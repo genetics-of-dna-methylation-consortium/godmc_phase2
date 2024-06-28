@@ -19,21 +19,21 @@ If you are interested in joining or finding out more please contact either Josin
 
 ## Guidance for how to use this repository
 
-Detailed instructions for running each stage of the pipeline [can be found here.](https://github.com/genetics-of-dna-methylation-consortium/goDMC_phase2/wiki). This includes details on how what software you need to have installed, and the required input data and their format. 
+Detailed instructions for running each stage of the pipeline [can be found here](https://github.com/genetics-of-dna-methylation-consortium/goDMC_phase2/wiki). This includes details on how what software you need to have installed, and the required input data and their format. 
 
 Whilst we have done a lot of testing of these scripts across a range of different datasets, we do antecipate that there will be bugs and edge cases we are yet to detect. All communication regarding this pipeline is to occur through this GitHub repository. If you email any of the developers they will direct you back to this repository. 
 
 There are two ways to communicate with us. 
 
 1. [Issues](https://github.com/genetics-of-dna-methylation-consortium/goDMC_phase2/issues). This is the mechanism to report bugs or errors with the pipeline or documentation. Essentially anything which requires us to make edits to the content in the repository. There are more guidelines on how to submit issues below.
-2. [Discussions.](https://github.com/genetics-of-dna-methylation-consortium/goDMC_phase2/discussions). This is the place to ask questions about the pipeline and analyses. 
+2. [Discussions](https://github.com/genetics-of-dna-methylation-consortium/goDMC_phase2/discussions). This is the place to ask questions about the pipeline and analyses. 
 
 ## Submitting an issue
 
 Thank you for helping improve our project! Before you submit an issue, please take a moment to review these guidelines to ensure your issue is addressed effectively.
 
 ### General Guidelines
-**Search Existing Issues:** Before submitting a new issue, please search the existing issues (including closed issues) to see if your problem or suggestion has already been reported. This helps avoid duplicates and allows us to focus on a single thread of discussion for each issue.
+**Search Existing Issues:** Before submitting a new issue, please search the existing issues (including closed issues) to see if your problem has already been reported. This helps avoid duplicates and allows us to focus on a single thread of discussion for each issue.
 
 **Use Clear and Descriptive Titles:** Provide a concise summary of the issue in the title. This helps others understand and search for similar issues.
 
@@ -51,15 +51,15 @@ The scripts in this repository were developed by the core goDMC team and individ
 
 Below lists the developer group of these scripts in alphabetical order:
 
-Carlos Ruiz Arenas
-Olalekan Awoniran
-Eilis Hannon
-Gibran Hemani
-Josine Min
-Maria Soler Artigas
-Natalia Llonga
-Olivia Castellini
-Siyi Wang
-Sonja Rajic
-Thomas Jonkman
-Xiaopu Zhang
+Carlos Ruiz Arenas  
+Olalekan Awoniran  
+Eilis Hannon  
+Gibran Hemani  
+Josine Min  
+Maria Soler Artigas  
+Natalia Llonga  
+Olivia Castellini  
+Siyi Wang  
+Sonja Rajic  
+Thomas Jonkman  
+Xiaopu Zhang  
