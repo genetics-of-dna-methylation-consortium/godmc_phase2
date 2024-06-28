@@ -1,0 +1,71 @@
+name: Documentation Report
+description: File a fault in the documentation
+title: "[Documentation Fault]: "
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before you fill this form, please check whether your issue has already been reported previously in either the open or closed issues. If it is new, please submit as an issue. Thank you for your input and suggestions. 
+  - type: input
+    id: contact
+    attributes:
+      label: Contact Details
+      description: How can we get in touch with you if we need more info?
+      placeholder: ex. email@example.com
+    validations:
+      required: false
+  - type: dropdown
+    id: which-wiki
+    attributes:
+      label: "Which wiki documentation"
+      description: Please specify which wiki page.
+      multiple: true
+      options:
+        - HOME 
+        - FAQ
+        - Imputed genetic data
+        - Normalised methylation data
+        - Covariate data
+        - System requirements
+        - Install and set up
+        - Script Flowchart
+        - 1. Check data
+        - 2. Process SNP data
+        - 3. Process methylation data
+        - 4. Run meQTL analysis
+        - 5. meQTL analysis of chromosome X and Y CpGs
+        - 6. Run cell type interacting meQTL analysis
+        - 7. Run variance meQTL analysis
+        - 8. Run inversion meQTL analysis
+        - 9. Run PRS EWAS
+        - 10. Run GWAS and heritability on age acceleration
+        - 11. Run GWAS and heritability on smoking
+        - 12. Run GWAS on cell counts
+        - 13. Run GWAS on MZ twinning
+        - 14. Run GWAS on the imprinted gene nc886
+    validations:
+      required: true
+  - type: dropdown
+    id: type
+    attributes:
+      label: "Fault type"
+      description: Please specify the type of fault in the documentation.
+      multiple: true
+      options:
+        - Spelling error
+        - Page removal required
+        - New page required
+        - Incorrect/outdated information given
+        - Rewording required
+    validations:
+      required: true
+  - type: textarea
+    id: Fault
+    attributes:
+      label: Please describe the fault in details
+      description: Where is the fault and how can it be improved?
+      placeholder: "1. On [page1] the following is incorrect... 
+                    2. On [page2] the following is incorrect..."
+    validations:
+      required: true

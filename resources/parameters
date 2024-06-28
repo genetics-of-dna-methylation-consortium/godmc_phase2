@@ -1,0 +1,373 @@
+#!/usr/bin/env bash
+
+LC_NUMERIC="en_GB.UTF-8"
+
+# logfiles
+timetemp=$(date -u +%Y-%m-%d_%H-%M)
+
+section_01_dir="${home_directory}/results/01"
+section_02_dir="${home_directory}/results/02"
+section_03_dir="${home_directory}/results/03"
+section_04_dir="${home_directory}/results/04"
+section_05_dir="${home_directory}/results/05"
+section_06_dir="${home_directory}/results/06"
+section_07_dir="${home_directory}/results/07"
+section_08_dir="${home_directory}/results/08"
+section_09_dir="${home_directory}/results/09"
+section_10_dir="${home_directory}/results/10"
+section_11_dir="${home_directory}/results/11"
+section_12_dir="${home_directory}/results/12"
+section_13_dir="${home_directory}/results/13"
+section_14_dir="${home_directory}/results/14"
+section_15_dir="${home_directory}/results/15"
+section_16_dir="${home_directory}/results/16"
+section_17_dir="${home_directory}/results/17"
+
+section_01_logfiles="${section_01_dir}/logs/log${timetemp}.txt"
+section_01_logfile="${section_01_dir}/logs/log.txt"
+section_02a_logfile="${section_02_dir}/logs_a/log.txt"
+section_02b_logfile="${section_02_dir}/logs_b/log.txt"
+section_03a_logfile="${section_03_dir}/logs_a/log.txt"
+section_03b_logfile="${section_03_dir}/logs_b/log.txt"
+section_03c_logfile="${section_03_dir}/logs_c/log.txt"
+section_03d_logfile="${section_03_dir}/logs_d/log.txt"
+section_03e_logfile="${section_03_dir}/logs_e/log.txt"
+section_03f_logfile="${section_03_dir}/logs_f/log.txt"
+section_03g_logfile="${section_03_dir}/logs_g/log.txt"
+
+section_04a_logfile="${section_04_dir}/logs_a/log.txt"
+section_04b_logfile="${section_04_dir}/logs_b/log.txt"
+section_04c_logfile="${section_04_dir}/logs_c/log.txt"
+section_04d_logfile="${section_04_dir}/logs_d/log.txt"
+section_04e_logfile="${section_04_dir}/logs_e/log.txt"
+section_04f_logfile="${section_04_dir}/logs_f/log.txt"
+
+section_05a_logfile="${section_05_dir}/logs_a/log.txt"
+section_05b_logfile="${section_05_dir}/logs_b/log.txt"
+section_05c_logfile="${section_05_dir}/logs_c/log.txt"
+section_05d_logfile="${section_05_dir}/logs_d/log.txt"
+
+section_06_logfile="${section_06_dir}/logs/log.txt"
+
+section_07a_logfile="${section_07_dir}/logs_a/log.txt"
+section_07b_logfile="${section_07_dir}/logs_b/log.txt"
+section_07c_logfile="${section_07_dir}/logs_c/log.txt"
+section_07d_logfile="${section_07_dir}/logs_d/log.txt"
+section_08a_logfile="${section_08_dir}/logs_a/log.txt"
+section_08b_logfile="${section_08_dir}/logs_b/log.txt"
+section_08c_logfile="${section_08_dir}/logs_c/log.txt"
+
+section_09_logfile="${section_09_dir}/logs/log.txt"
+section_10a_logfile="${section_10_dir}/logs_a/log.txt" 
+section_10b_logfile="${section_10_dir}/logs_b/log.txt"
+section_11a_logfile="${section_11_dir}/logs_a/log.txt"
+section_11b_logfile="${section_11_dir}/logs_b/log.txt"
+section_11c_logfile="${section_11_dir}/logs_c/log.txt"
+section_12_logfile="${section_12_dir}/logs/log.txt"
+section_13a_logfile="${section_13_dir}/logs_a/log.txt"
+section_13_logfile="${section_13_dir}/logs/log.txt"
+section_14_logfile="${section_14_dir}/logs/log.txt"
+section_15_logfile="${section_15_dir}/logs/log.txt"
+section_16a_logfile="${section_16_dir}/logs_a/log.txt"
+section_16b_logfile="${section_16_dir}/logs_b/log.txt"
+section_16c_logfile="${section_16_dir}/logs_c/log.txt"
+section_17a_logfile="${section_17_dir}/logs_a/log.txt"
+section_17b_logfile="${section_17_dir}/logs_b/log.txt"
+
+# ID lists
+meth_ids="${home_directory}/processed_data/ids/meth_ids.txt"
+intersect_ids_plink="${home_directory}/processed_data/ids/intersect_ids_plink.txt"
+intersect_ids="${home_directory}/processed_data/ids/intersect_ids.txt"
+
+# Sex prediction (methylation)
+sex_discrepancies="${home_directory}/results/01/sex_discrepancies.RData"
+sex_pred_plot="${home_directory}/results/01/XY_methylation_vs_sex.pdf"
+
+# Check data
+control_snps="${scripts_directory}/resources/genetics/snpsforbuildandposcheck.txt"
+snpchrtxt="${section_01_dir}/no_snps_by_chr.txt"
+snpchrplot="${section_01_dir}/no_snps_by_chr.pdf"
+quality_scores_plot="${section_01_dir}/snp_quality.pdf"
+ageplot="${section_01_dir}/age_distribution.pdf"
+positive_control_cpg="cg07959070"
+positive_control_snp_chr="22"
+positive_control_snp_pos="50053871"
+positive_control_snp_window="100000"
+positive_control_threshold="0.001"
+
+
+# Descriptives
+genetic_descriptives="${home_directory}/processed_data/ids/genetic_descriptives.RData"
+methylation_descriptives="${home_directory}/processed_data/ids/methylation_descriptives.RData"
+cnv_descriptives="${home_directory}/processed_data/ids/cnv_descriptives.RData"
+covariate_descriptives="${home_directory}/processed_data/ids/covariate_descriptives.RData"
+covariate_ADHD_PRS_descriptives="${home_directory}/processed_data/ids/covariate_ADHD_PRS_descriptives.RData"
+covariate_AD_PRS_descriptives="${home_directory}/processed_data/ids/covariate_AD_PRS_descriptives.RData"
+covariate_Psoriasis_PRS_descriptives="${home_directory}/processed_data/ids/covariate_Psoriasis_PRS_descriptives.RData"
+covariate_PsoriasisNOHLA_PRS_descriptives="${home_directory}/processed_data/ids/covariate_PsoriasisNOHLA_PRS_descriptives.RData"
+phenotype_descriptives="${home_directory}/processed_data/ids/phenotype_descriptives.RData"
+phenotype_ADHD_PRS_descriptives="${home_directory}/processed_data/ids/phenotype_ADHD_PRS_descriptives.RData"
+phenotype_AD_PRS_descriptives="${home_directory}/processed_data/ids/phenotype_AD_PRS_descriptives.RData"
+phenotype_Psoriasis_PRS_descriptives="${home_directory}/processed_data/ids/phenotype_Psoriasis_PRS_descriptives.RData"
+phenotype_PsoriasisNOHLA_PRS_descriptives="${home_directory}/processed_data/ids/phenotype_PsoriasisNOHLA_PRS_descriptives.RData"
+
+cohort_descriptives="${section_01_dir}/cohort_descriptives.RData"
+methylation_summary="${section_03_dir}/methylation_summary.RData"
+cohort_descriptives_commonids="${section_03_dir}/cohort_descriptives_commonids.RData"
+
+# PRS
+PRS_ADHD_weights="${scripts_directory}/resources/genetics/ADHD_weights_2023_moreMCMCit_1kg.txt"
+PRS_AD_weights="${scripts_directory}/resources/genetics/AD_weights_2024_moreMCMCit_HRC.txt"
+PRS_Psoriasis_weights="${scripts_directory}/resources/genetics/Psoriasis_weights_2024_tophits.txt"
+PRS_PsoriasisNOHLA_weights="${scripts_directory}/resources/genetics/PsoriasisNOHLA_weights_2024_tophits.txt"
+
+covariates_ADHD="NULL"
+covariates_AD="NULL"
+covariates_Psoriasis="NULL"
+covariates_PsoriasisNOHLA="NULL"
+
+# Clean genetic data
+bfile="${home_directory}/processed_data/genetic_data/data"
+tabfile="${home_directory}/processed_data/genetic_data/tabfile/data"
+bfile_hm3="${home_directory}/processed_data/genetic_data/data_hm3"
+tabfile_hm3="${home_directory}/processed_data/genetic_data/tabfile_hm3/data"
+allele_ref_hm3="${home_directory}/processed_data/genetic_data/data_hm3.allele_codes"
+
+pcaplot="${section_02_dir}/pcaplot.pdf"
+allele_ref="${section_02_dir}/data.allele_codes.gz"
+SNPfail1="${home_directory}/processed_data/genetic_data/SNPfail1.txt"
+easyQC="${home_directory}/processed_data/genetic_data/data.easyqc"
+easyQCfile="${home_directory}/processed_data/genetic_data/CLEANED.data.easyqc.gz"
+#easyQCfile="${scripts_directory}/resources/genetics/CLEANED.data.easyqc.txt.gz"
+easyQCscript="${scripts_directory}/resources/genetics/easyQC_hrc.ecf"
+genetic_processed_dir="${home_directory}/processed_data/genetic_data"
+
+# CNV file
+#tabcnv="${home_directory}/processed_data/cnv_data/tabfile/data"
+
+# Inversions files
+inv_processed_dir="${home_directory}/processed_data/inversions"
+tabinv="${home_directory}/processed_data/inversions/data"
+inv_snps="${scripts_directory}/resources/inversions/mapSNPs.tab"
+bfile_inv="${home_directory}/processed_data/inversions/inversions"
+
+
+# Kinship files
+grmfile_all="${home_directory}/processed_data/genetic_data/data"
+grmfile_fast="${home_directory}/processed_data/genetic_data/data_fast"
+grmfile_relateds="${home_directory}/processed_data/genetic_data/data_relateds"
+grmfile_unrelateds="${home_directory}/processed_data/genetic_data/data_unrelateds"
+grmfile_fast="${home_directory}/processed_data/genetic_data/data_fast"
+
+
+# PCA files
+pca="${home_directory}/processed_data/genetic_data/pca"
+pcs_all="${pca}.eigenvec"
+
+# Cell count
+cellcounts="${home_directory}/processed_data/methylation_data/cellcounts.txt"
+#cellcounts_reference="blood_gse35069_complete"
+cellcounts_tf="${home_directory}/processed_data/cellcounts/cellcounts.transformed.txt"
+cellcounts_tf_smok="${home_directory}/processed_data/cellcounts/cellcounts.transformed.smokingadj.txt"
+cellcounts_entropy="${home_directory}/processed_data/cellcounts/cellcounts_entropy.txt"
+cellcounts_plink="${home_directory}/processed_data/cellcounts/cellcounts.transformed.plink"
+cellcounts_plink_raw="${home_directory}/processed_data/cellcounts/cellcounts.raw.plink"
+cellcounts_plink_smokadj="${home_directory}/processed_data/cellcounts/cellcounts.transformed.smokadj.plink"
+cellcounts_SD="5"
+cellcounts_plot="${section_03_dir}/cellcounts_plot.pdf"
+cellcounts_summary="${section_03_dir}/cellcounts_summary.txt"
+cellcounts_gwa="${home_directory}/processed_data/cellcounts/cellcounts.houseman.txt"
+cellcounts_cov="${home_directory}/processed_data/cellcounts/cellcounts.covariates.txt"
+cor_matrix="${home_directory}/results/03/cor_matrix.txt"
+cor_plot="${home_directory}/results/03/cor_plot.pdf"
+
+# Covariates
+covariates_intersect="${home_directory}/processed_data/covariate_data/covariates_intersectids.txt"
+covariates_combined="${home_directory}/processed_data/methylation_data/all_covariates"
+meth_pcs_transformed="${home_directory}/processed_data/methylation_data/meth_pcs_transformed"
+meth_pcs_untransformed="${home_directory}/processed_data/methylation_data/meth_pcs_untransformed"
+nongenetic_meth_pcs_transformed="${home_directory}/processed_data/methylation_data/meth_pcs_nongenetic_transformed"
+nongenetic_meth_pcs_untransformed="${home_directory}/processed_data/methylation_data/meth_pcs_nongenetic_untransformed"
+gwas_covariates="${home_directory}/processed_data/genetic_data/gwas_covariates"
+
+# SNP list files
+#hm3_snps="${scripts_directory}/resources/genetics/hapmap3_autosome.snplist.gz"
+ilmn_probesnps="${scripts_directory}/resources/qc/probesnps.txt"
+#hm3_snps_no_ld="${scripts_directory}/resources/genetics/hapmap3_autosome.snplist_withoutlong-range.LDSNPs.txt.gz"
+#hm3_snps_no_ld2="${scripts_directory}/resources/genetics/hapmap3_autosome.snplist_withoutlong-range.LDSNPs.txt"
+hm3_snps="${scripts_directory}/resources/genetics/hapmap3_autosome_withoutlong-range.LDSNPs.recode.snplist.gz"
+
+
+# Sample mixup checks
+bfile_probesnps="${bfile}_probesnps"
+
+# ID lists
+genetic_outlier_ids="${home_directory}/processed_data/genetic_data/genetic_outliers.txt"
+methylation_ids="${home_directory}/processed_data/genetic_data/methylation_ids.txt"
+
+# Methylation files
+methylation_no_outliers="${home_directory}/processed_data/methylation_data/methylation_no_outliers.Robj"
+transformed_methylation_adjusted="${home_directory}/processed_data/methylation_data/transformed_methylation_adjusted"
+untransformed_methylation_adjusted="${home_directory}/processed_data/methylation_data/untransformed_methylation_adjusted"
+transformed_methylation_adjusted_pcs="${home_directory}/processed_data/methylation_data/transformed_methylation_adjusted_pcs"
+untransformed_methylation_adjusted_pcs="${home_directory}/processed_data/methylation_data/untransformed_methylation_adjusted_pcs"
+methylation_subset="${home_directory}/processed_data/methylation_data/methylation_subset"
+outlier_count="${home_directory}/processed_data/methylation_data/outlier_count.txt"
+
+# Smoking prediction
+methylation_processed_dir="${home_directory}/processed_data/methylation_data"
+smoking_pred="${methylation_processed_dir}/smoking_prediction"
+smoking_pred_plot="${section_03_dir}/smoking_prediction.pdf"
+smoking_pred_SD="5"
+
+
+# Age prediction
+age_pred="${home_directory}/processed_data/methylation_data/age_prediction"
+age_pred_sumstats="${section_03_dir}/age_prediction_stats"
+age_pred_plot="${section_03_dir}/age_prediction"
+age_pred_clock="${section_03_dir}/age_clock.txt"
+age_pred_SD="5"
+
+
+# Results locations
+matrixeqtl_mqtl_dir="${home_directory}/results/05"
+matrixeqtl_vmqtl_dir="${home_directory}/results/06"
+matrixeqtl_mcnv_dir="${home_directory}/results/07"
+ewas_results_dir="${home_directory}/results/08"
+gwas_aar_dir="${home_directory}/results/10"
+gwas_smoking_dir="${home_directory}/results/11"
+gwas_cellcount_entropy_dir="${home_directory}/results/11"
+gwas_cellcounts_dir="${home_directory}/results/12"
+gwas_cellcounts_mvlmm_dir="${home_directory}/results/13"
+
+resname="res"
+
+#HASE
+hase_dir_plink="${home_directory}/processed_data/hase/hase_plink"
+hase_dir_in="${home_directory}/processed_data/hase/hase_in"
+hase_converting="${home_directory}/processed_data/hase/hase_converting"
+hase_pheno="${home_directory}/processed_data/hase/hase_pheno"
+hase_cov="${home_directory}/processed_data/hase/hase_cov"
+hase_cov_females="${home_directory}/processed_data/hase/hase_cov_females"
+hase_cov_males="${home_directory}/processed_data/hase/hase_cov_males"
+hase_encoding="${home_directory}/processed_data/hase/encoding"
+hase_mapping="${home_directory}/processed_data/hase/mapped"
+hase_single_site="${home_directory}/processed_data/hase/single_site"
+
+#vmeQTL
+meth_vmeQTL_directory="${home_directory}/processed_data/methylation_data/vmeQTL"
+meth_vmeQTL_input_chr="${meth_vmeQTL_directory}/meth_vmeQTL_input.chr"
+meth_vmeQTL_annotation="${scripts_directory}/resources/methylation/vmeQTL/EPIC_annotation_autochr"
+vmeQTL_thread="10"
+
+
+# SFTP details
+# This is the location your results will be uploaded
+# Note: No individual data will be uploaded to this location during the course of the pipeline
+# sftp_address="sscmv-filetran.epi.bris.ac.uk"
+#sftp_address="filetrn-scmv-d0.epi.bris.ac.uk"
+sftp_address="sftp.acrc.bris.ac.uk"
+
+if [ "$sftp_username" = "gh13047" ] || [ "$sftp_username" = "epzjlm" ] || [ "$sftp_username" = "godmc" ] || [ "$sftp_username" = "epwkb" ]
+then
+	sftp_path="/sftp/resources"
+	#sftp_path="/srv/sftponly/GoDMC"
+	#sftp_path="/GoDMC"
+else
+	#sftp_path="/GoDMC"
+	sftp_path="/sftp/resources"
+
+fi
+
+sftp_username_inversions="godmc-pub-bristol"
+sftp_address_inversions="ftp.unav.es"
+sftp_path_inversions="/usr/local/etc2/ftp/godmc/pub/bristol"
+
+
+sftp_address_nc866="https://86.50.168.229"
+sftp_path_nc866="/remote.php/webdav/GoDMC"
+
+# scripts and binaries
+plink="${scripts_directory}/resources/bin/plink1.90"
+plink2="${scripts_directory}/resources/bin/plink2"
+gcta="${scripts_directory}/resources/bin/gcta-1.94.1"
+gemma="${scripts_directory}/resources/bin/gemma"
+hase="${scripts_directory}/resources/bin/hase"
+osca="${scripts_directory}/resources/bin/osca"
+smr="${scripts_directory}/resources/bin/smr-1.3.1"
+
+# Functions
+
+vercomp () {
+        if [[ $1 == $2 ]]
+        then
+                echo "0"
+                return 0
+        fi
+        local IFS=.
+        local i ver1=($1) ver2=($2)
+        # fill empty fields in ver1 with zeros
+        for ((i=${#ver1[@]}; i<${#ver2[@]}; i++))
+        do
+                ver1[i]=0
+        done
+        for ((i=0; i<${#ver1[@]}; i++))
+        do
+                if [[ -z ${ver2[i]} ]]
+                then
+                        # fill empty fields in ver2 with zeros
+                        ver2[i]=0
+                fi
+                if ((10#${ver1[i]} > 10#${ver2[i]}))
+                then
+                        echo "0"
+                        return 0
+                fi
+                if ((10#${ver1[i]} < 10#${ver2[i]}))
+                then
+                        echo "1"
+                        return 0
+                fi
+        done
+        echo "Correct script version"
+        echo "0"
+        return 0
+}
+
+
+print_version () {
+
+	current_time=`date`
+	version=`git tag | tail -n 1`
+	a=`git --version | cut -d " " -f 3`
+	b=`vercomp $a 1.8.4.2`
+	if [ "$b" -eq "1" ]
+	then
+		echo "git version:"
+		echo "$a"
+
+		echo "GoDMC2 version ${version}"
+		echo "Current time: ${current_time}"
+
+		echo "This git version is too early to handle proper version checking."
+		echo "Please ensure that your scripts are up to date."
+		echo "If in doubt, run 'git pull'"
+		return 0
+	fi
+
+	commit=`git rev-parse HEAD`
+	commit_date=`git show -s --format=%ci`
+	echo ""
+	echo ""
+	echo "GoDMC2 version ${version}"
+	echo "Commit: ${commit}"	
+	echo "Commit date: ${commit_date}"
+	echo "Current time: ${current_time}"
+	echo ""
+	echo "Please ensure your scripts are up to date."
+	echo "If in doubt, run 'git pull'"
+	echo ""
+	echo ""
+
+}
+
