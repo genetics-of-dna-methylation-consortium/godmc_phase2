@@ -225,6 +225,13 @@ check_logs_04 () {
 		exit 1
 	fi
 
+    compare_version "04f"
+    if grep -i -q "Successfully created results archives of module 04" ${section_04f_logfile}; then
+        echo "04f-tar_results.sh completed successfully."
+    else
+        echo "Problem: 04f-tar_results.sh did not complete successfully"
+        exit 1
+    fi
 }
 
 check_logs_07 () {
@@ -249,9 +256,9 @@ check_logs_07 () {
     
     compare_version "07d"
     if grep -i -q "Successfully created results archives of module 07" ${section_07d_logfile}; then
-        echo "07d-encrypt_results.sh completed successfully."
+        echo "07d-tar_results.sh completed successfully."
     else
-        echo "Problem: 07d-encrypt_results.sh did not complete successfully"
+        echo "Problem: 07d-tar_results.sh did not complete successfully"
         exit 1
     fi
 }

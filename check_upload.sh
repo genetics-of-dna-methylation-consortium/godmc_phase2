@@ -120,9 +120,9 @@ bye
 #        echo "Encrypting files"
 #        gpg --output ${home_directory}/results/${study_name}_${1}.${suff}.aes --symmetric --cipher-algo AES256 ${home_directory}//results/${study_name}_${1}.${suff}
         echo ""
-    elif [[ $1 = "07" ]]
+    elif [[ $1 = "07" || $1 = "04" ]]
     then
-        echo "Tarring results have been generated in 07d"
+        echo "Tarring results have been generated"
     else
 	    tar ${flags} ${home_directory}/results/${study_name}_${1}.${suff} -C ${home_directory} results/${1}
         echo "Successfully created results archives"

@@ -322,6 +322,12 @@ check_results_04 () {
 		exit 1
 	fi
 
+    if [ -f "${home_directory}/results/${study_name}_04.tgz" ]; then
+        echo "hase tar results present"
+    else
+        echo "hase tar results absent. Please re-run"
+    fi
+
 }
 
 
@@ -344,10 +350,10 @@ check_results_07 () {
         echo "vQTL detection results with drm method present"
     fi
 
-    if [ -f "${home_directory}/results/${study_name}_07.tgz.aes" ] && [ -f "${home_directory}/results/${study_name}_07.md5sum" ]; then
-        echo "vQTL encrypted results present"
+    if [ -f "${home_directory}/results/${study_name}_07.tgz" ]; then
+        echo "vQTL tar results present"
     else
-        echo "vQTL encrypted results absent. Please re-run"
+        echo "vQTL tar results absent. Please re-run"
     fi
 }
 
