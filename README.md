@@ -1,9 +1,9 @@
 
 ## Welcome to GoDMC phase 2 analysis pipeline.
 
-This repository contains the scripts to run the goDMC pipeline which includes:
+This repository contains the scripts to run the GoDMC pipeline which includes:
 
-* genome-wide scans for DNA methylation quantitative trait loci
+* Genome-wide scans for DNA methylation quantitative trait loci
 * GWAS of DNAm derived phenotypes
 * EWAS of genetic phenotypes
 
@@ -44,7 +44,7 @@ For Documentation: Specify the page & section where the documentation was mislea
 
 
 ## Guidance for contributing
-The scripts in this repository were developed by the core goDMC team and individuals who had approved external projects. A list can be found under the Acknowledgements section below. At present just this group are able to contribute to the pipeline - if you are interested in joining this group please contact either Josine Min (Josine.Min@bristol.ac.uk) or Eilis Hannon (E.J.Hannon@exeter.ac.uk).
+The scripts in this repository were developed by the core GoDMC team and individuals who had approved external projects. A list can be found under the Acknowledgements section below. At present just this group are able to contribute to the pipeline - if you are interested in joining this group please contact either Josine Min (Josine.Min@bristol.ac.uk) or Eilis Hannon (E.J.Hannon@exeter.ac.uk).
 
 
 ## Acknowledements
