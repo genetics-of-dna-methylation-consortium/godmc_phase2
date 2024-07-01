@@ -79,7 +79,7 @@ then
 
 	if ! [[ "$study_name" =~ [^a-zA-Z0-9_\] ]] && ! [ "$study_name" = "" ]
 	then
-		echo "The study name '${study_name}' will be used for this analysis. Change this in the config file if necessary."
+		echo "The study name '${study_name}' is analysed by '${analyst_name}' who can be contacted at '${analyst_email}' for this analysis. Change this in the config file if necessary."
 		echo ""
 	else
 		echo "The study name '${study_name}' is invalid. Please use only alphanumeric or underscore characters, with no spaces or special characters etc."
