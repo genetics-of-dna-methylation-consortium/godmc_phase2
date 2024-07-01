@@ -103,16 +103,26 @@ main <- function()
   qqplot_pval(res$none, file=paste(qqplot_file,"nocovs.pdf",sep="."))
   qqplot_pval(res$all, file=paste(qqplot_file,"allcovs.pdf",sep="."))
   qqplot_pval(res$isva, file=paste(qqplot_file,"isvacovs.pdf",sep="."))
-    
-	message("Saving results")
-	save(ewas.ret, file=out_file)
 
-  main_model <- "all" #model with all covariates as default for the EWAS report
-  if(phen_name=="ADHD"){main_model <- "none"} #for ADHD we use the model with no additional covariates for the EWAS report
+  main_model <- "none" #model with no additional covariates for the EWAS report
     
   ewas.parameters <- meffil.ewas.parameters(sig.threshold=1e-7, max.plots=100,qq.inflation.method="regression", model=main_model)
   ewas.summary<-meffil.ewas.summary(ewas.ret,norm.beta,parameters=ewas.parameters)                              
   meffil.ewas.report(ewas.summary, output.file=paste(report_file,".ewas.report.html",sep=""))
+
+  #remove items not needed and save
+  ewas.ret$samples <- NULL
+  ewas.ret$variable <- NULL
+  ewas.ret$covariates <- NULL
+  ewas.ret$analyses$none$design <- NULL
+  ewas.ret$analyses$all$design <- NULL
+  ewas.ret$analyses$isva$design <- NULL
+  ewas.ret$sva.ret$isv <- NULL
+    
+	message("Saving results")
+	save(ewas.ret, file=out_file)
+
+
 
 }
 
