@@ -1,9 +1,9 @@
 
 ## Welcome to GoDMC phase 2 analysis pipeline.
 
-This repository contains the scripts to run the goDMC pipeline which includes:
+This repository contains the scripts to run the GoDMC pipeline which includes:
 
-* genome-wide scans for DNA methylation quantitative trait loci
+* Genome-wide scans for DNA methylation quantitative trait loci
 * GWAS of DNAm derived phenotypes
 * EWAS of genetic phenotypes
 
@@ -39,18 +39,19 @@ Thank you for helping improve our project! Before you submit an issue, please ta
 
 **Provide Detailed Information:**
 
-For Bugs: Specify which script you were running when the error occured, the expected result, and the actual result. Provide any relevant logs or screenshots.
 
-For Documentation: Specify the page & section where the documentation was misleading or confusing. 
+**For Bugs**: Specify which script you were running when the error occured, the expected result, and the actual result. Provide any relevant logs or screenshots.
 
+**For Documentation:** Specify the page & section where the documentation was misleading or confusing. 
 
 ## Guidance for contributing
-The scripts in this repository were developed by the core goDMC team and individuals who had approved [external projects](http://www.godmc.org.uk/projects.html). A list can be found under the Acknowledgements section below. At present just this group are able to contribute to the pipeline - if you are interested in joining this group please contact either Josine Min (Josine.Min@bristol.ac.uk) or Eilis Hannon (E.J.Hannon@exeter.ac.uk).
+
+The scripts in this repository were developed by the core GoDMC team and individuals who had [approved external projects](http://www.godmc.org.uk/projects.html). A list can be found under the Acknowledgements section below. At present just this group are able to contribute to the pipeline - if you are interested in joining this group please contact either Josine Min (Josine.Min@bristol.ac.uk) or Eilis Hannon (E.J.Hannon@exeter.ac.uk).
 
 
-## Acknowledements
+## Acknowledgements
 
-Below lists the developer group of these scripts in alphabetical order:
+The developer group of these scripts are listed in alphabetical order below:
 
 Carlos Ruiz Arenas  
 Olalekan Awoniran  
