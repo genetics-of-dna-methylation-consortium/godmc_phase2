@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
   - name: GoDMC2 Wiki
-    url: https://github.com/MRCIEU/EPIC_mQTL/wiki
+    url: https://github.com/genetics-of-dna-methylation-consortium/godmc_phase2/wiki
     about: Please read the documentation here.
   - name: GoDMC2 Workflow Chart
-    url: https://github.com/MRCIEU/EPIC_mQTL/wiki/test-Script-Flowchart
+    url: https://github.com/genetics-of-dna-methylation-consortium/godmc_phase2/wiki/Script-Flowchart
     about: Please go through the workflow here.
   - name: GoDMC2 Support
-    url: https://github.com/MRCIEU/EPIC_mQTL/discussions
+    url: https://github.com/genetics-of-dna-methylation-consortium/godmc_phase2/discussions
     about: Please ask and answer questions here.
