@@ -354,7 +354,7 @@ main <- function()
   
   
   message("Predicting, adjusting and standardizing DunedinPACE")########################################
-  PredAgeDun <- try(PACEProjector(norm.beta, proportionOfProbesRequired=0.7), silent = TRUE)
+  suppressWarnings(PredAgeDun <- PACEProjector(norm.beta, proportionOfProbesRequired=0.7))
   paceresult <- data.frame("IID" = names(PredAgeDun[['DunedinPACE']]), "PredAge" = PredAgeDun[['DunedinPACE']])
   
   if (inherits(paceresult, 'data.frame') & inherits(paceresult$PredAge, 'numeric')) {
