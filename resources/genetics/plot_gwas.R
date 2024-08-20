@@ -18,11 +18,11 @@ suppressPackageStartupMessages(library(magrittr))
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(ggtext))
 suppressPackageStartupMessages(library(qqman))
-
+# options(bitmapType = "cairo")
 
 #################################Sub-functions################################
 qqplot = function(data, filename, lambda) {
-  png(file=paste0(filename, '_qqplot.png'))
+  jpeg(file=paste0(filename, '_qqplot.jpeg'))
   exp_pvalues = (rank(data, ties.method="first")+.5)/(length(data)+1)
   plot(-log10(exp_pvalues), -log10(data), 
        xlim = c(0, round(max(-log10(exp_pvalues)))),
