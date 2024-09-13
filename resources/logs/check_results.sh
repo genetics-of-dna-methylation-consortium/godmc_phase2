@@ -81,16 +81,14 @@ check_results_03a () {
     fi
 
 
-    if [ "${cellcounts_required}" = "yes" ]; then
+    if [ "${measured_cellcounts}" != "NULL"  ]; then
         if [ -f "${section_03_dir}/cor_plot.pdf" ]; then
           echo "Correlation plot of observed vs predicted cell counts is present"
         else
           echo "Problem: correlation plot of observed vs predicted cell counts is absent"
           exit 1
         fi
-    fi
-
-    if [ "${cellcounts_required}" = "yes" ]; then
+		
        if [ -f "${section_03_dir}/cor_matrix.txt" ]; then
           echo "Correlation matrix of observed vs predicted cell counts is present"
        else
@@ -99,23 +97,55 @@ check_results_03a () {
        fi
     fi
 
-    if [ -f "${section_03_dir}/cellcounts_plot.pdf" ]; then
-        echo "Plots of cell counts are present"
-    else
-        echo "Problem: plots of cell counts are absent"
-        exit 1
-    fi
-    
-    if [ -f "${section_03_dir}/cellcounts_summary.txt" ]; then
-        echo "Summary statistics of cell counts are present"
-    else
-        echo "Problem: summary statistics of cell counts are absent"
-        exit 1
-    fi
+	if [ "${cellcounts_required}" = "yes" ]; then
+
+		if [ -f "${section_03_dir}/cellcounts_plot.pdf" ]; then
+			echo "Plots of cell counts are present"
+		else
+			echo "Problem: plots of cell counts are absent"
+			exit 1
+		fi
+		
+		if [ -f "${section_03_dir}/cellcounts_summary.txt" ]; then
+			echo "Summary statistics of cell counts are present"
+		else
+			echo "Problem: summary statistics of cell counts are absent"
+			exit 1
+		fi
+	fi
+
     if [ -f "${smoking_pred_plot}" ]; then
-        echo "Smoking prediction plot present"
+        echo "Smoking prediction plot is present"
     else
-        echo "Smoking prediction plot file not present"
+        echo "Problem: Smoking prediction plot is absent"
+        exit 1
+    fi
+
+	if [ -f "${age_pred_plot}.pdf" ]; then
+        echo "Plot of age prediction is present"
+    else
+        echo "Problem: Plot of age prediction is absent"
+        exit 1
+    fi
+
+	if [ -f "${age_pred_plot}_correlation.png" ]; then
+        echo "Correlations plot of ages is present"
+    else
+        echo "Problem: Correlations plot of ages is absent"
+        exit 1
+    fi
+
+	if [ -f "${age_pred_sumstats}.csv" ]; then
+        echo "Summary statistics of age acceleration residuals is present"
+    else
+        echo "Problem: Summary statistics of age acceleration residuals is absent"
+        exit 1
+    fi
+
+	if [ -f "${age_pred_sumstats}_corrsd.csv" ]; then
+        echo "Summary statistics of predicted age is present"
+    else
+        echo "Problem: Summary statistics of predicted age is absent"
         exit 1
     fi
 
