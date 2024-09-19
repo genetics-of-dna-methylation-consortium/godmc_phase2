@@ -77,6 +77,7 @@ else
 		--mind ${snp_imiss} \
 		--make-bed \
 		--out ${bfile} \
+		--allow-extra-chr --chr-set 23 \
 		--chr 1-23 \
 		--threads ${nthreads}
 fi
