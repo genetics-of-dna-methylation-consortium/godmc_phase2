@@ -153,10 +153,6 @@ check_results_03a () {
 
 }
 
-check_results_03d () {
-    echo "03d results are required submitted"
-}
-
 check_results_03 () {
 
 	check_results_03a
