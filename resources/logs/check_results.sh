@@ -81,23 +81,21 @@ check_results_03a () {
 		exit 1
 	fi
 
-	if [ "${cellcounts_required}" = "yes" ]; then
-		if [ -f "${section_03_dir}/cellcounts_summary.txt" ]; then
-			echo "Summary statistics of cell counts are present"
-		else
-			echo "Problem: summary statistics of cell counts are absent"
-			exit 1
-		fi
-
-		if [ -f "${section_03_dir}/cellcounts_plot.pdf" ]; then
-			echo "Plots of cell counts are present"
-		else
-			echo "Problem: plots of cell counts are absent"
-			exit 1
-		fi
+	
+	if [ -f "${section_03_dir}/cellcounts_summary.txt" ]; then
+		echo "Summary statistics of cell counts are present"
 	else
-		echo "Message: since cellcounts_required is not required, no output for cellcounts_summary.txt and cellcounts_plot.pdf for cell counts."
+		echo "Problem: summary statistics of cell counts are absent"
+		exit 1
 	fi
+
+	if [ -f "${section_03_dir}/cellcounts_plot.pdf" ]; then
+		echo "Plots of cell counts are present"
+	else
+		echo "Problem: plots of cell counts are absent"
+		exit 1
+	fi
+
 
 	if [ "${measured_cellcounts}" != "NULL" ];then
 		if [  -f "${section_03_dir}/cor_plot.pdf" ]; then
@@ -114,7 +112,7 @@ check_results_03a () {
 			exit 1
 		fi
 	else
-		echo "Message: since cellcounts_required is not required, no output for cor_plot.pdf and cor_matrix.txt for observed vs predicted cell counts."
+		echo "Message: since measured_cellcounts are not provided, there is no output for cor_plot.pdf and cor_matrix.txt for observed vs predicted cell counts."
 
 	fi
 
