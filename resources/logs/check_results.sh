@@ -66,66 +66,6 @@ check_results_02 () {
 }
 
 check_results_03a () {
-    if [ -f "${section_03_dir}/methylation_summary.RData" ]; then
-        echo "Methylation_summary.RData is present"
-    else
-        echo "Problem: methylation_summary.RData is absent"
-        exit 1
-    fi
-
-    if [ -f "${section_03_dir}/cohort_descriptives_commonids.RData" ]; then
-        echo "cohort_descriptives_commonids.RData is present"
-    else
-        echo "Problem: cohort_descriptives_commonids.RData is absent"
-        exit 1
-    fi
-
-
-    if [ "${cellcounts_required}" = "yes" ]; then
-        if [ -f "${section_03_dir}/cor_plot.pdf" ]; then
-          echo "Correlation plot of observed vs predicted cell counts is present"
-        else
-          echo "Problem: correlation plot of observed vs predicted cell counts is absent"
-          exit 1
-        fi
-    fi
-
-    if [ "${cellcounts_required}" = "yes" ]; then
-       if [ -f "${section_03_dir}/cor_matrix.txt" ]; then
-          echo "Correlation matrix of observed vs predicted cell counts is present"
-       else
-          echo "Problem: correlation matrix of observed vs predicted cell counts is absent"
-          exit 1
-       fi
-    fi
-
-    if [ -f "${section_03_dir}/cellcounts_plot.pdf" ]; then
-        echo "Plots of cell counts are present"
-    else
-        echo "Problem: plots of cell counts are absent"
-        exit 1
-    fi
-    
-    if [ -f "${section_03_dir}/cellcounts_summary.txt" ]; then
-        echo "Summary statistics of cell counts are present"
-    else
-        echo "Problem: summary statistics of cell counts are absent"
-        exit 1
-    fi
-    if [ -f "${smoking_pred_plot}" ]; then
-        echo "Smoking prediction plot present"
-    else
-        echo "Smoking prediction plot file not present"
-        exit 1
-    fi
-
-}
-
-check_results_03d () {
-    echo "03d results are required submitted"
-}
-
-check_results_03 () {
 
 	if [ -f "${section_03_dir}/methylation_summary.RData" ]; then
 		echo "Methylation_summary.RData is present"
@@ -141,23 +81,21 @@ check_results_03 () {
 		exit 1
 	fi
 
-	if [ "${cellcounts_required}" = "yes" ]; then
-		if [ -f "${section_03_dir}/cellcounts_summary.txt" ]; then
-			echo "Summary statistics of cell counts are present"
-		else
-			echo "Problem: summary statistics of cell counts are absent"
-			exit 1
-		fi
-
-		if [ -f "${section_03_dir}/cellcounts_plot.pdf" ]; then
-			echo "Plots of cell counts are present"
-		else
-			echo "Problem: plots of cell counts are absent"
-			exit 1
-		fi
+	
+	if [ -f "${section_03_dir}/cellcounts_summary.txt" ]; then
+		echo "Summary statistics of cell counts are present"
 	else
-		echo "Message: since cellcounts_required is not required, no output for cellcounts_summary.txt and cellcounts_plot.pdf for cell counts."
+		echo "Problem: summary statistics of cell counts are absent"
+		exit 1
 	fi
+
+	if [ -f "${section_03_dir}/cellcounts_plot.pdf" ]; then
+		echo "Plots of cell counts are present"
+	else
+		echo "Problem: plots of cell counts are absent"
+		exit 1
+	fi
+
 
 	if [ "${measured_cellcounts}" != "NULL" ];then
 		if [  -f "${section_03_dir}/cor_plot.pdf" ]; then
@@ -174,7 +112,7 @@ check_results_03 () {
 			exit 1
 		fi
 	else
-		echo "Message: since cellcounts_required is not required, no output for cor_plot.pdf and cor_matrix.txt for observed vs predicted cell counts."
+		echo "Message: since measured_cellcounts are not provided, there is no output for cor_plot.pdf and cor_matrix.txt for observed vs predicted cell counts."
 
 	fi
 
@@ -212,6 +150,12 @@ check_results_03 () {
 		echo "Problem: The statistical table for each pair of comparisons in the matrix plot of aging is absent"
 		exit 1
 	fi
+
+}
+
+check_results_03 () {
+
+	check_results_03a
 
  	if [ -f "${section_03_dir}/positive_control_transformed_${positive_control_cpg}.PHENO1.glm.linear.gz" ]; then
 		echo "transformed mQTL analysis positive control results present"

@@ -32,7 +32,7 @@ print_version
 
 
 # Step 1: Check if cellcount is generated ###################################
-if [ "${cellcounts_required}" = "no" ]
+if [ "${sorted_methylation}" = "yes" ]
 then
   echo "No cell counts required" 
   cellcounts_cov="NULL"
