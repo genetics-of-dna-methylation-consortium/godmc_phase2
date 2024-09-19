@@ -51,11 +51,7 @@ ${R_directory}Rscript resources/smoking/smoking_predictor.R \
 		${smoking_pred_SD} \
 		${covariates} 
 
-#Predict cell counts
-echo "Processing cell counts"
-if [ "${cellcounts_required}" = "yes" ]
-then
-
+#Predict cell counts - force for all datasets to ensure consistency
 echo "Predicting cell counts using epiDISH"
 ${R_directory}Rscript resources/cellcounts/cellcounts_epiDISH.R \
         ${methylation_no_outliers} \
@@ -63,7 +59,6 @@ ${R_directory}Rscript resources/cellcounts/cellcounts_epiDISH.R \
         ${cellcounts_plot} \
         ${cellcounts_summary}
 
-fi
 
 if [ "${measured_cellcounts}" != "NULL" ]
 then
@@ -73,13 +68,6 @@ then
  	          ${measured_cellcounts} \
 	          ${cor_matrix} \
 	          ${cor_plot}
-
-fi
-
-if [ "${cellcounts_required}" = "no" ]
-then
-  echo "No cell counts required"
-	  cellcounts_cov="NULL"
 
 fi
 
