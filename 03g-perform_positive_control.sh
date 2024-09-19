@@ -67,6 +67,7 @@ ${plink2} \
 	--bfile ${bfile} \
 	--pheno ${untransformed_methylation_adjusted}.positive_control.plink \
 	--glm allow-no-covars \
+	--allow-extra-chr --chr-set 23 \
 	--out ${section_03_dir}/positive_control_untransformed_${positive_control_cpg}
 
 tr -s " " < ${section_03_dir}/positive_control_untransformed_${positive_control_cpg}.PHENO1.glm.linear | gzip -c > ${section_03_dir}/positive_control_untransformed_${positive_control_cpg}.PHENO1.glm.linear.gz
@@ -93,6 +94,7 @@ ${plink2} \
 	--bfile ${bfile} \
 	--pheno ${transformed_methylation_adjusted}.positive_control.plink \
 	--glm allow-no-covars \
+	--allow-extra-chr --chr-set 23 \
 	--out ${section_03_dir}/positive_control_transformed_${positive_control_cpg}
 
 tr -s " " < ${section_03_dir}/positive_control_transformed_${positive_control_cpg}.PHENO1.glm.linear | gzip -c > ${section_03_dir}/positive_control_transformed_${positive_control_cpg}.PHENO1.glm.linear.gz
