@@ -53,9 +53,6 @@ phenotypes_PsoriasisNOHLA="NULL"
 # This should be a file with three columns, SNP, MAF and quality scores
 quality_scores="${home_directory}/input_data/data.info"
 
-# The software used to to estimate imputation quality. eg. impute2 or minimac
-quality_type="minimac3"
-
 # Cellcounts
 # Please specify whether or not cell counts are needed in the model (yes if you have e.g. blood, no if you have sorted celltypes)
 cellcounts_required="yes"
