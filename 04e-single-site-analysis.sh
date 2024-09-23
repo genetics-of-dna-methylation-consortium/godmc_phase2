@@ -41,7 +41,7 @@ python ${hase}/hase.py \
    -g ${hase_converting} \
    -ph ${hase_pheno} \
    -cov ${hase_cov}  \
-   -mapper ${home_directory}/results/04/mapping/  \
+   -mapper ${hase_mapping} \
    -o ${hase_single_site} \
    -ref_name ref-hrc
 
