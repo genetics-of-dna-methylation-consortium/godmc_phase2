@@ -384,8 +384,8 @@ main <- function()
          main = "Density plot of chronological age and predicted age")
     polygon(agedensity, col = alpha("#ff595e", 0.6))
     abline(v =mean(covs$Age_numeric), lty=2, col="#ff595e")
-    if (exists('dandensity')) {
-      polygon(dandensity, col = alpha("#ffca3a", 0.6))
+    if (exists('dnadensity')) {
+      polygon(dnadensity, col = alpha("#ffca3a", 0.6))
       abline(v=mean(dnampred[,2]), lty=2, col= "#ffca3a")
       legendname = c(legendname, "DNAmAge")
       densitycolor = c(densitycolor, "#ffca3a")
