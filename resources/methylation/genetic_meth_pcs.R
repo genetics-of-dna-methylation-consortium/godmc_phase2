@@ -32,7 +32,7 @@ main <- function()
 
 	if(length(l) == ncol(pc))
 	{
-		stop("It appears that all the PCs have a genetic component\n",
+		message("It appears that all the PCs have a genetic component\n",
 			"This is a little worrying because it suggests family effects or stratification\n",
 			"Please check that 03b is adjusting for these factors\n",
 			"You could also try increasing the 'n_meth_pcs and/or meth_pc_cutoff' value in the config file.\n"
