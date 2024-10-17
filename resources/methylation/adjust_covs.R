@@ -90,21 +90,21 @@ main <- function()
         	run.adjust.cov(norm.beta, covs, nthreads, transform, paste0(out_file,".",jid,".RData"))
     	}
 
-    	if(nrow(beta.x.female)>0 & ncol(norm.beta)>0){
+    	if(nrow(beta.x.female)>0 & ncol(beta.x.female)>0){
 		index_female <-sapply(covs.female,function(.col){all(is.na(.col) | .col[1L] == .col)})
     		index_female[is.na(index_female)] <- FALSE
 		covs.female <- covs.female[match(colnames(beta.x.female), rownames(covs.female)),!index_female]
         	run.adjust.cov(beta.x.female, covs.female, nthreads=1, transform, paste0(out_file, ".Female.chrX.", jid, ".RData"))
     	}
 
-    	if(nrow(beta.x.male)>0 & ncol(norm.beta)>0){
+    	if(nrow(beta.x.male)>0 & ncol(beta.x.male)>0){
 		index_male <-sapply(covs.male,function(.col){all(is.na(.col) | .col[1L] == .col)})
     		index_male[is.na(index_male)] <- FALSE
 		covs.male <- covs.male[match(colnames(beta.x.male), rownames(covs.male)),!index_male]
         	run.adjust.cov(beta.x.male, covs.male, nthreads=1, transform, paste0(out_file,".Male.chrX.", jid, ".RData"))
     	}
 
-    	if(nrow(beta.y.male)>0 & ncol(norm.beta)>0){
+    	if(nrow(beta.y.male)>0 & ncol(beta.y.male)>0){
         	index_male <-sapply(covs.male,function(.col){all(is.na(.col) | .col[1L] == .col)})
     		index_male[is.na(index_male)] <- FALSE
 		covs.male <- covs.male[match(colnames(beta.y.male), rownames(covs.male)),!index_male]

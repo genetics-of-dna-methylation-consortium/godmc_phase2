@@ -90,7 +90,7 @@ main <- function()
 	stopifnot(all(rownames(phen) == colnames(norm.beta)))
     
   covs <- covs[match(colnames(norm.beta), rownames(covs)), , drop=FALSE]
-  covs <- covs[,which(colnames(covs)%in%c("IID")==F)]
+  covs <- subset(covs, , select=colnames(covs)[!colnames(covs)%in%c("IID")])
   nr<-nrow(norm.beta)
   nc<-ncol(norm.beta)
 

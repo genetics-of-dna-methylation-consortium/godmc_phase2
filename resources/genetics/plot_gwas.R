@@ -26,7 +26,7 @@ qqplot = function(data, filename, lambda) {
   exp_pvalues = (rank(data, ties.method="first")+.5)/(length(data)+1)
   plot(-log10(exp_pvalues), -log10(data), 
        xlim = c(0, round(max(-log10(exp_pvalues)))),
-       ylim = c(0, round(max(-log10(data)))),
+       ylim = c(0, round(max(-log10(data), -log10(exp_pvalues)))),
        main = paste0("lambda:", round(lambda, 3)))
   abline(0,1, col = 'red')
   dev.off()

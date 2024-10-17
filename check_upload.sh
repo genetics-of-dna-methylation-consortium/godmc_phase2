@@ -159,7 +159,7 @@ echo "Detecting sshpass"
         put ${home_directory}/results/${study_name}_${1}.md5sum
         put ${home_directory}/results/${study_name}_$1.${suff}.aes
 		put ${home_directory}/results/config/${study_name}_config.tar.aes
-		put ${home_directory}/results/config/${study_name}_config.tar.md5sum 
+		put ${home_directory}/results/config/${study_name}_config.md5sum 
         bye
 !
 	fi
@@ -258,7 +258,7 @@ echo ""
 read -s -p "Enter SFTP password: " mypassword
 
 curl -k -u ${sftp_username}:${mypassword} -T ${home_directory}/results/config/${study_name}_config.tar.aes "${sftp_address}/${sftp_path}/${study_name}_${1}._config.tar.aes" 
-curl -k -u ${sftp_username}:${mypassword} -T ${home_directory}/results/config/${study_name}_config.tar.md5sum "${sftp_address}/${sftp_path}/${study_name}_${1}._config.tar.md5sum"
+curl -k -u ${sftp_username}:${mypassword} -T ${home_directory}/results/config/${study_name}_config.md5sum "${sftp_address}/${sftp_path}/${study_name}_${1}._config.md5sum"
 curl -k -u ${sftp_username}:${mypassword} -T ${home_directory}/results/${study_name}_${1}.${suff}.aes "${sftp_address}/${sftp_path}/${study_name}_${1}.${suff}.aes" 
 curl -k -u ${sftp_username}:${mypassword} -T ${home_directory}/results/${study_name}_${1}.md5sum "${sftp_address}/${sftp_path}/${study_name}_${1}.md5sum" <<EOF
 
