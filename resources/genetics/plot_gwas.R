@@ -59,24 +59,24 @@ main = function(){
       stop("Wrong chromosome column specified")
     }
 
-    if (length(grep('X', GWAS_result[,chr_column], fixed = T)) > 0){
+    if (length(grep('X', GWAS_result[,chr_column], ignore.case = TRUE)) > 0){
       print("X chr in the #CHROM column. It will be replaced by the 23.")
-      GWAS_result[grep('X', GWAS_result[,chr_column], fixed = T),chr_column] = as.numeric(23)
+      GWAS_result[grep('X', GWAS_result[,chr_column], ignore.case = TRUE),chr_column] = as.numeric(23)
     }
 
-    if (length(grep('Y', GWAS_result[,chr_column], fixed = T)) > 0){
+    if (length(grep('Y', GWAS_result[,chr_column], ignore.case = TRUE)) > 0){
       print("Y chr in the #CHROM column. It will be replaced by the 24.")
-      GWAS_result[grep('Y', GWAS_result[,chr_column], fixed = T),chr_column] = as.numeric(24)
+      GWAS_result[grep('Y', GWAS_result[,chr_column], ignore.case = TRUE),chr_column] = as.numeric(24)
     }
 
-    if (length(grep('MT', GWAS_result[,chr_column], fixed = T)) > 0){
+    if (length(grep('MT', GWAS_result[,chr_column], ignore.case = TRUE)) > 0){
       print("MT chr in the #CHROM column. It will be replaced by the 25.")
-      GWAS_result[grep('MT', GWAS_result[,chr_column], fixed = T),chr_column] = as.numeric(25)
+      GWAS_result[grep('MT', GWAS_result[,chr_column], ignore.case = TRUE),chr_column] = as.numeric(25)
     }
 
-    if (length(grep('PAR', GWAS_result[,chr_column], fixed = T) > 0)){
+    if (length(grep('PAR', GWAS_result[,chr_column], ignore.case = TRUE) > 0)){
       print("Either PAR1 chr or PAR2 in the #CHROM column. It will be removed from the manhatten plot.")
-      GWAS_result = GWAS_result[-grep('PAR', GWAS_result[,chr_column]),]
+      GWAS_result = GWAS_result[-grep('PAR', GWAS_result[,chr_column], ignore.case = TRUE),]
     }
 
     if(min(GWAS_result[,pval_column], na.rm=TRUE) < 0 | max(GWAS_result[,pval_column], na.rm=TRUE) > 1){
@@ -86,7 +86,10 @@ main = function(){
     if(any(GWAS_result[, pos_column] < 0)){
       stop("Negative values in position column")
     }
-
+    
+    GWAS_result[,chr_column] = as.numeric(GWAS_result[,chr_column])
+    GWAS_result[,pos_column] = as.numeric(GWAS_result[,pos_column])
+    GWAS_result[,pval_column] = as.numeric(GWAS_result[,pval_column])
     GWAS_result[,snp_column] = paste0(GWAS_result[,chr_column],":",GWAS_result[,pos_column],"_",GWAS_result[,5], "_",GWAS_result[,4])
 
     if(any(GWAS_result[, pval_column] == 0, na.rm=TRUE)){
