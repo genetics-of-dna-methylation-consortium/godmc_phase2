@@ -8,9 +8,16 @@ print_version
 
 mkdir -p ${hase_dir_in}
 mkdir -p ${hase_converting}
-cp ${bfile}.bim	${hase_dir_in}
+
+nX=grep ^X ${bfile}.bim | wc -l
+if [ "$nX" -gt "0" ]
+then
+${plink2} --bfile ${bfile} --make-bed --output-chr 26 --out ${hase_dir_in}
+else
+cp ${bfile}.bim ${hase_dir_in}
 cp ${bfile}.fam ${hase_dir_in}
 cp ${bfile}.bed ${hase_dir_in}
+fi
 
 python ${hase}/hase.py \
     -mode converting \
