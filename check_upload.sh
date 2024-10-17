@@ -1,6 +1,6 @@
 #!/bin/bash
 
-./resources/setup.sh "$@"
+source resources/setup.sh "$@"
 checkFirstArg () {
 	local e
 	for e in "${@:2}"; do [[ "$e" == "$1" ]] && return 0; done

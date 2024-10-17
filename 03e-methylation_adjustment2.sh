@@ -1,6 +1,6 @@
 #!/bin/bash
 
-./resources/setup.sh "$@"
+source resources/setup.sh "$@"
 batch_number=${1}
 exec &> >(tee ${section_03e_logfile}${batch_number})
 print_version

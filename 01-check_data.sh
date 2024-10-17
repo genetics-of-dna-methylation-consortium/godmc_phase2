@@ -1,6 +1,6 @@
 #!/bin/bash
 
-./resources/setup.sh "$@"
+source resources/setup.sh "$@"
 
 exec &> >(tee ${section_01_logfile})
 exec &> >(tee ${section_01_logfiles})

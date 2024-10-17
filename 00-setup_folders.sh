@@ -1,7 +1,7 @@
 #!/bin/bash
 
 chmod +x ./resources/setup.sh
-./resources/setup.sh "$@"
+source resources/setup.sh "$@"
 
 print_version
 

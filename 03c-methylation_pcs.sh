@@ -1,6 +1,6 @@
 #!/bin/bash
 
-./resources/setup.sh "$@"
+source resources/setup.sh "$@"
 exec &> >(tee ${section_03c_logfile})
 print_version
 
