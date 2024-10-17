@@ -1,6 +1,6 @@
 #!/bin/bash
 
-./resources/setup.sh
+./resources/setup.sh "$@"
 exec &> >(tee ${section_04a_logfile})
 print_version
 #Please read reasources/bin/hase/README_2.md

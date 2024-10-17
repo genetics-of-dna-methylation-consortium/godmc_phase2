@@ -1,6 +1,6 @@
 #!/bin/bash
 
-./resources/setup.sh
+./resources/setup.sh "$@"
 
 mkdir -p ${section_11_dir}/logs_c
 touch ${section_11c_logfile}

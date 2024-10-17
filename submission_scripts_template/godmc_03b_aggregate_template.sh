@@ -7,7 +7,7 @@
 #SBATCH --time=6:0:0
 
 cd ..
-./resources/setup.sh
+./resources/setup.sh "$@"
 bash ./resources/methylation/aggregate_adjustment1.sh
 
 count0=`ls ${transformed_methylation_adjusted}* | grep ${transformed_methylation_adjusted}.Female.chrX | wc -l`

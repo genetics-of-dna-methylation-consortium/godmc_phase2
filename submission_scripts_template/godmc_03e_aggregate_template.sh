@@ -7,6 +7,6 @@
 #SBATCH --time=6:0:0
 
 cd ..
-./resources/setup.sh
+./resources/setup.sh "$@"
 
 bash ./resources/methylation/aggregate_adjustment2.sh
