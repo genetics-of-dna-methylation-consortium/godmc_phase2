@@ -9,7 +9,7 @@ main <- function()
 {
 	arguments <- commandArgs(T)
 
-        filepath <- arguments[1]
+	filepath <- arguments[1]
 	methylationfile <- arguments[2]
 	grmfile <- arguments[3]
 	cov_file <- arguments[4]
@@ -18,12 +18,12 @@ main <- function()
 	nthreads <- as.numeric(arguments[7])
 	chunks <- as.numeric(arguments[8])
 	jid <- as.numeric(arguments[9])
-   	meth_array <- arguments[10]
+    	meth_array <- arguments[10]
 
-   	source(paste0(filepath, "/resources/methylation/polygenic_genable.R"))
-        source(paste0(filepath, "/resources/methylation/polylik_genable.R"))
+    	source(paste0(filepath, "/resources/methylation/polygenic_genable.R"))
+    	source(paste0(filepath, "/resources/methylation/polylik_genable.R"))
 	
-   	message("Reading methylation data...")
+    	message("Reading methylation data...")
 	load(methylationfile)
 
 	if(!is.na(jid))
@@ -44,13 +44,13 @@ main <- function()
 	covs <- covs[match(colnames(norm.beta), rownames(covs)), ]
 	stopifnot(all(rownames(covs) == colnames(norm.beta)))
 
-        ## process CpGs on sex chromosomes
-        annots <- meffil.get.features(meth_array)
+    ## process CpGs on sex chromosomes
+    	annots <- meffil.get.features(meth_array)
 	annots <- annots[!is.na(annots$chromosome),]
    	x_probes <- annots$name[annots$chromosome == "chrX"]
    	y_probes <- annots$name[annots$chromosome == "chrY"]
    	
-        beta.x.female <- norm.beta[rownames(norm.beta) %in% x_probes, colnames(norm.beta) %in% rownames(covs)[covs$Sex_factor=="F"]]
+    beta.x.female <- norm.beta[rownames(norm.beta) %in% x_probes, colnames(norm.beta) %in% rownames(covs)[covs$Sex_factor=="F"]]
    	beta.x.male <- norm.beta[rownames(norm.beta) %in% x_probes, colnames(norm.beta) %in% rownames(covs)[covs$Sex_factor=="M"]]
    	beta.y.male <- norm.beta[rownames(norm.beta) %in% y_probes, colnames(norm.beta) %in% rownames(covs)[covs$Sex_factor=="M"]]
 
@@ -87,11 +87,14 @@ main <- function()
             covs[,g[i]]<-as.factor(covs[,g[i]])
         }
     }
-
-	covs.female <- covs[covs$Sex_factor=="F",]
-	covs.male <- covs[covs$Sex_factor=="M",]
-
-        grm <- readGRM(grmfile)
+    
+    covs.female <- covs %>% dplyr::filter(Sex_factor=="F") %>% dplyr::select(-Sex_factor)
+    covs.male <- covs %>% dplyr::filter(Sex_factor=="M") %>% dplyr::select(-Sex_factor)
+    index<-sapply(covs,function(.col){all(is.na(.col) | .col[1L] == .col)})
+    index[is.na(index)] <- FALSE
+    covs <- covs[,!index]
+	
+    grm <- readGRM(grmfile)
 	kin <- makeGRMmatrix(grm)
 	kin <- kin[rownames(kin) %in% colnames(norm.beta), colnames(kin) %in% colnames(norm.beta)]
 
@@ -99,17 +102,7 @@ main <- function()
 
 	index <- match(rownames(kin), colnames(norm.beta))
 	norm.beta <- norm.beta[,index]
-	
-        index_female <- match(rownames(kin), colnames(beta.x.female))
-        beta.x.female <- beta.x.female[,index_female]
-
-        index_male_x <- match(rownames(kin), colnames(beta.x.male))
-        beta.x.male <- beta.x.male[,index_male_x]
-
-        index_male_y <- match(rownames(kin), colnames(beta.y.male))
-        beta.y.male <- beta.x.male[,index_male_y]
-
-        covs <- covs[match(colnames(norm.beta), rownames(covs)), ]
+	covs <- covs[match(colnames(norm.beta), rownames(covs)), ]
 	stopifnot(all(rownames(kin) == colnames(norm.beta)))
 	stopifnot(all(rownames(covs) == colnames(norm.beta)))
 	
@@ -126,35 +119,23 @@ main <- function()
 	rm(tmp, relmat)
 
     if(nrow(norm.beta)>0 & ncol(norm.beta)>0){
-    	index<-sapply(covs,function(.col){all(is.na(.col) | .col[1L] == .col)})
-    	index[is.na(index)] <- FALSE
-	covs <- covs[match(colnames(norm.beta), rownames(covs)),!index]
         run.adjust.cov(norm.beta, covs, nthreads, kin, eig, transform, paste0(out_file,".",jid,".RData"))
     }
 
     if(nrow(beta.x.female)>0 & ncol(beta.x.female)>0){
-        index_female <-sapply(covs.female,function(.col){all(is.na(.col) | .col[1L] == .col)})
-    	index_female[is.na(index_female)] <- FALSE
-	covs.female <- covs.female[match(colnames(beta.x.female), rownames(covs.female)),!index_female]
         run.adjust.cov(beta.x.female, covs.female, nthreads=1, kin, eig, transform, paste0(out_file, ".Female.chrX.", jid, ".RData"))
     }
     
     if(nrow(beta.x.male)>0 & ncol(beta.x.male)>0){
-    	index_male <-sapply(covs.male,function(.col){all(is.na(.col) | .col[1L] == .col)})
-    	index_male[is.na(index_male)] <- FALSE
-	covs.male <- covs.male[match(colnames(beta.x.male), rownames(covs.male)),!index_male]
         run.adjust.cov(beta.x.male, covs.male, nthreads=1, kin, eig, transform, paste0(out_file,".Male.chrX.", jid, ".RData"))
     }
 
     if(nrow(beta.y.male)>0 & ncol(beta.y.male)>0){
-    	index_male <-sapply(covs.male,function(.col){all(is.na(.col) | .col[1L] == .col)})
-    	index_male[is.na(index_male)] <- FALSE
-	covs.male <- covs.male[match(colnames(beta.x.male), rownames(covs.male)),!index_male]
         run.adjust.cov(beta.y.male, covs.male, nthreads=1, kin, eig, transform, paste0(out_file,".Male.chrY.", jid, ".RData"))
     }
 }
 
-run.adjust.cov <- function(betas, covs, nthreads, kin, eig, transform, out_file)
+run.adjust.cov <- function(betas, covs, nthreads, kin, eig, transform,  out_file)
 {
 	if(nrow(betas) > 0){
 	    betas.copy <- is.na(betas)
@@ -235,28 +216,22 @@ adjust.relatedness.fast.1 <- function(x, covs, kin, eig, transform, quiet=TRUE)
 	} else {
 		d <- data.frame(X=x, covs)
 	}
-    
-        form <- as.formula(paste0("X ~ ", paste(names(d)[-1], collapse=" + ")))
-	d$X <- residuals(lm(form, d, na.action = na.omit)
-
-        p_out <- try(polygenic(X, data=d, kinship.matrix=kin, eigenOfRel=eig, quiet=TRUE))
+	rownames(d) <- colnames(kin)
+	form <- as.formula(paste0("X ~ ", paste(names(d)[-1], collapse=" + ")))
+	d$X <- residuals(lm(form, d, na.action = na.exclude))
+	p_out <- try(polygenic(X, data=d, kinship.matrix=kin, eigenOfRel=eig, quiet=quiet))
 
 	iter <- 1
 	while(class(p_out) == "try-error" & iter < 5)
 	{
 		message("trying again...")
 		iter <- iter + 1
-		p_out <- try(polygenic(X, data=d, kinship.matrix=kin, eigenOfRel=eig, quiet=TRUE))
+		p_out <- try(polygenic(X, data=d, kinship.matrix=kin, eigenOfRel=eig, quiet=quiet))
 	}
 	if(class(p_out) == "try-error")
 	{
 		message("giving up, just using fixed effects model")
-		if(transform == "Yes"){
-                        a <- as.numeric(rntransform(d$X))
-                }
-		else{
-			a <- d$X
-		}
+		a <- d$X
 	} else {
 		if(transform == "Yes"){
 			a <- as.numeric(rntransform(p_out$grresidualY))
@@ -283,7 +258,7 @@ adjust.relatedness.serial <- function(B, covs, kin, eig, transform)
 
 get.index.list <- function(n, mc.cores)
 {
-B <	mc.cores <- ifelse(mc.cores < 1, 1, mc.cores)
+	mc.cores <- ifelse(mc.cores < 1, 1, mc.cores)
 	div <- floor(n / mc.cores)
 	rem <- n %% mc.cores
 	l1 <- lapply(1:div, function(x) (x-1) * mc.cores + 1:mc.cores)
@@ -301,7 +276,7 @@ rntransform <- function(x)
 	out
 }
 
-adjust.relatedness <- function(B, covs, kin, mc.cores=mc.cores, transform)
+adjust.relatedness <- function(B, covs, kin, eig, mc.cores=mc.cores, transform)
 {
 
 	l1 <- get.index.list(nrow(B), mc.cores)
