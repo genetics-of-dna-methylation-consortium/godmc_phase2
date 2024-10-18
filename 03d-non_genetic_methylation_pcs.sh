@@ -1,8 +1,9 @@
 #!/bin/bash
 
-./resources/setup.sh
-exec &> >(tee ${section_03d_logfile})
+source resources/setup.sh "$@"
+set -- $concatenated
 
+exec &> >(tee ${section_03d_logfile})
 print_version
 
 echo "Performing genetic analysis of methylation PCs of transformed data by MatrixEQTL"

@@ -1,6 +1,8 @@
 #!/bin/bash
 
-./resources/setup.sh
+source resources/setup.sh "$@"
+set -- $concatenated
+
 mkdir -p ${section_08_dir}
 mkdir -p ${section_08_dir}/logs_b/
 set -e

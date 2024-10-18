@@ -18,6 +18,15 @@ done
 # Shift option arguments, so $1 becomes the first positional argument
 shift $((OPTIND - 1))
 
+# Initialize an empty string
+concatenated=""
+
+# Loop through all arguments
+for arg in "$@"; do
+    concatenated="$concatenated$arg "
+done
+
+
 set -e
 echo "-----------------------------------------------"
 echo ""

@@ -2,31 +2,10 @@
 
 set -e -o pipefail
 
-# Initialize variables
-config_file="./config"
+source resources/setup.sh "$@"
+set -- $concatenated
 
-# Parse options using getopts
-while getopts "c:" opt; do
-    case $opt in
-        c) config_file=$OPTARG ;;
-        *) echo "Usage: $0 -c <config_file>"
-           exit 1 ;;
-    esac
-done
-
-# Shift option arguments, so $1 becomes the first positional argument
-shift $((OPTIND - 1))
-
-set -e
-echo "-----------------------------------------------"
-echo ""
-echo "Using config located at:" ${config_file}
-echo ""
-echo "-----------------------------------------------"
-	
-source ${config_file}
 mkdir -p ${section_09_dir}/logs
-
 exec &> >(tee ${section_09_logfile})
 print_version
 

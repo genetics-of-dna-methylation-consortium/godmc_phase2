@@ -1,5 +1,8 @@
 #!/bin/bash -l
-./resources/setup.sh
+
+source resources/setup.sh "$@"
+set -- $concatenated
+
 exec &> >(tee ${section_07b_logfile}_$1_$2_$3)
 print_version
 
