@@ -35,7 +35,7 @@ main <- function()
 	} 
 
 	# Remove all IDs that have any NAs in the covariate file
-	covs <- read.table(cov_file, he=T,stringsAsFactors=F,colClasse=c("Sex_factor"="character"))
+	covs <- read.table(cov_file, he=T,stringsAsFactors=F,colClasses=c("Sex_factor"="character"))
 	covs <- covs[,!colnames(covs)=="Treg"]
 
 	rownames(covs) <- covs$IID
