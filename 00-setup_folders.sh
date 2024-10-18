@@ -1,30 +1,8 @@
 #!/bin/bash
 
-set -e
+chmod +x ./resources/setup.sh
+./resources/setup.sh
 
-# Initialize variables
-config_file="./config"
-
-# Parse options using getopts
-while getopts "c:" opt; do
-    case $opt in
-        c) config_file=$OPTARG ;;
-        *) echo "Usage: $0 -c <config_file>"
-           exit 1 ;;
-    esac
-done
-
-# Shift option arguments, so $1 becomes the first positional argument
-shift $((OPTIND - 1))
-
-set -e
-echo "-----------------------------------------------"
-echo ""
-echo "Using config located at:" ${config_file}
-echo ""
-echo "-----------------------------------------------"
-	
-source ${config_file}
 print_version
 
 mkdir -p ${home_directory}/processed_data/ids

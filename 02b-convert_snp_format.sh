@@ -1,30 +1,6 @@
 #!/bin/bash
 
-set -e
-
-# Initialize variables
-config_file="./config"
-
-# Parse options using getopts
-while getopts "c:" opt; do
-    case $opt in
-        c) config_file=$OPTARG ;;
-        *) echo "Usage: $0 -c <config_file>"
-           exit 1 ;;
-    esac
-done
-
-# Shift option arguments, so $1 becomes the first positional argument
-shift $((OPTIND - 1))
-
-set -e
-echo "-----------------------------------------------"
-echo ""
-echo "Using config located at:" ${config_file}
-echo ""
-echo "-----------------------------------------------"
-	
-source ${config_file}
+./resources/setup.sh
 exec &> >(tee ${section_02b_logfile})
 print_version
 
@@ -70,7 +46,13 @@ function make_tab_format {
 # Generate plink.raw / plink.frq #freq files are required to determine effect allele
 # Chromosome X is coded as 0/2 for males
 echo "Converting plink files to transposed raw format"
-${plink2} --bfile ${bfile} --recode A-transpose --out ${bfile} --freq
+${plink2} \
+	--bfile ${bfile} \
+	--allow-extra-chr --chr-set 23 \
+	--recode A-transpose \
+	--out ${bfile} \
+	--freq \
+	--output-chr 26
 
 # How big will each chunk be
 nrow=`wc -l ${bfile}.bim | awk '{ print $1 }'`
