@@ -1,6 +1,7 @@
 #!/bin/bash
 
 source resources/setup.sh "$@"
+set -- $concatenated
 
 exec &> >(tee ${section_01_logfile})
 exec &> >(tee ${section_01_logfiles})

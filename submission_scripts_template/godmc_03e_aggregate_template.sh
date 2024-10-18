@@ -8,5 +8,6 @@
 
 cd ..
 source resources/setup.sh "$@"
+set -- $concatenated
 
 bash ./resources/methylation/aggregate_adjustment2.sh

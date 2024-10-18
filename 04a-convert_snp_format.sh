@@ -1,6 +1,8 @@
 #!/bin/bash
 
 source resources/setup.sh "$@"
+set -- $concatenated
+
 exec &> >(tee ${section_04a_logfile})
 print_version
 #Please read reasources/bin/hase/README_2.md

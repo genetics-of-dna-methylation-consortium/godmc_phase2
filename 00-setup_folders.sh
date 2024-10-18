@@ -2,6 +2,7 @@
 
 chmod +x ./resources/setup.sh
 source resources/setup.sh "$@"
+set -- $concatenated
 
 print_version
 

@@ -1,6 +1,8 @@
 #!/bin/bash
 
 source resources/setup.sh "$@"
+set -- $concatenated
+
 mkdir -p ${section_10_dir}/logs_a
 touch ${section_10a_logfile}
 exec &> >(tee ${section_10a_logfile})

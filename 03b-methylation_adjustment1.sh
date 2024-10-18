@@ -1,6 +1,7 @@
 #!/bin/bash
 
 source resources/setup.sh "$@"
+set -- $concatenated
 batch_number=${1}
 exec &> >(tee ${section_03b_logfile}${batch_number})
 print_version
