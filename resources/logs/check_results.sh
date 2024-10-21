@@ -178,14 +178,14 @@ check_results_03 () {
 		exit 1
 	fi
 
-	if [ -f "${section_03_dir}/positive_control_transformed_${positive_control_cpg}_qqplot.png" ]; then
+	if [ -f "${section_03_dir}/positive_control_transformed_${positive_control_cpg}_qqplot.jpeg" ]; then
 		echo "transformed mQTL analysis positive control QQ plot present"
 	else
 		echo "transformed mQTL analysis positive control QQ plot file not present"
 		exit 1
 	fi
 
-		if [ -f "${section_03_dir}/positive_control_transformed_${positive_control_cpg}_nocisChr_qqplot.png" ]; then
+		if [ -f "${section_03_dir}/positive_control_transformed_${positive_control_cpg}_nocisChr_qqplot.jpeg" ]; then
 		echo "transformed mQTL analysis positive control QQ plot present"
 	else
 		echo "transformed mQTL analysis positive control QQ plot file not present"
