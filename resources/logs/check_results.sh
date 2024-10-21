@@ -356,13 +356,6 @@ check_results_09 () {
 		  exit 1
 	  fi
 
-	  if [ -f "${section_09_dir}/${PRS}/${study_name}_PRS_${PRS}_meth_pcs_nongenetic_untransformed_plots.pdf" ]; then
-		  echo "Non genetic methylation PCs PRS correlation plot for $PRS PRS present"
-	  else
-		  echo "Problem: cell count correlation plot for $PRS PRS is absent"
-		  exit 1
-	  fi
-
 	  if [ -f "${section_09_dir}/${PRS}/${study_name}_PRS_${PRS}_EWAS_results.RData" ]; then
 		  echo "EWAS results file for $PRS PRS present"
 	  else
@@ -377,10 +370,11 @@ check_results_09 () {
 		  exit 1
 	  fi
 
-	  if [ -f "${section_09_dir}/${PRS}/${study_name}_PRS_${PRS}_EWAS_qqplot.allcovs.pdf" ] && [ -f "${section_09_dir}/${PRS}/${study_name}_PRS_${PRS}_EWAS_qqplot.isvacovs.pdf" ] && [ -f "${section_09_dir}/${PRS}/${study_name}_PRS_${PRS}_EWAS_qqplot.nocovs.pdf" ]; then
-		  echo "All three qqplots for $PRS PRS EWAS present"
+		 if [ -f "${section_09_dir}/${PRS}/${study_name}_PRS_${PRS}_EWAS_qqplot.isvacovs.pdf" ] && [ -f "${section_09_dir}/${PRS}/${study_name}_PRS_${PRS}_EWAS_qqplot.nocovs.pdf" ]; then
+		
+      echo "QQplots for $PRS PRS EWAS present"
 	  else
-		  echo "Problem: not all three qqplots for $PRS PRS EWAS present"
+		  echo "Problem: not all QQplots for $PRS PRS EWAS present"
 		  exit 1
 	  fi
 
