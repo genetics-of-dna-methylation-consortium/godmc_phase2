@@ -1,7 +1,8 @@
 #!/bin/bash
 
 chmod +x ./resources/setup.sh
-./resources/setup.sh
+source resources/setup.sh "$@"
+set -- $concatenated
 
 print_version
 
