@@ -70,40 +70,51 @@ dev.off()
 
 
 #generate correlation plots for non genetic methylation PCs
-message("")
-message("Correlation plots for PRS and non genetic methylation PCs generated")
-message("")
 
 df_pc <- fread(paste(pc_file,".txt",sep=""))
-df_merge_pc <- inner_join(df_PRS, df_pc, by = "IID")
 
-list_pc <- list()
-for(pc in names(df_pc)[-1]){
+if(ncol(df_pc) == 1){
+  message("")
+  message("No correlation plots generated: no non genetic methylation PCs available")
+  message("")
+}
 
-  x <- df_merge_pc$SCORE
-  y <- df_merge_pc[[pc]]
-  cor <- cor(x,y)
+if(ncol(df_pc) > 1){
+  message("")
+  message("Correlation plots for PRS and non genetic methylation PCs being generated")
+  message("")
 
-  p <- ggplot(df_merge_pc, aes(x=SCORE, y=.data[[pc]])) +
-    geom_point()+
-    geom_smooth(method=lm) +
-    ylim(min(y),max(y)+(max(y)-min(y))/10)
+  df_merge_pc <- inner_join(df_PRS, df_pc, by = "IID")
 
-  p <-annotate_figure(p,
-    fig.lab = paste("r =",round(cor,2)),
-    fig.lab.pos = "top.right")
+  list_pc <- list()
+  for(pc in names(df_pc)[-1]){
+
+    x <- df_merge_pc$SCORE
+    y <- df_merge_pc[[pc]]
+    cor <- cor(x,y)
+
+    p <- ggplot(df_merge_pc, aes(x=SCORE, y=.data[[pc]])) +
+      geom_point()+
+      geom_smooth(method=lm) +
+      ylim(min(y),max(y)+(max(y)-min(y))/10)
+
+    p <-annotate_figure(p,
+      fig.lab = paste("r =",round(cor,2)),
+      fig.lab.pos = "top.right")
 
   list_pc[[pc]] <- p
 
+  }
+
+  #save correlation plots for PCs
+  ncol <- 3
+  nrow <- ceiling(length(names(df_pc)[-1])/ncol)
+
+  pdf(file_PRS_pheno_pc_plots)
+  print(ggarrange(plotlist=list_pc, ncol = ncol, nrow = nrow))
+  dev.off()
+
 }
-
-#save correlation plots for PCs
-ncol <- 3
-nrow <- ceiling(length(names(df_pc)[-1])/ncol)
-
-pdf(file_PRS_pheno_pc_plots)
-print(ggarrange(plotlist=list_pc, ncol = ncol, nrow = nrow))
-dev.off()
 
 #check whether pheno file available
 if(pheno_file == "NULL"){q()}

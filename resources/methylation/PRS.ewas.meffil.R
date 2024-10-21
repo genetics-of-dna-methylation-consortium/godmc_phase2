@@ -6,12 +6,12 @@ suppressMessages(library(meffil))
 main <- function()
 {
 
-	arguments <- commandArgs(T)
+  arguments <- commandArgs(T)
 
-	beta_file <- arguments[1]
-	phen_name <- arguments[2]
-	covs_file <- arguments[3]
-	pc_file <- arguments[4]
+  beta_file <- arguments[1]
+  phen_name <- arguments[2]
+  covs_file <- arguments[3]
+  pc_file <- arguments[4]
   home_dir <- arguments[5]
   res_dir <- arguments[6] 
   study_name <- arguments[7]
@@ -95,13 +95,21 @@ main <- function()
   nc<-ncol(norm.beta)
 
   message("\nPerforming EWAS for ", phen_name, " on ",nc," individuals and ",nr," CpGs")    
-  ewas.ret <- meffil.ewas(norm.beta, variable=phen[,1], covariates=covs,winsorize.pct = NA, most.variable = min(nrow(norm.beta), 20000), sva=F, isva=T)       
+
+  if(ncol(covs) > 0){ 
+    ewas.ret <- meffil.ewas(norm.beta, variable=phen[,1], covariates=covs,winsorize.pct = NA, most.variable = min(nrow(norm.beta), 20000), sva=F, isva=T)       
+  }
+  
+  if(ncol(covs) == 0){ 
+    ewas.ret <- meffil.ewas(norm.beta, variable=phen[,1], winsorize.pct = NA, most.variable = min(nrow(norm.beta), 20000), sva=F, isva=T)       
+  }
  
   res<-as.data.frame(ewas.ret$p.value)
   
 	message("Generating Q-Q plot")
   qqplot_pval(res$none, file=paste(qqplot_file,"nocovs.pdf",sep="."))
-  qqplot_pval(res$all, file=paste(qqplot_file,"allcovs.pdf",sep="."))
+  if(ncol(covs) > 0){ qqplot_pval(res$all, file=paste(qqplot_file,"allcovs.pdf",sep=".")) }
+  if(ncol(covs) == 0){ message("no QQ plot provided with covariate adjustment: no covariates provided") }  
   qqplot_pval(res$isva, file=paste(qqplot_file,"isvacovs.pdf",sep="."))
 
   main_model <- "none" #model with no additional covariates for the EWAS report
@@ -113,9 +121,11 @@ main <- function()
   #remove items not needed and save
   ewas.ret$samples <- NULL
   ewas.ret$variable <- NULL
-  ewas.ret$covariates <- NULL
-  ewas.ret$analyses$none$design <- NULL
-  ewas.ret$analyses$all$design <- NULL
+  if(ncol(covs) > 0){
+    ewas.ret$covariates <- NULL
+    ewas.ret$analyses$all$design <- NULL
+  }  
+  ewas.ret$analyses$none$design <- NULL  
   ewas.ret$analyses$isva$design <- NULL
   ewas.ret$sva.ret$isv <- NULL
     
