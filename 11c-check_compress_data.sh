@@ -76,7 +76,7 @@ check_results_10a () {
 		exit 1
 	fi
 
-	QQplot=$(find ${section_10_dir} -type f -name "*_qqplot.png" | wc -l)
+	QQplot=$(find ${section_10_dir} -type f -name "*_qqplot.jpg" | wc -l)
 	if [ $QQplot -gt 2 ]; then
 		echo "QQ plots of age accelerations are present"
 	else
