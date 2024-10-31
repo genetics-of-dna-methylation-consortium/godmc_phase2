@@ -76,7 +76,7 @@ check_results_10a () {
 		exit 1
 	fi
 
-	QQplot=$(find ${section_10_dir} -type f -name "*_qqplot.jpg" | wc -l)
+	QQplot=$(find ${section_10_dir} -type f -name "*_qqplot.jpeg" | wc -l)
 	if [ $QQplot -gt 2 ]; then
 		echo "QQ plots of age accelerations are present"
 	else
@@ -114,7 +114,7 @@ check_results_11a () {
 	fi
 	
 	
-	if [ -f "${section_11_dir}/gwas_smoking_qqplot.png" ]; then
+	if [ -f "${section_11_dir}/gwas_smoking_qqplot.jpeg" ]; then
 		echo "QQ plot of smoking is present"
 	else
 		echo "Problem: QQ plot of smoking is absent"
