@@ -154,12 +154,19 @@ age.plot = function(AgePredTable, PhenVal, AgeValid, ClockNames, SD){
       pAge = AgePredTable[,which(colnames(AgePredTable)==cname)]
       message("No correlation between predicted ", cname, " and actual age.")
     }
+
+    if ( length(pAge) > 5000 ){
+		  shapiroscore = signif(as.numeric(shapiro.test(sample(pAge, 3000))[2]),2)
+    }else{
+      shapiroscore = signif(as.numeric(shapiro.test(pAge)[2]),2)
+    }
+	
     
     hist(pAge, xlab="", main=paste(cname,"\n(N=", length(which(!is.na(pAge))),"; Mean=", round(mean(pAge, na.rm=T),3),")",sep=""), cex.main=1)
     abline(v=mean(pAge, na.rm=T)-SD*sd(pAge, na.rm=T), lty=2)
     abline(v=mean(pAge,na.rm=T)+SD*sd(pAge, na.rm=T), lty=2)
     
-    qqnorm(pAge, main=paste(cname, "\n(N=", length(which(!is.na(pAge))),"; shapiroP=",signif(as.numeric(shapiro.test(pAge)[2]),2),")",sep=""),cex.main=1)
+    qqnorm(pAge, main=paste(cname, "\n(N=", length(which(!is.na(pAge))),"; shapiroP=",shapiroscore,")",sep=""),cex.main=1)
     qqline(pAge)
 }
 
