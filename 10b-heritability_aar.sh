@@ -18,7 +18,7 @@ for clock_name in $clock_names
 do
   echo "Runing SNP heritability for " $clock_name $i
   ${gcta} \
-          --grm ${grmfile_all}  \
+          --grm ${grmfile_all}_gaws10  \
           --reml \
           --mpheno $i \
           --pheno age_acc.plink \
