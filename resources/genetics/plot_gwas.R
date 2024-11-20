@@ -79,7 +79,7 @@ main = function(){
       GWAS_result = GWAS_result[-grep('PAR', GWAS_result[,chr_column], ignore.case = TRUE),]
     }
 
-    if(min(GWAS_result[,pval_column], na.rm=TRUE) < 0 | max(GWAS_result[,pval_column], na.rm=TRUE) > 1){
+    if( as.numeric(min(GWAS_result[,pval_column], na.rm=TRUE)) < 0 | as.numeric(max(GWAS_result[,pval_column], na.rm=TRUE)) > 1){
       stop("Wrong column specified for p-values")
     }
 
