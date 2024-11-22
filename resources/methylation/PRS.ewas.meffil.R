@@ -21,11 +21,18 @@ main <- function()
   qqplot_file <- paste(res_dir,"/",study_name,"_PRS_",phen_name,"_EWAS_qqplot",sep="")
   report_file <- paste(res_dir,"/",study_name,"_PRS_",phen_name,"_EWAS",sep="")
 
-	message("Loading non genetic methylation PCs")
-  pcs<-read.table(paste(pc_file,".txt",sep=""),sep=" ",header=T)
-  rownames(pcs) <- pcs$IID
+  #logic variables of whether we have pc and cov files
+  l_pc <- ifelse(file.exists(paste(pc_file,".txt",sep="")),TRUE,FALSE)
+  l_cov <- ifelse(covs_file != "NULL",TRUE,FALSE)
 
-  if(covs_file != "NULL") 
+  if(l_pc)
+  {
+	  message("Loading non genetic methylation PCs")
+    pcs<-read.table(paste(pc_file,".txt",sep=""),sep=" ",header=T)
+    rownames(pcs) <- pcs$IID  
+  }
+  
+  if(l_cov) 
   {
     msg <- paste("Loading covariates for", phen_name)
  	  message(msg)
@@ -49,23 +56,24 @@ main <- function()
 
     rownames(covs) <- covs$IID
 	
+  }
+    
+  if(l_cov & l_pc) 
+  {
     m<-match(covs$IID,pcs$IID)
     covs<-data.frame(covs,pcs[m,-1])
   }
-    
-  if(covs_file == "NULL") 
+  
+  if(!l_cov & l_pc) {covs <- pcs}
+
+	if(l_cov | l_pc)
   {
-    msg <- paste("No covariates file present for", phen_name)
-    message(msg)
-
-    covs <- pcs
-  }
-
-	if(nrow(covs) < 10)
-	{
+    if(nrow(covs) < 10)
+    {	  
 		message("There are fewer than 10 individuals remaining. Stopping the analysis.")
 		q()
-	}
+	  }
+  }
 
 	message("Loading methylation data")
  	load(beta_file)
@@ -89,18 +97,19 @@ main <- function()
 	phen <- phen[match(colnames(norm.beta), rownames(phen)), , drop=FALSE]
 	stopifnot(all(rownames(phen) == colnames(norm.beta)))
     
-  covs <- covs[match(colnames(norm.beta), rownames(covs)), , drop=FALSE]
-  covs <- subset(covs, , select=colnames(covs)[!colnames(covs)%in%c("IID")])
   nr<-nrow(norm.beta)
   nc<-ncol(norm.beta)
 
   message("\nPerforming EWAS for ", phen_name, " on ",nc," individuals and ",nr," CpGs")    
 
-  if(ncol(covs) > 0){ 
+  if(l_cov | l_pc){ 
+    covs <- covs[match(colnames(norm.beta), rownames(covs)), , drop=FALSE]
+    covs <- subset(covs, , select=colnames(covs)[!colnames(covs)%in%c("IID")])
+
     ewas.ret <- meffil.ewas(norm.beta, variable=phen[,1], covariates=covs,winsorize.pct = NA, most.variable = min(nrow(norm.beta), 20000), sva=F, isva=T)       
   }
   
-  if(ncol(covs) == 0){ 
+  if(!l_cov & !l_pc){ 
     ewas.ret <- meffil.ewas(norm.beta, variable=phen[,1], winsorize.pct = NA, most.variable = min(nrow(norm.beta), 20000), sva=F, isva=T)       
   }
  
@@ -108,8 +117,8 @@ main <- function()
   
 	message("Generating Q-Q plot")
   qqplot_pval(res$none, file=paste(qqplot_file,"nocovs.pdf",sep="."))
-  if(ncol(covs) > 0){ qqplot_pval(res$all, file=paste(qqplot_file,"allcovs.pdf",sep=".")) }
-  if(ncol(covs) == 0){ message("no QQ plot provided with covariate adjustment: no covariates provided") }  
+  if(l_cov | l_pc){ qqplot_pval(res$all, file=paste(qqplot_file,"allcovs.pdf",sep=".")) }
+  if(!l_cov & !l_pc){ message("no QQ plot provided with covariate adjustment: no covariates provided") }  
   qqplot_pval(res$isva, file=paste(qqplot_file,"isvacovs.pdf",sep="."))
 
   main_model <- "none" #model with no additional covariates for the EWAS report
@@ -121,7 +130,7 @@ main <- function()
   #remove items not needed and save
   ewas.ret$samples <- NULL
   ewas.ret$variable <- NULL
-  if(ncol(covs) > 0){
+  if(l_cov | l_pc){
     ewas.ret$covariates <- NULL
     ewas.ret$analyses$all$design <- NULL
   }  
