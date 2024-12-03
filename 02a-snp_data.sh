@@ -42,7 +42,9 @@ then
 			--mind ${snp_imiss} \
 			--make-bed \
 			--out ${bfile} \
-			--allow-extra-chr --chr-set 23 \
+			--allow-extra-chr \
+			--human \
+			--output-chr 26 \
 			--chr 1-23 \
 			--threads ${nthreads}
 else
@@ -56,7 +58,9 @@ else
 		--mind ${snp_imiss} \
 		--make-bed \
 		--out ${bfile} \
-		--allow-extra-chr --chr-set 23 \
+		--allow-extra-chr \
+		--human \
+		--output-chr 26 \
 		--chr 1-23 \
 		--threads ${nthreads}
 fi
