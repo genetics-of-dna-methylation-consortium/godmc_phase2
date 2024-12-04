@@ -33,12 +33,11 @@ ${gcta} \
   		--fastGWA-mlm  \
   		--pheno ${smoking_pred}.smok.plink  \
   		--autosome \
-      --h2-limit 100 \
+      	--h2-limit 100 \
   		--out ${section_11_dir}/gwas_smoking
 
 
 # Step 4: Visulization ###################################
-
 echo "Making plots"
 rm -f ${section_11_dir}/GWAlist.txt
 find ${section_11_dir} -type f -name "*.fastGWA" > ${section_11_dir}/GWAlist.txt

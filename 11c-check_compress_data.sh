@@ -171,8 +171,9 @@ done
 echo ""
 echo "Compressing the outputs from 03a, 10 and 11"
 cd ${home_directory}
-tar -zcf results/AgeSmokGWAS_${study_name}.tgz results/03/logs_a results/03/age_prediction.pdf results/03/age_prediction_correlation.png results/03/age_prediction_stats.csv results/03/age_prediction_stats_corrsd.csv results/03/smoking_prediction.pdf results/10 results/11 
-					
+
+tar -zcf results/AgeSmokGWAS_${study_name}.tgz results/03/logs_a/log.txt results/03/age_prediction.pdf results/03/age_prediction_correlation.png results/03/age_prediction_stats.csv results/03/age_prediction_stats_corrsd.csv results/03/smoking_prediction.pdf results/10 results/11 
+
 echo "Successfully created results archives ${home_directory}/results/11/AgeSmokGWAS_${study_name}.tgz"
 
 
