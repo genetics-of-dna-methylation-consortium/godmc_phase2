@@ -50,7 +50,8 @@ function make_tab_format {
 echo "Converting plink files to transposed raw format"
 ${plink2} \
 	--bfile ${bfile} \
-	--allow-extra-chr --chr-set 23 \
+	--allow-extra-chr \
+	--human \
 	--recode A-transpose \
 	--out ${bfile} \
 	--freq \

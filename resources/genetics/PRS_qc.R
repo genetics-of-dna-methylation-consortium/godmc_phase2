@@ -70,19 +70,18 @@ dev.off()
 
 
 #generate correlation plots for non genetic methylation PCs
-
-df_pc <- fread(paste(pc_file,".txt",sep=""))
-
-if(ncol(df_pc) == 1){
+if(!file.exists(paste(pc_file,".txt",sep=""))){
   message("")
   message("No correlation plots generated: no non genetic methylation PCs available")
   message("")
 }
 
-if(ncol(df_pc) > 1){
+if(file.exists(paste(pc_file,".txt",sep=""))){
   message("")
   message("Correlation plots for PRS and non genetic methylation PCs being generated")
   message("")
+
+  df_pc <- fread(paste(pc_file,".txt",sep=""))
 
   df_merge_pc <- inner_join(df_PRS, df_pc, by = "IID")
 
