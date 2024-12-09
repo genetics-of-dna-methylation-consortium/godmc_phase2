@@ -40,6 +40,8 @@ n_pcs <- min(n_pcs, n_pc_0.1)
 
 message(n_pcs, " will be used.")
 pc <- pc$x[,1:n_pcs]
+pc <- as.matrix(pc)
+if (ncol = 1){ colnames(pc) <- "PC1" } 
 
 if(phen_file != "NULL")
 {
