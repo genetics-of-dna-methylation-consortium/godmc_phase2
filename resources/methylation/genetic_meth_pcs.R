@@ -41,8 +41,10 @@ main <- function()
 
 	pc <- pc[,!colnames(pc) %in% l, drop=FALSE]
 	message("Keeping ", ncol(pc), " non-genetic PCs.")
-	pc <- data.frame(IID=rownames(pc), pc)
-	write.table(pc, file=paste0(out_file, ".txt"), row=F, col=T, qu=F)
+	if (ncol(pc) != 0){
+		pc <- data.frame(IID=rownames(pc), pc)
+		write.table(pc, file=paste0(out_file, ".txt"), row=F, col=T, qu=F)
+	}
 }
 
 run_all_chunks_serial <- function(dn, geno_file, gene, threshold, slicesize)
