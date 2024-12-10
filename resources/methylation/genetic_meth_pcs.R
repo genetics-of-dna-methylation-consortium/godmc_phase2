@@ -37,14 +37,14 @@ main <- function()
 			"Please check that 03b is adjusting for these factors\n",
 			"You could also try increasing the 'n_meth_pcs and/or meth_pc_cutoff' value in the config file.\n"
 		)
+		q()
 	}
 
 	pc <- pc[,!colnames(pc) %in% l, drop=FALSE]
-	message("Keeping ", ncol(pc), " non-genetic PCs.")
-	if (ncol(pc) != 0){
-		pc <- data.frame(IID=rownames(pc), pc)
-		write.table(pc, file=paste0(out_file, ".txt"), row=F, col=T, qu=F)
-	}
+	
+	pc <- data.frame(IID=rownames(pc), pc)
+	write.table(pc, file=paste0(out_file, ".txt"), row=F, col=T, qu=F)
+
 }
 
 run_all_chunks_serial <- function(dn, geno_file, gene, threshold, slicesize)
