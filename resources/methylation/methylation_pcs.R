@@ -46,7 +46,7 @@ if(n_pcs > 0 ){
 	q()
 }
 
-if (ncol = 1){colnames(pc) <- "PC1"} 
+if (ncol == 1){colnames(pc) <- "PC1"} 
 
 if(phen_file != "NULL")
 {
