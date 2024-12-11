@@ -42,7 +42,7 @@ if(n_pcs > 0 ){
 	pc <- pc$x[,1:n_pcs]
 	pc <- as.matrix(pc)
 }else{
-	message(“no methylation PC will be used”)
+	message("no methylation PC will be used")
 	q()
 }
 
