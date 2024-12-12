@@ -38,8 +38,15 @@ n_pc_0.1 <- sum(pc_explain_var > 0.01)
 message(n_pc_0.1, " PCs could explain >0.01 variance individually")
 n_pcs <- min(n_pcs, n_pc_0.1)
 
-message(n_pcs, " will be used.")
-pc <- pc$x[,1:n_pcs]
+if(n_pcs > 0 ){
+	pc <- pc$x[,1:n_pcs]
+	pc <- as.matrix(pc)
+}else{
+	message("no methylation PC will be used")
+	q()
+}
+
+if (ncol(pc) == 1){colnames(pc) <- "PC1"} 
 
 if(phen_file != "NULL")
 {
