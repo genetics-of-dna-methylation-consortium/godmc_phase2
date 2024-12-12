@@ -71,7 +71,7 @@ nthreads="16"
 meth_chunks="100"
 
 # Number of chunks to split genetic data during mQTL and cellcount GWAS
-# See 03d, 06a, 06b and 07e
+# See 06a, 06b and 07e
 genetic_chunks="100"
 
 # Number of chunks to split genetic data during inversion calling
