@@ -153,46 +153,9 @@ check_results_03a () {
 
 }
 
-check_results_03d () {
-
-	check_results_03a
-
-	if [ -f "${home_directory}/processed_data/methylation_data/meth_pcs_transformed.txt" ]; then
-		echo "meth_pcs_transformed.txt present"
-	else
-		echo "meth_pcs_transformed.txt absent. Please re-run 3c."
-		exit 1
-	fi
- 	
-	if [ -f "${home_directory}/processed_data/methylation_data/meth_pcs_untransformed.txt" ]; then
-		echo "meth_pcs_nongenetic_untransformed.txt present"
-	else
-		echo "methylation_data meth_pcs_untransformed.txt absent. Please re-run 3c."
-		exit 1
-	fi
-
-
-	if [ -f "${home_directory}/processed_data/methylation_data/meth_pcs_nongenetic_transformed.txt" ]; then
-		echo "meth_pcs_nongenetic_transformed.txt present"
-	else
-		echo "meth_pcs_nongenetic_transformed.txt absent. Please re-run 3d."
-		exit 1
-	fi
- 	
-	if [ -f "${home_directory}/processed_data/methylation_data/meth_pcs_nongenetic_untransformed.txt" ]; then
-		echo "meth_pcs_nongenetic_untransformed.txt present"
-	else
-		echo "meth_pcs_nongenetic_untransformed.txt absent. Please re-run 3d."
-		exit 1
-	fi
-	
-}
-
 check_results_03 () {
 
 	check_results_03a
-
-  	check_results_03d
 
  	if [ -f "${section_03_dir}/positive_control_transformed_${positive_control_cpg}.PHENO1.glm.linear.gz" ]; then
 		echo "transformed mQTL analysis positive control results present"
