@@ -47,32 +47,36 @@ if(length(g)!=(phenoPRS2-1))
 	warning("ERROR: ", msg)
 }
 
-
-for (i in 1:length(g1))
-{
-	if(length(table(na.omit(phenoPRS[,g1[i]])))==(phenoPRS1))
-	{
-		msg <- paste0(g1[i], " is specified as a factor but has the same number of levels as individuals")
-		errorlist <- c(errorlist, msg)
-		warning("ERROR: ", msg)
-	}
+if(length(g1) > 0){
+  for (i in 1:length(g1))
+  {
+	  if(length(table(na.omit(phenoPRS[,g1[i]])))==(phenoPRS1))
+	  {
+		  msg <- paste0(g1[i], " is specified as a factor but has the same number of levels as individuals")
+		  errorlist <- c(errorlist, msg)
+		  warning("ERROR: ", msg)
+	  }
+  }
 }
-
 
 phenoPRS <- subset(phenoPRS, IID %in% commonids_mgc)
 
 cohort_summary <- list()
 
-for (var in names(phenoPRS[g1]))
-{
-  cohort_summary[[var]] <- table(phenoPRS[[var]])
+if(length(g1) > 0){
+  for (var in names(phenoPRS[g1]))
+  {
+    cohort_summary[[var]] <- table(phenoPRS[[var]])
+  }
 }
 
-for (var in names(phenoPRS[g2]))
-{
-  sum <- as.list(summary(phenoPRS[[var]]))
-  sum$sd <- sd(phenoPRS[[var]])
-  cohort_summary[[var]] <- as.data.frame(sum)
+if(length(g2) > 0){
+  for (var in names(phenoPRS[g2]))
+  {
+    sum <- as.list(summary(phenoPRS[[var]]))
+    sum$sd <- sd(phenoPRS[[var]])
+    cohort_summary[[var]] <- as.data.frame(sum)
+  }
 }
 
 save(cohort_summary, file=cohort_descriptives_file)
