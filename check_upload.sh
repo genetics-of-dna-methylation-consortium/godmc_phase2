@@ -69,9 +69,15 @@ bye
 
 	echo ""
 	echo "Tarring results, log and config files"
-
 	mkdir -p ${home_directory}/results/config/
-	tar czf ${home_directory}/results/config/${study_name}_config.tar -C ${scripts_directory}/ ./${config_file} ./resources/parameters 
+	if [[ "$config_file" = /* ]]; then
+		cp ${config_file} ${scripts_directory}/
+		config_basename=$(basename "$config_file")
+		tar czf ${home_directory}/results/config/${study_name}_config.tar -C ${scripts_directory}/ ./${config_basename} ./resources/parameters
+		rm ${scripts_directory}/${config_basename}
+	else
+		tar czf ${home_directory}/results/config/${study_name}_config.tar -C ${scripts_directory}/ ./${config_file} ./resources/parameters 
+	fi	
     echo "Successfully created config archive"	
 
     echo "Generating md5 checksum"
