@@ -153,9 +153,20 @@ check_results_03a () {
 
 }
 
+check_results_03d () {
+	if grep -i -q "success" ${section_03d_logfile}; then
+	        echo "03d-non_genetic_methylation_pcs.sh completed successfully."
+	    else
+	        echo "Problem: 03d-non_genetic_methylation_pcs.sh did not complete successfully"
+	        exit 1
+	fi
+}
+
 check_results_03 () {
 
 	check_results_03a
+
+ 	check_results_03d
 
  	if [ -f "${section_03_dir}/positive_control_transformed_${positive_control_cpg}.PHENO1.glm.linear.gz" ]; then
 		echo "transformed mQTL analysis positive control results present"
