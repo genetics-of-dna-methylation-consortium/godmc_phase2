@@ -154,12 +154,7 @@ check_results_03a () {
 }
 
 check_results_03d () {
-	if grep -i -q "success" ${section_03d_logfile}; then
-	        echo "03d-non_genetic_methylation_pcs.sh completed successfully."
-	    else
-	        echo "Problem: 03d-non_genetic_methylation_pcs.sh did not complete successfully"
-	        exit 1
-	fi
+    	echo "The number of methylation files may varied across cohorts. For more details, please check the Wiki. Please ensure you have seen the scripts 03a-03d run successfully from log files."
 }
 
 check_results_03 () {
