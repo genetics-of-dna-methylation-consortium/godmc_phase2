@@ -11,7 +11,7 @@ print_version
 #### GREML for SNP heritability###################################
 
   ${gcta} \
-          --grm ${grmfile_all}  \
+          --grm ${grmfile_all}_gaws10  \
           --reml \
           --pheno ${smoking_pred}.smok.plink \
           --out ${section_11_dir}/heritability_smoking \

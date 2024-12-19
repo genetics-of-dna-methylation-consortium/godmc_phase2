@@ -143,6 +143,12 @@ main <- function()
 	d <- density(smok$Smoking)
 	mini_d <- optimize(approxfun(d$x,d$y), interval=c(min(m1, m2),max(m1,m2)))$minimum
 	
+
+	if ( dim(smok)[1] > 5000 ){
+		shapiroscore = signif(as.numeric(shapiro.test(sample(smok$Smoking, 3000))[2]),2)
+	}else{
+		shapiroscore = signif(as.numeric(shapiro.test(smok$Smoking)[2]),2)
+	}
 	
 	pdf(smok_plot, width=12, height=10)
 	par(mfrow=c(3,2))
@@ -151,7 +157,7 @@ main <- function()
 	hist(smok$Smoking, xlab="", main=paste("Smoking prediction (N=", length(which(!is.na(smok$Smoking))),")",sep=""),cex.main=0.7)
 	abline(v=mean(smok$Smoking,na.rm=T)-SD*sd(smok$Smoking,na.rm=T),lty=2)
 	abline(v=mean(smok$Smoking,na.rm=T)+SD*sd(smok$Smoking,na.rm=T),lty=2)
-	qqnorm(smok$Smoking, main=paste("Smoking prediction (N=", length(which(!is.na(smok$Smoking))),"; shapiroP=",signif(as.numeric(shapiro.test(smok$Smoking)[2]),2),")",sep=""),cex.main=0.7)
+	qqnorm(smok$Smoking, main=paste("Smoking prediction (N=", length(which(!is.na(smok$Smoking))),"; shapiroP=",shapiroscore,")",sep=""),cex.main=0.7)
 	qqline(smok$Smoking)
 
 	plot(covs$Age_numeric, smok$Smoking, xlab="Age", ylab="predicted smoking",main="Age vs Smoking prediction",cex.main=0.7)

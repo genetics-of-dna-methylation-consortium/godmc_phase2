@@ -56,6 +56,13 @@ check_results_03a () {
 		exit 1
 	fi
 
+	if [ -f "${smoking_pred_plot}" ]; then
+		echo "Smoking prediction plot is present"
+	else
+		echo "Problem: Smoking prediction plot file not present"
+		exit 1
+	fi
+
 }
 
 check_results_10a () {
@@ -76,7 +83,7 @@ check_results_10a () {
 		exit 1
 	fi
 
-	QQplot=$(find ${section_10_dir} -type f -name "*_qqplot.png" | wc -l)
+	QQplot=$(find ${section_10_dir} -type f -name "*_qqplot.jpeg" | wc -l)
 	if [ $QQplot -gt 2 ]; then
 		echo "QQ plots of age accelerations are present"
 	else
@@ -114,7 +121,7 @@ check_results_11a () {
 	fi
 	
 	
-	if [ -f "${section_11_dir}/gwas_smoking_qqplot.png" ]; then
+	if [ -f "${section_11_dir}/gwas_smoking_qqplot.jpeg" ]; then
 		echo "QQ plot of smoking is present"
 	else
 		echo "Problem: QQ plot of smoking is absent"
@@ -164,8 +171,9 @@ done
 echo ""
 echo "Compressing the outputs from 03a, 10 and 11"
 cd ${home_directory}
-tar -zcf results/AgeSmokGWAS_${study_name}.tgz results/03/age_prediction.pdf results/03/age_prediction_correlation.png results/03/age_prediction_stats.csv results/03/age_prediction_stats_corrsd.csv results/10 results/11 
-					
+
+tar -zcf results/AgeSmokGWAS_${study_name}.tgz results/03/logs_a/log.txt results/03/age_prediction.pdf results/03/age_prediction_correlation.png results/03/age_prediction_stats.csv results/03/age_prediction_stats_corrsd.csv results/03/smoking_prediction.pdf results/10 results/11 
+
 echo "Successfully created results archives ${home_directory}/results/11/AgeSmokGWAS_${study_name}.tgz"
 
 
@@ -179,7 +187,7 @@ echo ""
 echo "Please download the follwing files to your own local machine and upload via the link of https://drive.google.com/drive/folders/19T0aSzh7xX6rX17pe6HBNImMYjoZEGSW?usp=sharing."
 echo "1. " ${home_directory}/results/AgeSmokGWAS_${study_name}.tgz.md5sum
 echo "2. " ${home_directory}/results/AgeSmokGWAS_${study_name}.tgz.gpg
-echo "Please share encryption passphrase to the developers by emailing the developers mentioned in the wiki."
+echo "Please share encryption passphrase to the developers by emailing the developers s.w.wang@exeter.ac.uk mentioned in the wiki."
 echo "Thank you very much. Have a nice day!"
 # decompressing archives
 # gpg -d -o AgeSmokGWAS.tgz AgeSmokGWAS.tgz.gpg

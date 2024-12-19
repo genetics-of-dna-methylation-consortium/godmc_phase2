@@ -25,10 +25,20 @@ print_version
 
 ${gcta} \
 	--grm ${grmfile_all} \
+	--grm-cutoff 0.05 \
+	--make-grm \
+	--out ${grmfile_all}_gaws10 \
+	--thread-num ${nthreads}
+
+
+${gcta} \
+	--grm ${grmfile_all}_gaws10 \
 	--make-bK-sparse 0.05 \
-  --autosome \
-	--out ${grmfile_fast}  \
-  --thread-num ${nthreads}
+	--autosome \
+	--make-grm \
+	--out ${grmfile_fast} \
+	--thread-num ${nthreads}
+
 
 echo 'Done on making bK sparse'
 
