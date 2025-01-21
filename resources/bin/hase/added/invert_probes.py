@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import argparse
 import os
+import sys
 
 
 pd.options.mode.chained_assignment = None
@@ -28,19 +29,25 @@ def inv_probes(probes_folder, project_name):
     flipped_alleles = merged[merged["allele1_x"] != merged["allele1_y"]]
     print ("{} Flipped Alleles Detected".format((len(flipped_alleles))))
 
-    merged["allele1"] = merged["allele1_x"]
-    merged["allele2"] = merged["allele2_x"]
+    # To avoid behaviour different to original loop, check for any instances where only one allele is NA in both dataframes
+    # These would also have been missed by the original loop resulting in errors when type casting allele1/2 below
+    any_x_na_mismatches = (merged["allele1_x"].isna() ^ merged["allele2_x"].isna()).any()
+    any_y_na_mismatches = (merged["allele1_y"].isna() ^ merged["allele2_y"].isna()).any()
+
+    # Error and report if the reference or input file have probes with one missing ref/alt allele
+    if any_x_na_mismatches:
+        input_reference_path = os.path.join("./resources/bin/hase/data", "ref-hrc.ref.gz")
+        sys.exit("Error: Partially missing alleles in reference panel file. Please check the input file: {}".format(input_reference_path))
+    elif any_y_na_mismatches:
+        sys.exit("Error: Partially missing alleles in probes input file. Please check the input file: {}".format(new_original))
+
+    # Provided there are no partially missing ref/alt alleles, use combine first to fill NAs for alleles not in the reference panel
+    # This caters to SNPS that are not in the reference panel
+    merged["allele1"] = merged["allele1_x"].combine_first(merged["allele1_y"])
+    merged["allele2"] = merged["allele2_x"].combine_first(merged["allele2_y"])
 
     merged.rename({"CHR_y":"CHR", "bp_y":"bp"}, axis = 1, inplace=True)
     merged = merged.reindex(columns=["CHR", "ID", "distance", "bp", "allele1", "allele2"])
-
-    #This caters dor SNPS that are not in the reference panel
-    for i in range(len(merged)):
-        if (pd.isnull(merged.loc[i, "allele1"])) & (pd.isnull(merged.loc[i, "allele2"])):
-            x = df[df["ID"] ==  merged.loc[i, "ID"]]["allele1"].values[0]
-            y =df[df["ID"] ==  merged.loc[i, "ID"]]["allele2"].values[0]
-            merged.loc[i, "allele1"] =  x
-            merged.loc[i, "allele2"] =  y
 
     merged["ID"] = merged["ID"].apply(lambda x: (str(x)))
     merged["allele1"] =  merged["allele1"].apply(lambda x: (int(x)))
