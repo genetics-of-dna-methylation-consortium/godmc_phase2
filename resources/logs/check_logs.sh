@@ -186,7 +186,7 @@ check_logs_03 () {
 check_logs_04 () {
 
     compare_version "04a"
-	if grep -i -q "success" ${section_04a_logfile}; then
+	if grep -i -q "Successfully" ${section_04a_logfile}; then
 		echo "04a-convert_snp_format.sh completed successfully."
 	else
 		echo "Problem: 04a-convert_snp_format.sh did not complete successfully"
@@ -202,7 +202,7 @@ check_logs_04 () {
 	fi
 
 	compare_version "04c"
-	if grep -i -q "success" ${section_04c_logfile}; then
+	if grep -i -q "Successfully" ${section_04c_logfile}; then
 		echo "04c-create_mapper_files.sh completed successfully."
 	else
 		echo "Problem: 04c-create_mapper_files.sh did not complete successfully"
@@ -210,7 +210,7 @@ check_logs_04 () {
 	fi
 
 	compare_version "04d"
-	if grep -i -q "Success" ${section_04d_logfile}; then
+	if grep -i -q "Successfully" ${section_04d_logfile}; then
 		echo "04d-encoding.sh completed successfully."
 	else
 		echo "Problem: 04d-encoding.sh did not complete successfully"
