@@ -34,7 +34,21 @@ ${gcta} \
   		--pheno ${smoking_pred}.smok.plink  \
   		--autosome \
       	--h2-limit 100 \
+		--thread-num ${nthreads} \
   		--out ${section_11_dir}/gwas_smoking
+
+
+${gcta} \
+  		--bfile ${bfile} \
+  		--grm-sparse ${grmfile_fast}  \
+        --fastGWA-mlm \
+  		--pheno ${smoking_pred}.smok.plink \
+		--qcovar ${section_10_dir}/gaws10_pc.eigenvec \
+		--autosome \
+		--h2-limit 100 \
+		--thread-num ${nthreads} \
+  		--out ${section_11_dir}/gwas_smoking_PCA
+
 
 
 # Step 4: Visulization ###################################
@@ -54,4 +68,5 @@ ${R_directory}Rscript resources/genetics/plot_gwas.R \
 		0 
 
 rm -f ${section_11_dir}/GWAlist.txt
+
 echo "Successfully finished the GWAS on smoking!"
