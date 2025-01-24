@@ -153,9 +153,15 @@ check_results_03a () {
 
 }
 
+check_results_03d () {
+    	echo "The number of methylation files may varied across cohorts. For more details, please check the Wiki. Please ensure you have seen the scripts 03a-03d run successfully from log files."
+}
+
 check_results_03 () {
 
 	check_results_03a
+
+ 	check_results_03d
 
  	if [ -f "${section_03_dir}/positive_control_transformed_${positive_control_cpg}.PHENO1.glm.linear.gz" ]; then
 		echo "transformed mQTL analysis positive control results present"
