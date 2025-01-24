@@ -15,7 +15,8 @@ nX=`grep ^X ${bfile}.bim | wc -l`
 if [ "$nX" -gt "0" ]
 then
 
-perl -pe 's/^X\tX/23\t23/g' < ${bfile}.bim >${hase_dir_in}/data.bim
+#perl -pe 's/^X\tX/23\t23/g' < ${bfile}.bim >${hase_dir_in}/data.bim
+${plink2} --bfile ${bfile} --make-bed --output-chr 26 --out ${hase_dir_in}/data
 cp ${bfile}.fam ${hase_dir_in}
 cp ${bfile}.bed ${hase_dir_in}
 else
