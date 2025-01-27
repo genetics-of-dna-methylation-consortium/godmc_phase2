@@ -35,7 +35,7 @@ mv ${hase_single_site}/*npy ${home_directory}/results/04/meta_inputs/part_dev
 mv ${hase_encoding}/encode_genotype/*h5 ${home_directory}/results/04/meta_inputs/use_data/genotype/
 mv ${hase_encoding}/encode_individuals/*h5 ${home_directory}/results/04/meta_inputs/use_data/individuals/
 mv ${hase_converting}/probes/$study_name.h5 ${home_directory}/results/04/meta_inputs/use_data/probes/
-mv ${hase_mapping}/*npy ${home_directory}/results/04/mapping/
+mv ${hase_mapping}/*npy ${home_directory}/results/04/meta_inputs/mapping/
 mv ${hase_encoding}/encode_phenotype/*.csv ${home_directory}/results/04/meta_inputs/use_data/phenotypes/
 
 #Example
