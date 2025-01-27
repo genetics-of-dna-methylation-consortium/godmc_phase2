@@ -52,7 +52,7 @@ then
 	echo "You have specified that the data is family data. Adjusting for pedigree and covariates..."
 	echo "Generating normally transformed residuals"
 	${R_directory}Rscript resources/methylation/adjust_pedigree.R \
-		${home_directory} \
+		${scripts_directory} \
 		${methylation_no_outliers} \
 		${grmfile_relateds} \
 		${covariates_combined}.txt \
@@ -65,7 +65,7 @@ then
     
 	echo "Generating untransformed residuals"
 	${R_directory}Rscript resources/methylation/adjust_pedigree.R \
-		${home_directory} \
+		${scripts_directory} \
 		${methylation_no_outliers} \
 		${grmfile_relateds} \
 		${covariates_combined}.txt \
