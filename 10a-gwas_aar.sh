@@ -21,7 +21,7 @@ print_version
 # 	--thread-num 10
 
 
-# Step 2: generate a sparse genetic relationship matrix (GRM) ###################################
+# Step 2: generate a sparse genetic relationship matrix (GRM) and PCA ###################################
 
 ${gcta} \
 	--grm ${grmfile_all} \
@@ -30,6 +30,10 @@ ${gcta} \
 	--out ${grmfile_all}_gaws10 \
 	--thread-num ${nthreads}
 
+${gcta} \
+	--grm ${grmfile_all}_gaws10 \
+	--pca 20 \
+	--out ${section_10_dir}/gaws10_pc
 
 ${gcta} \
 	--grm ${grmfile_all}_gaws10 \
@@ -44,23 +48,36 @@ echo 'Done on making bK sparse'
 
 # Step 3: fastGWA ###################################
 i=1
-tail -n +2 ${age_pred}.txt > age_acc.plink
+tail -n +2 ${age_pred}.txt > ${section_10_dir}/age_acc.plink
 clock_names=$(cut -d" " -f 3- ${age_pred}.txt | head -n 1)
 
 for clock_name in $clock_names
 do  
-  ${gcta} \
+    ${gcta} \
           --bfile ${bfile}  \
           --grm-sparse ${grmfile_fast} \
           --fastGWA-mlm \
           --mpheno $i \
-          --pheno age_acc.plink \
-          --h2-limit 20 \
+          --pheno ${section_10_dir}/age_acc.plink \
+          --h2-limit 100 \
           --out ${section_10_dir}/${clock_name}
+
+	
+	${gcta} \
+          --bfile ${bfile}  \
+          --grm-sparse ${grmfile_fast}  \
+          --fastGWA-mlm \
+          --mpheno $i \
+		  --h2-limit 100 \
+		  --qcovar ${section_10_dir}/gaws10_pc.eigenvec \
+          --pheno ${section_10_dir}/age_acc.plink \
+		  --thread-num ${nthreads} \
+          --out ${section_10_dir}/${clock_name}_PCA
+
   i=$(($i+1))
   echo "Done the GWAS on" $clock_name 
 done
-rm age_acc.plink
+
 
 # Step 4: Visulization ###################################
 

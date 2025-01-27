@@ -68,7 +68,7 @@ check_results_03a () {
 check_results_10a () {
 
 	GWASresults=$(find ${section_10_dir} -type f -name "*.fastGWA" | wc -l)
-	if [ $GWASresults -gt 2 ]; then
+	if [ $GWASresults -gt 4 ]; then
 		echo "The GWAS results are present"
 	else
 		echo "Problem: GWAS has not been performed successfully"
@@ -76,7 +76,7 @@ check_results_10a () {
 	fi
 
 	MANplot=$(find ${section_10_dir} -type f -name "*_manhattan.pdf" | wc -l)
-	if [ $MANplot -gt 2 ]; then
+	if [ $MANplot -gt 4 ]; then
 		echo "Manhattan plots of age accelerations are present"
 	else
 		echo "Problem: Manhattan plots of age accelerations are absent"
@@ -84,7 +84,7 @@ check_results_10a () {
 	fi
 
 	QQplot=$(find ${section_10_dir} -type f -name "*_qqplot.jpeg" | wc -l)
-	if [ $QQplot -gt 2 ]; then
+	if [ $QQplot -gt 4 ]; then
 		echo "QQ plots of age accelerations are present"
 	else
 		echo "Problem: QQ plots of age accelerations are absent"
@@ -106,14 +106,14 @@ check_results_10b () {
 }
 
 check_results_11a () {
-	if [ -f "${section_11_dir}/gwas_smoking.fastGWA" ]; then
+	if [ -f "${section_11_dir}/gwas_smoking.fastGWA" ] && [ -f "${section_11_dir}/gwas_smoking_PCA.fastGWA"  ]; then
 		echo "The GWAS result of smoking is present"
 	else
 		echo "Problem: GWAS has not been performed successfully"
 		exit 1
 	fi
 	
-	if [ -f "${section_11_dir}/gwas_smoking_manhattan.pdf" ]; then
+	if [ -f "${section_11_dir}/gwas_smoking_manhattan.pdf" ] && [ -f "${section_11_dir}/gwas_smoking_PCA_manhattan.pdf" ]; then
 		echo "Manhattan plot of smoking is present"
 	else
 		echo "Problem: Manhattan plot of smoking is absent"
@@ -121,7 +121,7 @@ check_results_11a () {
 	fi
 	
 	
-	if [ -f "${section_11_dir}/gwas_smoking_qqplot.jpeg" ]; then
+	if [ -f "${section_11_dir}/gwas_smoking_qqplot.jpeg" ] && [ -f "${section_11_dir}/gwas_smoking_PCA_qqplot.jpeg" ]; then
 		echo "QQ plot of smoking is present"
 	else
 		echo "Problem: QQ plot of smoking is absent"
@@ -178,7 +178,7 @@ echo "Successfully created results archives ${home_directory}/results/11/AgeSmok
 
 
 # Generating md5 checksum for verify the data intensity
-cd ./results
+cd ${home_directory}/results || exit 1
 md5sum AgeSmokGWAS_${study_name}.tgz > AgeSmokGWAS_${study_name}.tgz.md5sum
 md5sum -c AgeSmokGWAS_${study_name}.tgz.md5sum
 # encryption 
