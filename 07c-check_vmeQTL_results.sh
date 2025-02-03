@@ -25,7 +25,7 @@ else
                 if ! [ -f ${section_07_dir}/vQTL_${method}_cis_genetic${g_chunk}_cpgchr${chr}.besd ] && [ "$chr" -ne 23 ]
                 then    
                     echo "resubmit vmeQTL detection job - vmeQTL method: ${method}, genetic chunk: ${g_chunk}, chr: ${chr}"
-	            batch 07b-run_cis_vmeQTL.sh ${method} ${chr} ${g_chunk}
+	            sbatch 07b-run_cis_vmeQTL.sh ${method} ${chr} ${g_chunk}
                 fi
        done
    done
