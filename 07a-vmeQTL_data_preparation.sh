@@ -17,6 +17,21 @@ fi
 
 echo "Split methylation data into each chromosome"
 
+if [ "$genetic_chunks" -gt 100 ]
+then
+    echo "#####################################################################################################################"
+    echo "#####################################################################################################################"
+    echo "#####################################################################################################################"
+    echo "WARNING: The genetic chunk in config file is ${genetic_chunk}"
+    echo "We would highly recommend to change genetic_chunk to 100 to save your running time of 07b, unless your sample size is large"
+    echo "If you change genetic_chunk for module 07, please rerun 02b"
+    echo "Please check the wiki https://github.com/genetics-of-dna-methylation-consortium/godmc_phase2/wiki/Run-variance-meQTL-analysis or contact xiaopu.1.zhang@kcl.ac.uk if you are unsure before you running 07"
+    echo "#####################################################################################################################"
+    echo "#####################################################################################################################"
+    echo "#####################################################################################################################"
+
+fi
+
 ${R_directory}Rscript \
     ./resources/methylation/vmeQTL_process_tabfile.R \
     ${untransformed_methylation_adjusted_pcs}.RData \
