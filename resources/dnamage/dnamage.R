@@ -101,12 +101,12 @@ cal.stats <- function(AgePredTable, PhenVal, AgeValid, SexValid, SD){
   # module for all the sample
   moduleall <- lm(PredAge ~ ., data=temp, na.action=na.exclude)
   outtemp <- c(outtemp, c(summary(moduleall)$coefficients[sumvar,c(1,2,4)], rep(NA, 3*nrep)))
-  
+
   outtemp <- c(outtemp, sum(!is.na(subtemp$PredAge)), mean(subtemp$PredAge, na.rm=T), sd(subtemp$PredAge, na.rm=T), subcor)
   # module for filtered sample
   modulesub <- lm(PredAge ~ ., data=subtemp, na.action=na.exclude)
   outtemp <- c(outtemp, c(summary(modulesub)$coefficients[sumvar,c(1,2,4)], rep(NA, 3*nrep)))
-  
+
   return(outtemp)
 }
 
@@ -415,8 +415,8 @@ main <- function()
   
   # statistic table of models
   rownames(sumstats) <- name_sumstats
-  colnames(sumstats) <- c("SampleSize", "mean", "SD", "cor", "SmokeEst", "SmokeSE", "SmokeP",
-                          "AgeEst", "AgeSE", "AgeP", "SexEst", "SexSE", "SexP", 
+  colnames(sumstats) <- c("SampleSize", "mean", "SD", "cor", "SmokeEst", "AgeEst", "SexEst",
+                          "SmokeSE", "AgeSE", "SexSE", "SmokePr(>|t|)", "AgePr(>|t|)", "Pr(>|t|)", 
                           "NPostFilter", "meanPostFilter", "sdPostFilter", "corPostFilter",
                           "SmokeEstPostFilter", "SmokeSEPostFilter", "SmokePPostFilter",
                           "AgeEstPostFilter", "AgeSEPostFilter", "AgePPostFilter", 
