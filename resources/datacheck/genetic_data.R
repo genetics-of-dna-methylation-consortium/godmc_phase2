@@ -221,17 +221,17 @@ if(any(grepl("_",fam[,2])))
 	warning("ERROR: ", msg)
 }
 
-if (any(fam[, 1] == 0)) {
-  msg <- "The first column contains a 0. Please correct this before proceeding."
-  errorlist <- c(errorlist, msg)
-  warning("ERROR: ", msg)
-}
-
 if(any(grepl("_",fam[,1])))
 {
 	msg <- paste0("please remove underscores from family ids")
 	errorlist <- c(errorlist, msg)
 	warning("ERROR: ", msg)
+}
+
+if (length(unique(fam[, 1])) == 1) {
+  msg <- "The family ids column contains only one unique value. Please correct this before proceeding."
+  errorlist <- c(errorlist, msg)
+  warning("ERROR: ", msg)
 }
 
 ## Summary
