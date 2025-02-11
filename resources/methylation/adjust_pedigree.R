@@ -61,7 +61,6 @@ main <- function()
   
   covs.all <- covs[match(common_ids, covs$IID),]
   kin.all <- kin[match(common_ids, colnames(kin)), match(common_ids, rownames(kin))]
-  norm.beta <- norm.beta[,]
 
   covs.female <- covs[match(female_ids, covs$IID),]
   covs.male <- covs[match(male_ids, covs$IID),]
@@ -73,7 +72,7 @@ main <- function()
   
   ## process CpGs on sex chromosomes
   annots <- meffil.get.features(meth_array)
-  annots <- annots[!is.na(annots$chromosome),]
+  iannots <- annots[!is.na(annots$chromosome),]
   x_probes <- annots$name[annots$chromosome == "chrX"]
   y_probes <- annots$name[annots$chromosome == "chrY"]
   
@@ -87,25 +86,29 @@ main <- function()
   message("Kinship matrix of female samples ", nrow(kin.female), " by ", nrow(kin.female))
   message("Kinship matrix of all samples ", nrow(kin.male), " by ", nrow(kin.male))
   
-  message("Calculating eigenvectors")
-  eig.all <- cal.eig(kin.all)
-  eig.female <- cal.eig(kin.female)
-  eig.male <- cal.eig(kin.male)
+#  message("Calculating eigenvectors")
+#  eig.all <- cal.eig(kin.all)
+#  eig.female <- cal.eig(kin.female)
+#  eig.male <- cal.eig(kin.male)
 
   if(nrow(norm.beta)>0 & ncol(norm.beta)>0){
-    run.adjust.cov(beta.autosal.all, covs.all %>% select(-IID), nthreads, kin.all, eig.all, transform, paste0(out_file,".",jid,".RData"))
+  eig.all <- cal.eig(kin.all)  
+  run.adjust.cov(beta.autosal.all, covs.all %>% select(-IID), nthreads, kin.all, eig.all, transform, paste0(out_file,".",jid,".RData"))
   }
   
   if(nrow(beta.x.female)>0 & ncol(beta.x.female)>0){
-    run.adjust.cov(beta.x.female, covs.female %>% select(-IID, -Sex_factor), nthreads=1, kin.female, eig.female, transform, paste0(out_file, ".Female.chrX.", jid, ".RData"))
+  eig.female <- cal.eig(kin.female)
+  run.adjust.cov(beta.x.female, covs.female %>% select(-IID, -Sex_factor), nthreads=1, kin.female, eig.female, transform, paste0(out_file, ".Female.chrX.", jid, ".RData"))
   }
   
   if(nrow(beta.x.male)>0 & ncol(beta.x.male)>0){
-    run.adjust.cov(beta.x.male, covs.male %>% select(-IID, -Sex_factor), nthreads=1, kin.male, eig.male, transform, paste0(out_file,".Male.chrX.", jid, ".RData"))
+  eig.male <- cal.eig(kin.male)
+  run.adjust.cov(beta.x.male, covs.male %>% select(-IID, -Sex_factor), nthreads=1, kin.male, eig.male, transform, paste0(out_file,".Male.chrX.", jid, ".RData"))
   }
   
   if(nrow(beta.y.male)>0 & ncol(beta.y.male)>0){
-    run.adjust.cov(beta.y.male, covs.male %>% select(-IID, -Sex_factor), nthreads=1, kin.male, eig.male, transform, paste0(out_file,".Male.chrY.", jid, ".RData"))
+  eig.male <- cal.eig(kin.male)
+  run.adjust.cov(beta.y.male, covs.male %>% select(-IID, -Sex_factor), nthreads=1, kin.male, eig.male, transform, paste0(out_file,".Male.chrY.", jid, ".RData"))
   }
 }
 
