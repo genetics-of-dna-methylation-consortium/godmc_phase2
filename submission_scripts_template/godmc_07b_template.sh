@@ -49,7 +49,7 @@ do
 cut -d ' ' -f 1,$i ${section_07_dir}/tabfile.info >> ${section_07_dir}/tabfile.temp
 done
 
-awk 'BEGIN{FS=" "}{if($2>0 && $2!=23) print}' ${section_07_dir}/tabfile.temp | sort -k1,1n | uniq > ${section_07_dir}/tabfile.info1
+awk 'BEGIN{FS=" "}{if($2>0 && $2<23) print}' ${section_07_dir}/tabfile.temp | sort -k1,1n | uniq > ${section_07_dir}/tabfile.info1
 
 cat ${section_07_dir}/tabfile.info1 | while read line; 
 do 
