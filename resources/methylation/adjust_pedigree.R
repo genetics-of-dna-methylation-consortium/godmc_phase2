@@ -86,28 +86,30 @@ main <- function()
   message("Kinship matrix of female samples ", nrow(kin.female), " by ", nrow(kin.female))
   message("Kinship matrix of all samples ", nrow(kin.male), " by ", nrow(kin.male))
   
-#  message("Calculating eigenvectors")
-#  eig.all <- cal.eig(kin.all)
-#  eig.female <- cal.eig(kin.female)
-#  eig.male <- cal.eig(kin.male)
-
   if(nrow(norm.beta)>0 & ncol(norm.beta)>0){
-  eig.all <- cal.eig(kin.all)  
+  eig.all <- cal.eig(kin.all)
+  bate.autosal.all <- transpose_check(bate.autosal.all)  
   run.adjust.cov(beta.autosal.all, covs.all %>% select(-IID), nthreads, kin.all, eig.all, transform, paste0(out_file,".",jid,".RData"))
   }
   
   if(nrow(beta.x.female)>0 & ncol(beta.x.female)>0){
   eig.female <- cal.eig(kin.female)
+  probename <- rownames(norm.beta)[rownames(norm.beta) %in% x_probes]
+  bate.x.female <- transpose_check(beta.x.female, probename)
   run.adjust.cov(beta.x.female, covs.female %>% select(-IID, -Sex_factor), nthreads=1, kin.female, eig.female, transform, paste0(out_file, ".Female.chrX.", jid, ".RData"))
   }
   
   if(nrow(beta.x.male)>0 & ncol(beta.x.male)>0){
   eig.male <- cal.eig(kin.male)
+  probename <- rownames(norm.beta)[rownames(norm.beta) %in% x_probes]
+  beta.x.male <- transpose_check(beta.x.male, probename)
   run.adjust.cov(beta.x.male, covs.male %>% select(-IID, -Sex_factor), nthreads=1, kin.male, eig.male, transform, paste0(out_file,".Male.chrX.", jid, ".RData"))
   }
   
   if(nrow(beta.y.male)>0 & ncol(beta.y.male)>0){
   eig.male <- cal.eig(kin.male)
+  probename <- rownames(norm.beta)[rownames(norm.beta) %in% y_probes]
+  beta.y.male <- transpose_check(beta.y.male, probename)
   run.adjust.cov(beta.y.male, covs.male %>% select(-IID, -Sex_factor), nthreads=1, kin.male, eig.male, transform, paste0(out_file,".Male.chrY.", jid, ".RData"))
   }
 }
@@ -123,6 +125,15 @@ cal.eig <- function(kin){
   return(eig)
 }
 
+transpose_check <- function(mat, probename){
+  if(ncol(mat) == 1){
+    mat_tmp <- t(mat)
+    rownames(mat_tmp) <- probename
+} else{
+    mat_tmp <- mat}
+  return(mat_tmp)
+}
+
 run.adjust.cov <- function(betas, covs, nthreads, kin, eig, transform,  out_file)
 {
   if(nrow(betas) > 0){
@@ -133,7 +144,7 @@ run.adjust.cov <- function(betas, covs, nthreads, kin, eig, transform,  out_file
     } else {
       message("Running with ", nthreads, " threads")
       out <- adjust.relatedness(betas, covs, kin, eig, nthreads, transform)
-    }
+  c  }
     
     betas <- out$x
     classes <- data.frame(cpg=rownames(betas), cl=out$cl)
