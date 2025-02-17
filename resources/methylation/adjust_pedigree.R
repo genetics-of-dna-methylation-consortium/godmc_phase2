@@ -47,17 +47,17 @@ main <- function()
     }
   }
   
+  ## observe the intersect IDs across grm, covs, betas to ensure the same order of the three datasets
+  common_ids <- Reduce(intersect, list(colnames(norm.beta), covs$IID, colnames(kin)))
+  female_ids <- covs$IID[covs$Sex_factor=="F"]
+  male_ids <- covs$IID[covs$Sex_factor=="M"]
+  
   index<-sapply(covs,function(.col){all(is.na(.col) | .col[1L] == .col)})
   index[is.na(index)] <- FALSE
   covs <- covs[,!index]
   
   grm <- readGRM(grmfile)
   kin <- makeGRMmatrix(grm)
-  
-  ## observe the intersect IDs across grm, covs, betas to ensure the same order of the three datasets
-  common_ids <- Reduce(intersect, list(colnames(norm.beta), covs$IID, colnames(kin)))
-  female_ids <- covs$IID[covs$Sex_factor=="F"]
-  male_ids <- covs$IID[covs$Sex_factor=="M"]
   
   covs.all <- covs[match(common_ids, covs$IID),]
   kin.all <- kin[match(common_ids, colnames(kin)), match(common_ids, rownames(kin))]
@@ -72,7 +72,7 @@ main <- function()
   
   ## process CpGs on sex chromosomes
   annots <- meffil.get.features(meth_array)
-  iannots <- annots[!is.na(annots$chromosome),]
+  annots <- annots[!is.na(annots$chromosome),]
   x_probes <- annots$name[annots$chromosome == "chrX"]
   y_probes <- annots$name[annots$chromosome == "chrY"]
   
