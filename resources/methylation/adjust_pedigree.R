@@ -47,6 +47,9 @@ main <- function()
     }
   }
   
+  grm <- readGRM(grmfile)
+  kin <- makeGRMmatrix(grm)
+
   ## observe the intersect IDs across grm, covs, betas to ensure the same order of the three datasets
   common_ids <- Reduce(intersect, list(colnames(norm.beta), covs$IID, colnames(kin)))
   female_ids <- covs$IID[covs$Sex_factor=="F"]
@@ -55,9 +58,6 @@ main <- function()
   index<-sapply(covs,function(.col){all(is.na(.col) | .col[1L] == .col)})
   index[is.na(index)] <- FALSE
   covs <- covs[,!index]
-  
-  grm <- readGRM(grmfile)
-  kin <- makeGRMmatrix(grm)
   
   covs.all <- covs[match(common_ids, covs$IID),]
   kin.all <- kin[match(common_ids, colnames(kin)), match(common_ids, rownames(kin))]
