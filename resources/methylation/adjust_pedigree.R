@@ -96,21 +96,33 @@ main <- function()
   eig.female <- cal.eig(kin.female)
   probename <- rownames(norm.beta)[rownames(norm.beta) %in% x_probes]
   beta.x.female <- transpose_check(beta.x.female, probename)
+  if("Sex_factor" %in% colnames(covs.female)){
   run.adjust.cov(beta.x.female, covs.female %>% select(-IID, -Sex_factor), nthreads=1, kin.female, eig.female, transform, paste0(out_file, ".Female.chrX.", jid, ".RData"))
+  }else{
+  run.adjust.cov(beta.x.female, covs.female %>% select(-IID), nthreads=1, kin.female, eig.female, transform, paste0(out_file, ".Female.chrX.", jid, ".RData"))
+  }
   }
   
   if(nrow(beta.x.male)>0 & ncol(beta.x.male)>0 & !file.exists(paste0(out_file,".Male.chrX.",jid,".RData"))){
   eig.male <- cal.eig(kin.male)
   probename <- rownames(norm.beta)[rownames(norm.beta) %in% x_probes]
   beta.x.male <- transpose_check(beta.x.male, probename)
+  if("Sex_factor" %in% colnames(covs.male)){
   run.adjust.cov(beta.x.male, covs.male %>% select(-IID, -Sex_factor), nthreads=1, kin.male, eig.male, transform, paste0(out_file,".Male.chrX.", jid, ".RData"))
+  }else{
+  run.adjust.cov(beta.x.male, covs.male %>% select(-IID), nthreads=1, kin.male, eig.male, transform, paste0(out_file,".Male.chrX.", jid, ".RData"))
   }
-  
+  }  
+
   if(nrow(beta.y.male)>0 & ncol(beta.y.male)>0 & !file.exists(paste0(out_file,".Male.chrY.",jid,".RData"))){
   eig.male <- cal.eig(kin.male)
   probename <- rownames(norm.beta)[rownames(norm.beta) %in% y_probes]
   beta.y.male <- transpose_check(beta.y.male, probename)
-  run.adjust.cov(beta.y.male, covs.male %>% select(-IID, -Sex_factor), nthreads=1, kin.male, eig.male, transform, paste0(out_file,".Male.chrY.", jid, ".RData"))
+  if("Sex_factor" %in% colnames(covs.male)){
+  run.adjust.cov(beta.y.male, covs.male %>% select(-IID, -Sex_factor), nthreads=1, kin.male, eig.male, transform, paste0(out_file,".Male.chrX.", jid, ".RData"))
+  }else{
+  run.adjust.cov(beta.y.male, covs.male %>% select(-IID), nthreads=1, kin.male, eig.male, transform, paste0(out_file,".Male.chrY.", jid, ".RData"))
+  }
   }
 }
 
