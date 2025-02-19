@@ -37,7 +37,7 @@ fwrite(norm.beta, file=paste0(methylationfile_transformed, ".csv"), row=F, col=T
 c<-data.frame(IID=colnames(norm.beta)[-1],cov=rnorm(n=ncol(norm.beta)-1, mean = 0, sd = 1))
 fwrite(c,paste0(hase_cov,"/covariates.txt"),sep="\t",quote=F,col.names=T,row.names=F)
 
-if(sum(ids %in% male_ids > 0)){
+if(sum(ids %in% male_ids > 0) & file.exists(paste0(methylationfile_untransformed, ".Male.chrX.RData"))){
 message("Loading X chromosome untransformed methylation data for males")
 load(paste0(methylationfile_untransformed, ".Male.chrX.RData"))
 #norm.beta.t<-data.frame(IID=colnames(norm.beta),t(norm.beta))
@@ -77,7 +77,7 @@ fwrite(c,paste0(hase_cov_males,"/covariates_males.txt"),sep="\t",quote=F,col.nam
 }
 
 
-if(sum(ids %in% female_ids > 0))
+if(sum(ids %in% female_ids > 0) & file.exists(paste0(methylationfile_untransformed, ".Female.chrX.RData")))
 
 {
 message("Loading X chromosome untransformed methylation data for females")
