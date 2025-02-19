@@ -13,7 +13,7 @@ hase_cov_females <- as.character(arguments[6])
 
 message("Loading covariate data")
 cat(cov_file,"\n")
-covdat <- read.table(cov_file, header=TRUE, stringsAsFactors=FALSE)
+covdat <- read.table(cov_file, header=TRUE, stringsAsFactors=FALSE, colClasses=c("Sex_factor"="character"))
 male_ids <- subset(covdat, Sex_factor == "M")$IID
 female_ids<- subset(covdat, Sex_factor == "F")$IID
 
