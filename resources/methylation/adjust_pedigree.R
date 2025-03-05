@@ -119,7 +119,7 @@ main <- function()
   probename <- rownames(norm.beta)[rownames(norm.beta) %in% y_probes]
   beta.y.male <- transpose_check(beta.y.male, probename)
   if("Sex_factor" %in% colnames(covs.male)){
-  run.adjust.cov(beta.y.male, covs.male %>% select(-IID, -Sex_factor), nthreads=1, kin.male, eig.male, transform, paste0(out_file,".Male.chrX.", jid, ".RData"))
+  run.adjust.cov(beta.y.male, covs.male %>% select(-IID, -Sex_factor), nthreads=1, kin.male, eig.male, transform, paste0(out_file,".Male.chrY.", jid, ".RData"))
   }else{
   run.adjust.cov(beta.y.male, covs.male %>% select(-IID), nthreads=1, kin.male, eig.male, transform, paste0(out_file,".Male.chrY.", jid, ".RData"))
   }
