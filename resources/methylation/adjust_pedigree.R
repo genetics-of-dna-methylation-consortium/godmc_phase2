@@ -156,7 +156,7 @@ run.adjust.cov <- function(betas, covs, nthreads, kin, eig, transform,  out_file
     } else {
       message("Running with ", nthreads, " threads")
       out <- adjust.relatedness(betas, covs, kin, eig, nthreads, transform)
-  c  }
+    }
     
     betas <- out$x
     classes <- data.frame(cpg=rownames(betas), cl=out$cl)
