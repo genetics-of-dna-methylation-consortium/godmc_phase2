@@ -300,7 +300,7 @@ check_results_07 () {
     #    echo "vQTL detection results with drm method present"
     #fi
     
-    tarfile=`ls ${home_directory}/results/${study_name}_07_chr*.tgz`
+    tarfile=`ls ${home_directory}/results/${study_name}_07_chr*.tgz | wc -l`
     if [ $tarfile = 22 ]; then
         echo "vQTL tar results present"
     else

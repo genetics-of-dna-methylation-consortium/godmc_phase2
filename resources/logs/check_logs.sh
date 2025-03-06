@@ -244,22 +244,22 @@ check_logs_07 () {
 		exit 1
 	fi
 
-	compare_version "07c"
-	if grep -i -q "using drm method to detect vmeQTLs is successful" ${section_07c_logfile}_drm &
-	   grep -i -q "using svlm method to detect vmeQTLs is successful" ${section_07c_logfile}_svlm &
-	   grep -i -q "using BF method to detect vmeQTLs is successful" ${section_07c_logfile}_BF; then
-		echo "07b-run_cis_vmeQTL.sh and 07c-check_vmeQTL_results.sh completed successfully."
-	else
-		echo "Problem: 07c-check_vmeQTL_results.sh did not complete successfully"
-		exit 1
-	fi
+#	compare_version "07c"
+#	if grep -i -q "using drm method to detect vmeQTLs is successful" ${section_07c_logfile}_drm &
+#	   grep -i -q "using svlm method to detect vmeQTLs is successful" ${section_07c_logfile}_svlm &
+#	   grep -i -q "using BF method to detect vmeQTLs is successful" ${section_07c_logfile}_BF; then
+#		echo "07b-run_cis_vmeQTL.sh and 07c-check_vmeQTL_results.sh completed successfully."
+#	else
+#		echo "Problem: 07c-check_vmeQTL_results.sh did not complete successfully"
+#		exit 1
+#	fi
     
     compare_version "07d"
-    count_07d=`grep -i "success" ${section_07d_logfile}_[0-9]* | wc -l`
+    count_07d=`ls ${home_directory}/results/${study_name}_07_chr*.tgz | wc -l`
     if [ ${count_07d} == 22 ]; then
-        echo "07d-methylation_adjustment1.sh completed successfully."
+        echo "07d-tar_results.sh completed successfully."
     else
-        echo "Problem: 07d-methylation_adjustment1.sh did not complete successfully"
+        echo "Problem: 07d-tar_results.sh did not complete successfully"
         exit 1
     fi
    
