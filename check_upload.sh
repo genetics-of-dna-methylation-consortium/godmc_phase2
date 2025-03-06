@@ -147,6 +147,15 @@ echo "Detecting sshpass"
 		put ${home_directory}/results/config/${study_name}_config.md5sum 
    		bye
 !
+    elif [[ $1 = "07" ]]
+        sftp $port -oIdentityFile=$key -oBatchMode=no -b - ${sftp_username}@${sftp_address}:${sftp_path} << !
+        dir
+        cd ../upload
+        put ${home_directory}/results/${study_name}_${1}_chr*.md5sum
+        put ${home_directory}/results/${study_name}_$1_chr*.${suff}.aes
+        put ${home_directory}/results/config/${study_name}_config.tar.aes
+        put ${home_directory}/results/config/${study_name}_config.md5sum 
+        bye
     else
         sftp $port -oIdentityFile=$key -oBatchMode=no -b - ${sftp_username}@${sftp_address}:${sftp_path} << !
         dir
