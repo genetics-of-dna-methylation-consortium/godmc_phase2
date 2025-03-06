@@ -12,7 +12,7 @@ genetic_chunk=$3
 
 echo "Running cis vmeQTL analysis - CpGs on chr ${chr}; genetic chunk ${genetic_chunk}; method ${vQTL_method}."
 
-if [ $vQTL_method=="BF" ]
+if [ $vQTL_method = "BF" ]
 then
 ${osca} \
     --vqtl \
@@ -37,4 +37,5 @@ ${osca} \
     --task-num 1 \
     --task-id 1 \
     --out ${section_07_dir}/vQTL_${vQTL_method}_cis_genetic${genetic_chunk}_cpgchr${chr}
+echo "done"
 fi

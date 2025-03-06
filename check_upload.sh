@@ -41,7 +41,7 @@ eval "check_results_$1"
 echo ""
 echo "Section $1 has been successfully completed!"
 
-if [[ "$2" = "upload" && ( $1 = "01" || $1 = "02" || $1 = "03" || $1 = "03a" || $1 = "03d" || $1 = "04" || $1 = "07" || $1 = "08" ) ]]
+if [[ "$2" = "upload" && ( $1 = "01" || $1 = "02" || $1 = "03" || $1 = "03a" || $1 = "03d" || $1 = "04" || $1 = "08" ) ]]
 then
 
 	echo ""
@@ -104,7 +104,7 @@ bye
 #        echo "Encrypting files"
 #        gpg --output ${home_directory}/results/${study_name}_${1}.${suff}.aes --symmetric --cipher-algo AES256 ${home_directory}//results/${study_name}_${1}.${suff}
         echo ""
-    elif [[ $1 = "07" || $1 = "04" ]]
+    elif [[ $1 = "04" ]]
     then
         echo "Tarring results have been generated"
     else
@@ -165,6 +165,18 @@ fi
 
 fi
 
+if [[ "$2" = "upload" && $1 = "07" ]]
+then
+    for i in $(seq 1 22)
+    do
+        echo "Generating md5 checksum"
+        md5sum ${home_directory}/results/${study_name}_${1}_chr${i}.${suff} > ${home_directory}/results/${study_name}_${1}_chr${i}.md5sum
+        echo "Encrypting files"
+        gpg --output ${home_directory}/results/${study_name}_${1}_chr${i}.${suff}.aes --symmetric --cipher-algo AES256 ${home_directory}/results/${study_name}_${1}_chr${i}.${suff}
+        echo ""
+    done
+fi
+    
 
 if [[ "$2" = "upload" && $1 = "09" ]]
 then
