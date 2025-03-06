@@ -20,6 +20,17 @@ main <- function()
   jid <- as.numeric(arguments[9])
   meth_array <- arguments[10]
   
+  print(paste("filepath: ",filepath))
+  print(paste("methylationfile: ",methylationfile))
+  print(paste("grmfile: ",grmfile))
+  print(paste("covfile: ",cov_file))
+  print(paste("out_file: ",out_file))
+  print(paste("transform: ",transform))
+  print(paste("nthreads: ",nthreads))
+  print(paste("chunks: ",chunks))
+  print(paste("jid: ",jid))
+  print(paste("meth_array: ",meth_array))
+  
   source(paste0(filepath, "/resources/methylation/polygenic_genable.R"))
   source(paste0(filepath, "/resources/methylation/polylik_genable.R"))
   
@@ -47,6 +58,9 @@ main <- function()
     }
   }
   
+  grm <- readGRM(grmfile)
+  kin <- makeGRMmatrix(grm)
+
   ## observe the intersect IDs across grm, covs, betas to ensure the same order of the three datasets
   common_ids <- Reduce(intersect, list(colnames(norm.beta), covs$IID, colnames(kin)))
   female_ids <- covs$IID[covs$Sex_factor=="F"]
@@ -55,9 +69,6 @@ main <- function()
   index<-sapply(covs,function(.col){all(is.na(.col) | .col[1L] == .col)})
   index[is.na(index)] <- FALSE
   covs <- covs[,!index]
-  
-  grm <- readGRM(grmfile)
-  kin <- makeGRMmatrix(grm)
   
   covs.all <- covs[match(common_ids, covs$IID),]
   kin.all <- kin[match(common_ids, colnames(kin)), match(common_ids, rownames(kin))]
@@ -84,7 +95,7 @@ main <- function()
   
   message("Kinship matrix of all samples ", nrow(kin.all), " by ", nrow(kin.all))
   message("Kinship matrix of female samples ", nrow(kin.female), " by ", nrow(kin.female))
-  message("Kinship matrix of all samples ", nrow(kin.male), " by ", nrow(kin.male))
+  message("Kinship matrix of male samples ", nrow(kin.male), " by ", nrow(kin.male))
   
   if(nrow(norm.beta)>0 & ncol(norm.beta)>0 & !file.exists(paste0(out_file,".",jid,".RData"))){
   eig.all <- cal.eig(kin.all)
@@ -96,21 +107,33 @@ main <- function()
   eig.female <- cal.eig(kin.female)
   probename <- rownames(norm.beta)[rownames(norm.beta) %in% x_probes]
   beta.x.female <- transpose_check(beta.x.female, probename)
+  if("Sex_factor" %in% colnames(covs.female)){
   run.adjust.cov(beta.x.female, covs.female %>% select(-IID, -Sex_factor), nthreads=1, kin.female, eig.female, transform, paste0(out_file, ".Female.chrX.", jid, ".RData"))
+  }else{
+  run.adjust.cov(beta.x.female, covs.female %>% select(-IID), nthreads=1, kin.female, eig.female, transform, paste0(out_file, ".Female.chrX.", jid, ".RData"))
+  }
   }
   
   if(nrow(beta.x.male)>0 & ncol(beta.x.male)>0 & !file.exists(paste0(out_file,".Male.chrX.",jid,".RData"))){
   eig.male <- cal.eig(kin.male)
   probename <- rownames(norm.beta)[rownames(norm.beta) %in% x_probes]
   beta.x.male <- transpose_check(beta.x.male, probename)
+  if("Sex_factor" %in% colnames(covs.male)){
   run.adjust.cov(beta.x.male, covs.male %>% select(-IID, -Sex_factor), nthreads=1, kin.male, eig.male, transform, paste0(out_file,".Male.chrX.", jid, ".RData"))
+  }else{
+  run.adjust.cov(beta.x.male, covs.male %>% select(-IID), nthreads=1, kin.male, eig.male, transform, paste0(out_file,".Male.chrX.", jid, ".RData"))
   }
-  
+  }  
+
   if(nrow(beta.y.male)>0 & ncol(beta.y.male)>0 & !file.exists(paste0(out_file,".Male.chrY.",jid,".RData"))){
   eig.male <- cal.eig(kin.male)
   probename <- rownames(norm.beta)[rownames(norm.beta) %in% y_probes]
   beta.y.male <- transpose_check(beta.y.male, probename)
-  run.adjust.cov(beta.y.male, covs.male %>% select(-IID, -Sex_factor), nthreads=1, kin.male, eig.male, transform, paste0(out_file,".Male.chrY.", jid, ".RData"))
+  if("Sex_factor" %in% colnames(covs.male)){
+  run.adjust.cov(beta.y.male, covs.male %>% select(-IID, -Sex_factor), nthreads=1, kin.male, eig.male, transform, paste0(out_file,".Male.chrX.", jid, ".RData"))
+  }else{
+  run.adjust.cov(beta.y.male, covs.male %>% select(-IID), nthreads=1, kin.male, eig.male, transform, paste0(out_file,".Male.chrY.", jid, ".RData"))
+  }
   }
 }
 
@@ -285,7 +308,7 @@ adjust.relatedness <- function(B, covs, kin, eig, mc.cores=mc.cores, transform)
     {
       message("Probe ", i, " of ", nrow(B))
       out <- adjust.relatedness.fast.1(B[i,], covs, kin, eig, transform)
-    }, mc.cores=mc.cores, mc.preschedule=FALSE)
+    }, mc.cores=mc.cores, mc.preschedule=TRUE)
     a <- do.call(rbind, lapply(res, function(x) x$x))
     b <- sapply(res, function(x) x$cl)
     return(list(x=a, cl=b))
