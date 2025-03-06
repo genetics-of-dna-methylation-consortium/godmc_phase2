@@ -255,12 +255,14 @@ check_logs_07 () {
 	fi
     
     compare_version "07d"
-    if grep -i -q "Successfully created results archives of module 07" ${section_07d_logfile}; then
-        echo "07d-tar_results.sh completed successfully."
+    count_07d=`grep -i "success" ${section_07d_logfile}_[0-9]* | wc -l`
+    if [ ${count_07d} == 22 ]; then
+        echo "07d-methylation_adjustment1.sh completed successfully."
     else
-        echo "Problem: 07d-tar_results.sh did not complete successfully"
+        echo "Problem: 07d-methylation_adjustment1.sh did not complete successfully"
         exit 1
     fi
+   
 }
 
 check_logs_08 () {
