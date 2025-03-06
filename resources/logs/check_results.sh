@@ -283,27 +283,28 @@ check_results_04 () {
 
 check_results_07 () {
 
-    chunk_count=`cat ${section_07_dir}/tabfile.info1 | wc -l`
-    BFfile=`ls ${section_07_dir}/vQTL_BF_*besd | wc -l`
-    svlmfile=`ls ${section_07_dir}/vQTL_BF_*besd | wc -l`
-    drmfile=`ls ${section_07_dir}/vQTL_BF_*besd | wc -l`
+    #chunk_count=`cat ${section_07_dir}/tabfile.info1 | wc -l`
+    #BFfile=`ls ${section_07_dir}/vQTL_BF_*besd | wc -l`
+    #svlmfile=`ls ${section_07_dir}/vQTL_BF_*besd | wc -l`
+    #drmfile=`ls ${section_07_dir}/vQTL_BF_*besd | wc -l`
 
-    if [ $chunk_count = $BFfile ]; then
-        echo "vQTL detection results with BF method present"
-    fi
+    #if [ $chunk_count = $BFfile ]; then
+    #    echo "vQTL detection results with BF method present"
+    #fi
 
-    if [ $chunk_count = $svlmfile ]; then
-        echo "vQTL detection results with svlm method present"
-    fi 
+    #if [ $chunk_count = $svlmfile ]; then
+    #    echo "vQTL detection results with svlm method present"
+    #fi 
 
-    if [ $chunk_count = $drmfile ]; then
-        echo "vQTL detection results with drm method present"
-    fi
-
-    if [ -f "${home_directory}/results/${study_name}_07.tgz" ]; then
+    #if [ $chunk_count = $drmfile ]; then
+    #    echo "vQTL detection results with drm method present"
+    #fi
+    
+    tarfile=`ls ${home_directory}/results/${study_name}_07_chr*.tgz`
+    if [ $tarfile = 22 ]; then
         echo "vQTL tar results present"
     else
-        echo "vQTL tar results absent. Please re-run"
+        echo "vQTL tar results are missing. Please re-run"
     fi
 }
 
