@@ -12,12 +12,20 @@ method=$1
 
 for i in $(seq 1 22);
 do
-    if [ -f ${section_07_dir}/vQTL_svlm_cis_*cpgchr${i}.* ]; then
-        rm ${section_07_dir}/vQTL_svlm_cis_*cpgchr${i}.*
+    if [ -f ${section_07_dir}/vQTL_svlm_cis_*cpgchr${i}.besd ]; then
+        rm ${section_07_dir}/vQTL_svlm_cis_*cpgchr${i}.besd
+        rm ${section_07_dir}/vQTL_svlm_cis_*cpgchr${i}.epi
+        rm ${section_07_dir}/vQTL_svlm_cis_*cpgchr${i}.esi
+        rm ${section_07_dir}/vQTL_svlm_cis_*cpgchr${i}.novar
+        rm ${section_07_dir}/vQTL_svlm_cis_*cpgchr${i}.sigleton.list
     fi
 
-    if [ -f ${section_07_dir}/vQTL_drm_cis_*cpgchr${i}.* ]; then
-        rm ${section_07_dir}/vQTL_drm_cis_*cpgchr${i}.*
+    if [ -f ${section_07_dir}/vQTL_drm_cis_*cpgchr${i}.besd ]; then
+        rm ${section_07_dir}/vQTL_drm_cis_*cpgchr${i}.besd
+        rm ${section_07_dir}/vQTL_drm_cis_*cpgchr${i}.epi
+        rm ${section_07_dir}/vQTL_drm_cis_*cpgchr${i}.esi
+        rm ${section_07_dir}/vQTL_drm_cis_*cpgchr${i}.novar
+        rm ${section_07_dir}/vQTL_drm_cis_*cpgchr${i}.singleton.list
     fi
 done
 

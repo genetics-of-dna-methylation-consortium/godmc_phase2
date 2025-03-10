@@ -84,7 +84,7 @@ main <- function()
   
   message("Kinship matrix of all samples ", nrow(kin.all), " by ", nrow(kin.all))
   message("Kinship matrix of female samples ", nrow(kin.female), " by ", nrow(kin.female))
-  message("Kinship matrix of all samples ", nrow(kin.male), " by ", nrow(kin.male))
+  message("Kinship matrix of male samples ", nrow(kin.male), " by ", nrow(kin.male))
   
   if(nrow(norm.beta)>0 & ncol(norm.beta)>0 & !file.exists(paste0(out_file,".",jid,".RData"))){
   eig.all <- cal.eig(kin.all)
