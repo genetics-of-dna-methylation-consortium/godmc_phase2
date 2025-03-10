@@ -10,24 +10,24 @@ print_version
 
 method=$1
 
-for i in $(seq 1 22);
-do
-    if [ -f ${section_07_dir}/vQTL_svlm_cis_*cpgchr${i}.besd ]; then
-        rm ${section_07_dir}/vQTL_svlm_cis_*cpgchr${i}.besd
-        rm ${section_07_dir}/vQTL_svlm_cis_*cpgchr${i}.epi
-        rm ${section_07_dir}/vQTL_svlm_cis_*cpgchr${i}.esi
-        rm ${section_07_dir}/vQTL_svlm_cis_*cpgchr${i}.novar
-        rm ${section_07_dir}/vQTL_svlm_cis_*cpgchr${i}.sigleton.list
-    fi
+#for i in $(seq 1 22);
+#do
+#    if [ -f ${section_07_dir}/vQTL_svlm_cis_*cpgchr${i}.besd ]; then
+#        rm ${section_07_dir}/vQTL_svlm_cis_*cpgchr${i}.besd
+#        rm ${section_07_dir}/vQTL_svlm_cis_*cpgchr${i}.epi
+#        rm ${section_07_dir}/vQTL_svlm_cis_*cpgchr${i}.esi
+#        rm ${section_07_dir}/vQTL_svlm_cis_*cpgchr${i}.novar
+#        rm ${section_07_dir}/vQTL_svlm_cis_*cpgchr${i}.sigleton.list
+#    fi
 
-    if [ -f ${section_07_dir}/vQTL_drm_cis_*cpgchr${i}.besd ]; then
-        rm ${section_07_dir}/vQTL_drm_cis_*cpgchr${i}.besd
-        rm ${section_07_dir}/vQTL_drm_cis_*cpgchr${i}.epi
-        rm ${section_07_dir}/vQTL_drm_cis_*cpgchr${i}.esi
-        rm ${section_07_dir}/vQTL_drm_cis_*cpgchr${i}.novar
-        rm ${section_07_dir}/vQTL_drm_cis_*cpgchr${i}.singleton.list
-    fi
-done
+#    if [ -f ${section_07_dir}/vQTL_drm_cis_*cpgchr${i}.besd ]; then
+#        rm ${section_07_dir}/vQTL_drm_cis_*cpgchr${i}.besd
+#        rm ${section_07_dir}/vQTL_drm_cis_*cpgchr${i}.epi
+#        rm ${section_07_dir}/vQTL_drm_cis_*cpgchr${i}.esi
+#        rm ${section_07_dir}/vQTL_drm_cis_*cpgchr${i}.novar
+#        rm ${section_07_dir}/vQTL_drm_cis_*cpgchr${i}.singleton.list
+#    fi
+#done
 
 for g_chunk in $(seq 1 ${genetic_chunks}); do
     chr_temp=`awk 'BEGIN{FS=" "}{if($1=="'"${g_chunk}"'") print $2}' ${section_07_dir}/tabfile.info1`
@@ -46,6 +46,10 @@ for g_chunk in $(seq 1 ${genetic_chunks}); do
                 fi
 
                 if [ ${method} = "drm" ]; then
+                    if [ -f ${section_07_dir}/vQTL_drm_cis_genetic${g_chunk}_cpgchr${i}.besd ]; then
+                        rm ${section_07_dir}/vQTL_drm_cis_genetic${g_chunk}_cpgchr${i}.*
+                    fi
+
                     if grep -q "besd file was writen." ${section_07_dir}/vQTL_drm_cis_genetic${g_chunk}_cpgchr${chr}_1_1.log; then
                         echo "using $method method to detect vmeQTLs of genetic chunk: ${g_chunk} and chr: ${chr} is successful"
                     else
@@ -55,6 +59,10 @@ for g_chunk in $(seq 1 ${genetic_chunks}); do
                 fi
 
                 if [ ${method} = "svlm" ]; then
+                    if [ -f ${section_07_dir}/vQTL_svlm_cis_genetic${g_chunk}_cpgchr${i}.besd ]; then
+                        rm ${section_07_dir}/vQTL_svlm_cis_genetic${g_chunk}_cpgchr${i}.*
+                    fi
+
                     if grep -q "besd file was writen." ${section_07_dir}/vQTL_svlm_cis_genetic${g_chunk}_cpgchr${chr}_1_1.log; then
                         echo "using $method method to detect vmeQTLs of genetic chunk: ${g_chunk} and chr: ${chr} is successful"
                     else
