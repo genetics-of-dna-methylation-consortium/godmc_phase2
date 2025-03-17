@@ -1,6 +1,5 @@
 #!/bin/bash -l
 #SBATCH --job-name=GoDMC_07d
-#SBATCH --output=job_reports/GoDMC_07d_%A_%a
 #SBATCH --partition interruptible_cpu
 #SBATCH --mem=16GB
 #SBATCH --ntasks=8
