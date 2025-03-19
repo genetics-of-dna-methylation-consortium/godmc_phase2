@@ -17,8 +17,8 @@ for g_chunk in $(seq 1 ${genetic_chunks}); do
     ### remove the old results with drm and svlm name
     ### the old files look like vQTL_drm_cis_genetic${g_chunk}_cpgchr${i}.besd, while the new file format is vQTL_drm_cis_genetic${g_chunk}_cpgchr${i}_1_1.besd
     if [[ "${method}" == "drm" || "${method}" == "svlm" ]]; then
-        if [[ -f "${section_07_dir}/vQTL_drm_cis_genetic${g_chunk}_cpgchr${i}.besd" ]]; then
-            rm "${section_07_dir}/vQTL_drm_cis_genetic${g_chunk}_cpgchr${i}."*
+        if [[ -f "${section_07_dir}/vQTL_${method}_cis_genetic${g_chunk}_cpgchr${i}.besd" ]]; then
+            rm "${section_07_dir}/vQTL_${method}_cis_genetic${g_chunk}_cpgchr${i}."*
         fi
     fi
 
