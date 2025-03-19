@@ -49,6 +49,9 @@ phenotypes_AD="NULL"
 phenotypes_Psoriasis="NULL"
 phenotypes_PsoriasisNOHLA="NULL"
 
+# Optional phenotype file for MZ Twinning
+phenotypes_MZT="NULL"
+
 # Imputation quality scores
 # This should be a file with three columns, SNP, MAF and quality scores
 quality_scores="${home_directory}/input_data/data.info"
