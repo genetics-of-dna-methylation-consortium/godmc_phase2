@@ -25,7 +25,7 @@ for g_chunk in $(seq 1 ${genetic_chunks}); do
     if [[ "$chr" =~ ^[0-9]+$ ]]; then
         if  [ "$chr" -le 22 ]; then
             
-            if [ -f ${section_07_dir}/vQTL_${method}_cis_genetic${g_chunk}_cpgchr${chr}*.besd ]; then
+           # if [ -f ${section_07_dir}/vQTL_${method}_cis_genetic${g_chunk}_cpgchr${chr}*.besd ]; then
                 if [ ${method} = "BF" ]; then
                     if grep -q "Analysis finished" ${section_07_dir}/vQTL_BF_cis_genetic${g_chunk}_cpgchr${chr}_1_1.log; then
                         echo "using $method method to detect vmeQTLs of genetic chunk: ${g_chunk} and chr: ${chr} is successful"
@@ -39,8 +39,10 @@ for g_chunk in $(seq 1 ${genetic_chunks}); do
                     if grep -q "besd file was writen." ${section_07_dir}/vQTL_drm_cis_genetic${g_chunk}_cpgchr${chr}_1_1.log; then
                         echo "using $method method to detect vmeQTLs of genetic chunk: ${g_chunk} and chr: ${chr} is successful"
                     else
+                        echo "here loc 2"
                         echo "resubmit vmeQTL detection job - vmeQTL method: ${method}, genetic chunk: ${g_chunk}, chr: ${chr}"
-                        sbatch 07b-run_cis_vmeQTL.sh ${method} ${chr} ${g_chunk}
+                        echo "loc 2 end"
+                       # sbatch 07b-run_cis_vmeQTL.sh ${method} ${chr} ${g_chunk}
                     fi
                 fi
 
@@ -53,10 +55,10 @@ for g_chunk in $(seq 1 ${genetic_chunks}); do
                     fi
                 fi
 
-            else
-                echo "resubmit vmeQTL detection job - vmeQTL method: ${method}, genetic chunk: ${g_chunk}, chr: ${chr}"
-                sbatch 07b-run_cis_vmeQTL.sh ${method} ${chr} ${g_chunk}
-            fi
+          #  else
+          #      echo "resubmit vmeQTL detection job - vmeQTL method: ${method}, genetic chunk: ${g_chunk}, chr: ${chr}"
+#                sbatch 07b-run_cis_vmeQTL.sh ${method} ${chr} ${g_chunk}
+          #  fi
 
         fi
     fi
