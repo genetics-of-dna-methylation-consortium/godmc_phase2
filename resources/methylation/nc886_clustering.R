@@ -90,4 +90,4 @@ probes$non_imprinted[probes$methylation_group==4]=NA
 nc886_groups=probes[,13:16]
 nc886_groups=cbind(IID=rownames(nc886_groups), nc886_groups) #these IDs will need to match the IDs in genetic data. Moreover, the column name needs to be the same, too
 
-write.table(nc886_groups, file=paste0(out_file, "nc886_groups.txt"), row.names=F, sep="\t", quote=F)
+write.table(nc886_groups, file="${home_directory}/processed_data/methylation_data/nc886_groups.txt", row.names=F, sep="\t", quote=F)
