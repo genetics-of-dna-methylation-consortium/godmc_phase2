@@ -9,7 +9,8 @@ print_version
 echo "nc886 and clustering"
 ${R_directory}Rscript resources/methylation/nc886_clustering.R \
     ${betas} \
-    ${section_14_dir}/
+    ${section_14_dir} \
+    ${home_directory}/
 
 if [ -f "${home_directory}/processed_data/methylation_data/nc886_groups.txt" ]; then
 
