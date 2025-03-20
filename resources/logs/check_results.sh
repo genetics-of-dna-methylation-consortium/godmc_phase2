@@ -402,7 +402,8 @@ check_results_14 () {
 	else
 		echo "Problem: nc866 frequency file is absent"
 		exit 1
-
+	fi
+ 
   	if [ -f "${section_14_dir}/nc886_groups.txt" ]; then
 		rm ${section_14_dir}/nc886_groups.txt
   
