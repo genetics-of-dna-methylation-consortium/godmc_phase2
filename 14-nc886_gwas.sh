@@ -11,18 +11,18 @@ ${R_directory}Rscript resources/methylation/nc886_clustering.R \
     ${betas} \
     ${section_14_dir}/
 
-if [ -f "${section_14_dir}/nc886_groups.txt" ]; then
+if [ -f "${home_directory}/processed_data/methylation_data/nc886_groups.txt" ]; then
 
 echo "GWAS intermediated vs non-methylated"
-${plink2} --bfile ${bfile} --pheno ${section_14_dir}/nc886_groups.txt --pheno-name intermediate_non --maf 0.01 --glm allow-no-covars --ci 0.95 --hardy --freq --geno-counts --no-fid --out ${section_14_dir}/intermediate_non
+${plink2} --bfile ${bfile} --pheno ${home_directory}/processed_data/methylation_data/nc886_groups.txt --pheno-name intermediate_non --maf 0.01 --glm allow-no-covars --ci 0.95 --hardy --freq --geno-counts --no-fid --out ${section_14_dir}/intermediate_non
 
 
 echo "GWAS intermediated vs imprinted"
-${plink2} --bfile ${bfile} --pheno ${section_14_dir}/nc886_groups.txt --pheno-name intermediate_imprinted --maf 0.01 --glm allow-no-covars --ci 0.95 --hardy --freq --geno-counts --no-fid --out ${section_14_dir}/intermediate_imprinted
+${plink2} --bfile ${bfile} --pheno ${home_directory}/processed_data/methylation_data/nc886_groups.txt --pheno-name intermediate_imprinted --maf 0.01 --glm allow-no-covars --ci 0.95 --hardy --freq --geno-counts --no-fid --out ${section_14_dir}/intermediate_imprinted
 
 
 echo "GWAS non-methylated vs imprinted"
-${plink2} --bfile ${bfile} --pheno ${section_14_dir}/nc886_groups.txt --pheno-name non_imprinted --maf 0.01 --glm allow-no-covars --ci 0.95 --hardy --freq --geno-counts --no-fid --out ${section_14_dir}/non_imprinted
+${plink2} --bfile ${bfile} --pheno ${home_directory}/processed_data/methylation_data/nc886_groups.txt --pheno-name non_imprinted --maf 0.01 --glm allow-no-covars --ci 0.95 --hardy --freq --geno-counts --no-fid --out ${section_14_dir}/non_imprinted
 
 
 else
