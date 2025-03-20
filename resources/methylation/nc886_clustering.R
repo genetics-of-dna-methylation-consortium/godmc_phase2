@@ -3,6 +3,7 @@ arguments <- commandArgs(T)
 
 methylation=arguments[1]
 out_file = arguments[2]
+home_dir=arguments[3]
 
 if(!require(matrixStats)){
 #        install.packages("matrixStats")
@@ -90,4 +91,4 @@ probes$non_imprinted[probes$methylation_group==4]=NA
 nc886_groups=probes[,13:16]
 nc886_groups=cbind(IID=rownames(nc886_groups), nc886_groups) #these IDs will need to match the IDs in genetic data. Moreover, the column name needs to be the same, too
 
-write.table(nc886_groups, file="${home_directory}/processed_data/methylation_data/nc886_groups.txt", row.names=F, sep="\t", quote=F)
+write.table(nc886_groups, file=paste0(home_dir, "/processed_data/methylation_data/nc886_groups.txt"), row.names=F, sep="\t", quote=F)
