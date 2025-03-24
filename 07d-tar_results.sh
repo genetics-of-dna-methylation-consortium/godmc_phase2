@@ -15,7 +15,13 @@ flags="czf"
 mkdir -p results/07/chr${i}
 mv ./results/07/vQTL_drm_cis_*cpgchr${i}_1_1* ./results/07/chr${i}
 mv ./results/07/vQTL_svlm_cis_*cpgchr${i}_1_1* ./results/07/chr${i}
-mv ./results/07/vQTL_BF_cis_*cpgchr${i}* ./results/07/chr${i}
+mv ./results/07/vQTL_BF_cis_*cpgchr${i}.besd ./results/07/chr${i}
+mv ./results/07/vQTL_BF_cis_*cpgchr${i}.epi ./results/07/chr${i}
+mv ./results/07/vQTL_BF_cis_*cpgchr${i}.esi ./results/07/chr${i}
+mv ./results/07/vQTL_BF_cis_*cpgchr${i}.novar.list ./results/07/chr${i}
+mv ./results/07/vQTL_BF_cis_*cpgchr${i}.singleton.list ./results/07/chr${i}
+mv ./results/07/vQTL_BF_cis_*cpgchr${i}_1_1.log ./results/07/chr${i}
+
 tar ${flags} ${home_directory}/results/${study_name}_07_chr${i}.${suff} ${home_directory}/results/07/chr${i}
 
 echo "Successfully created results archives of module 07 chr ${i}"
