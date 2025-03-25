@@ -104,7 +104,7 @@ bye
 #        echo "Encrypting files"
 #        gpg --output ${home_directory}/results/${study_name}_${1}.${suff}.aes --symmetric --cipher-algo AES256 ${home_directory}//results/${study_name}_${1}.${suff}
         echo ""
-    elif [[ $1 = "07" || $1 = "04" ]]
+    elif [[ $1 = "04" || $1 = "07" ]]
     then
         echo "Tarring results have been generated"
     else
@@ -112,12 +112,28 @@ bye
         echo "Successfully created results archives"
     fi
     
-    echo "Generating md5 checksum"
-    md5sum ${home_directory}/results/${study_name}_${1}.${suff} > ${home_directory}/results/${study_name}_${1}.md5sum
-    echo "Encrypting files"
-    gpg --output ${home_directory}/results/${study_name}_${1}.${suff}.aes --symmetric --cipher-algo AES256 ${home_directory}//results/${study_name}_${1}.${suff}
-    echo ""
-
+    if [[ "$1" = "07" ]]
+    then
+        echo "start to encrypt 07"
+        for i in $(seq 1 22)
+        do
+        if [ -f ${home_directory}/results/${study_name}_07_chr${i}.md5sum ] && [ -f ${home_directory}/results/${study_name}_07_chr${i}.tgz.aes ]; then
+            echo ""
+        else
+            echo "Generating md5 checksum chr${i}"
+            md5sum ${home_directory}/results/${study_name}_07_chr${i}.tgz > ${home_directory}/results/${study_name}_07_chr${i}.md5sum
+            echo "Encrypting files chr${i}"
+            gpg --output ${home_directory}/results/${study_name}_07_chr${i}.tgz.aes --symmetric --cipher-algo AES256 ${home_directory}/results/${study_name}_07_chr${i}.tgz
+            echo ""
+        fi
+        done
+    else
+        echo "Generating md5 checksum"
+        md5sum ${home_directory}/results/${study_name}_${1}.${suff} > ${home_directory}/results/${study_name}_${1}.md5sum
+        echo "Encrypting files"
+        gpg --output ${home_directory}/results/${study_name}_${1}.${suff}.aes --symmetric --cipher-algo AES256 ${home_directory}//results/${study_name}_${1}.${suff}
+        echo ""
+    fi
 
 if [[ ! "${temp}" = "0"  ]]
 then
@@ -136,6 +152,17 @@ echo "Detecting sshpass"
 		put ${home_directory}/results/config/${study_name}_config.md5sum 
    		bye
 !
+    elif [[ $1 = "07" ]]
+    then
+        sftp $port -oIdentityFile=$key -oBatchMode=no -b - ${sftp_username}@${sftp_address}:${sftp_path} << !
+        dir
+        cd ../upload
+        put ${home_directory}/results/${study_name}_${1}_chr*.md5sum
+        put ${home_directory}/results/${study_name}_$1_chr*.${suff}.aes
+        put ${home_directory}/results/config/${study_name}_config.tar.aes
+        put ${home_directory}/results/config/${study_name}_config.md5sum 
+        bye
+!
     else
         sftp $port -oIdentityFile=$key -oBatchMode=no -b - ${sftp_username}@${sftp_address}:${sftp_path} << !
         dir
@@ -151,8 +178,18 @@ else
 
 read -s -p "Ready to upload? Press enter to continue: " anykey
 
-sftp $port -oIdentityFile=$key ${sftp_username}@${sftp_address}:${sftp_path} <<EOF
-
+if [[ $1 = "07" ]]
+then
+    sftp $port -oIdentityFile=$key ${sftp_username}@${sftp_address}:${sftp_path} <<EOF
+    dir
+    cd ../upload
+    put ${home_directory}/results/${study_name}_${1}_chr*.md5sum
+    put ${home_directory}/results/${study_name}_$1_chr*.${suff}.aes
+    put ${home_directory}/results/config/${study_name}_config.tar.aes
+    put ${home_directory}/results/config/${study_name}_config.md5sum
+EOF
+else
+    sftp $port -oIdentityFile=$key ${sftp_username}@${sftp_address}:${sftp_path} <<EOF
     dir
     cd ../upload
     put ${home_directory}/results/${study_name}_${1}.md5sum
@@ -160,12 +197,14 @@ sftp $port -oIdentityFile=$key ${sftp_username}@${sftp_address}:${sftp_path} <<E
 	put ${home_directory}/results/config/${study_name}_config.tar.aes
 	put ${home_directory}/results/config/${study_name}_config.md5sum 
 EOF
+fi
+
 
 fi
 
 fi
 
-
+    
 if [[ "$2" = "upload" && $1 = "09" ]]
 then
 
