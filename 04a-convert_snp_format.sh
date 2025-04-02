@@ -34,7 +34,4 @@ python ${hase}/hase.py \
     -o ${hase_converting} \
     -study_name ${study_name} # the name for your study 
 
-if [ "$nX" == "0" ]
-then
 echo "Successfully converted genetic data"
-fi
