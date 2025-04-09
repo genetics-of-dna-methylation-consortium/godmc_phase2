@@ -26,7 +26,7 @@ cp ${bfile}.fam ${hase_dir_in}
 cp ${bfile}.bed ${hase_dir_in}
 fi
 
-nX=`grep ^X ${hase_dir_in}/${bfile}.bim | wc -l`
+nX=`grep ^X ${hase_dir_in}/data.bim | wc -l`
 if [ "$nX" -gt "0" ]
 then
 echo "ERROR: wrong chrX coding"
