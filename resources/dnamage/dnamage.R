@@ -116,6 +116,7 @@ generate.aar <- function(AgePredTable, PhenVal, ClockName){
   
   phen = subset(PhenVal, select = -c(IID))
   temp = merge(AgePredTable,PhenVal, by.x = 'IID', by.y = 'IID')
+  temp=temp[match(AgePredTable$IID, temp$IID),]
   if(ncol(phen) == 1 && colnames(phen) == "Smoking"){
     AgePredTable$PredAgeSD = AgePredTable$PredAge/sd(AgePredTable$PredAge)
   } else {
