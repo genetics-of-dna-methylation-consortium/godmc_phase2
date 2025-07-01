@@ -172,21 +172,24 @@ echo ""
 echo "Compressing the outputs from 03a, 10 and 11"
 cd ${home_directory}
 
-tar -zcf results/AgeSmokGWAS_${study_name}.tgz results/03/logs_a/log.txt results/03/age_prediction.pdf results/03/age_prediction_correlation.png results/03/age_prediction_stats.csv results/03/age_prediction_stats_corrsd.csv results/03/smoking_prediction.pdf results/10 results/11 
+tar -zcf results/AgeSmokGWAS_${study_name}.tgz results/03/logs_a/log.txt results/03/age_prediction.pdf results/03/age_prediction_correlation.png results/03/age_prediction_stats.csv results/03/age_prediction_stats_corrsd.csv results/03/smoking_prediction.pdf results/03/cohort_descriptives_commonids.RData results/10 results/11 
 
-echo "Successfully created results archives ${home_directory}/results/11/AgeSmokGWAS_${study_name}.tgz"
+echo "Successfully created results archives ${home_directory}/results/11/AgeSmokGWAS2025_${study_name}.tgz"
 
 
 # Generating md5 checksum for verify the data intensity
 cd ${home_directory}/results || exit 1
-md5sum AgeSmokGWAS_${study_name}.tgz > AgeSmokGWAS_${study_name}.tgz.md5sum
-md5sum -c AgeSmokGWAS_${study_name}.tgz.md5sum
+md5sum AgeSmokGWAS2025_${study_name}.tgz > AgeSmokGWAS2025_${study_name}.tgz.md5sum
+md5sum -c AgeSmokGWAS2025_${study_name}.tgz.md5sum
 # encryption 
-gpg --output AgeSmokGWAS_${study_name}.tgz.gpg --symmetric --cipher-algo AES256 AgeSmokGWAS_${study_name}.tgz
+gpg --output AgeSmokGWAS2025_${study_name}.tgz.gpg --symmetric --cipher-algo AES256 AgeSmokGWAS2025_${study_name}.tgz
 echo ""
-echo "Please download the follwing files to your own local machine and upload via the link of https://drive.google.com/drive/folders/19T0aSzh7xX6rX17pe6HBNImMYjoZEGSW?usp=sharing."
-echo "1. " ${home_directory}/results/AgeSmokGWAS_${study_name}.tgz.md5sum
-echo "2. " ${home_directory}/results/AgeSmokGWAS_${study_name}.tgz.gpg
+#echo "Please download the follwing files to your own local machine and upload via the link of https://drive.google.com/drive/folders/19T0aSzh7xX6rX17pe6HBNImMYjoZEGSW?usp=sharing."
+echo "!!!!!!Please noted: the link has been updated and the old link will not work any more!!!!!!"
+echo "!!!!!!Please noted: Please upload the file named with 2025 which is the updated folder!!!!!!"
+echo "Please download the following files to your own local machine and upload via the link of https://drive.google.com/drive/folders/1CvrU4qDNJSS2J8a_MtlGm33UCDzVby5Y?usp=sharing."
+echo "1. " ${home_directory}/results/AgeSmokGWAS2025_${study_name}.tgz.md5sum
+echo "2. " ${home_directory}/results/AgeSmokGWAS2025_${study_name}.tgz.gpg
 echo "Please share encryption passphrase to the developers by emailing the developers s.w.wang@exeter.ac.uk mentioned in the wiki."
 echo "Thank you very much. Have a nice day!"
 # decompressing archives
