@@ -10,7 +10,7 @@ print_version
 
 #### GREML for SNP heritability##################################
 
-tail -n +2 ${age_pred}.txt > age_acc.plink
+tail -n +2 ${age_pred}.txt > ${age_pred}.plink
 clock_names=$(cut -d" " -f 3- ${age_pred}.txt | head -n 1)
 
 i=1
@@ -21,13 +21,13 @@ do
           --grm ${grmfile_all}_gaws10  \
           --reml \
           --mpheno $i \
-          --pheno age_acc.plink \
+          --pheno ${age_pred}.plink \
           --out ${section_10_dir}/heritability_${clock_name} \
           --thread-num ${nthreads}
   
   i=$(($i+1))
 done
-rm age_acc.plink
+
 
 echo "Successfully finished the calculation on SNP heritability for age accelerations!"
 

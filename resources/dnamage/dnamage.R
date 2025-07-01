@@ -117,6 +117,7 @@ generate.aar <- function(AgePredTable, PhenVal, ClockName){
   phen = subset(PhenVal, select = -c(IID))
   temp = merge(AgePredTable,PhenVal, by.x = 'IID', by.y = 'IID')
   temp=temp[match(AgePredTable$IID, temp$IID),]
+
   if(ncol(phen) == 1 && colnames(phen) == "Smoking"){
     AgePredTable$PredAgeSD = AgePredTable$PredAge/sd(AgePredTable$PredAge)
   } else {
@@ -126,6 +127,7 @@ generate.aar <- function(AgePredTable, PhenVal, ClockName){
   
   moduless = residuals(lm(temp$PredAge ~ ., subset(temp, select = -c(IID)), na.action=na.exclude))
   AgePredTable$PredAgessSD = moduless / sd(moduless)
+  AgePredTable = subset(AgePredTable, select = c(IID, PredAge, PredAgeSD, PredAgessSD))
   colnames(AgePredTable) = c('IID', ClockName, paste0(ClockName, 'SD'), paste0(ClockName, 'ssSD'))
   
   return(AgePredTable)
@@ -138,6 +140,7 @@ age.plot = function(AgePredTable, PhenVal, AgeValid, ClockNames, SD){
   if (AgeValid == T){
     par(mfrow=c(3,3))
     temp = merge(AgePredTable, PhenVal[,c('IID', 'Age_numeric')], by.x = 'IID', by.y = 'IID')
+    temp = temp[match(AgePredTable$IID, temp$IID),]
     cAge=temp$Age_numeric
   } else {
     par(mfrow=c(3,2))
@@ -309,13 +312,13 @@ main <- function()
     cellcount <- cellcount[m,]
     phen_value <- merge(phen_value, cellcount,  by.x = 'IID', by.y = 'IID', all.x = TRUE)
   }
-  
+  phen_value <- phen_value[match(fam[,2], phen_value$IID),]
   
   pdf(paste0(age_plot, '.pdf'), width=12, height=12)
   name_sumstats <- c()
   sumstats <- c()
   
-  
+
   message("Predicting DNAmAge")#############################################
   # filter to clock probes
   DNA_overlap <- intersect(dnamage_datclock$CpGmarker[-1], rownames(norm.beta))
@@ -435,10 +438,12 @@ main <- function()
     fam <- merge(fam, phenpred[,c(1,3,4)], by.x = 'IID', by.y = 'IID', all.x=TRUE)
     cortable <- merge(cortable, phenpred, by.x = 'IID', by.y = 'IID', all.x=TRUE)
   }
+
   if (exists('pacepred')) {
     fam <- merge(fam, pacepred[,c(1,3,4)], by.x = 'IID', by.y = 'IID', all.x=TRUE)
     cortable <- merge(cortable, pacepred, by.x = 'IID', by.y = 'IID', all.x=TRUE)
   }
+  
   fam <- fam[,c(2,1,seq(3,ncol(fam)))]
   write.table(fam, file=paste0(out_file, ".txt"), row=F, col=T, qu=F)
   

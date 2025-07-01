@@ -9,7 +9,7 @@ exec &> >(tee ${section_10a_logfile})
 print_version
 
 
-# Step 0: rre-preidcted the epigenetic clocks ###################################
+# Step 0: re-run the epigenetic clocks for age###################################
 ${R_directory}Rscript resources/dnamage/dnamage.R \
 		${methylation_no_outliers} \
 		${covariates_intersect} \
@@ -64,7 +64,7 @@ tail -n +2 ${age_pred}.txt > ${age_pred}.plink
 clock_names=$(cut -d" " -f 3- ${age_pred}.txt | head -n 1)
 
 for clock_name in $clock_names
-do  
+do
     ${gcta} \
           --bfile ${bfile}  \
           --grm-sparse ${grmfile_fast} \
