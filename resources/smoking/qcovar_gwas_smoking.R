@@ -19,6 +19,10 @@ main = function () {
   fam_file <- arguments[3]
   out <- arguments[4]
 
+  # cellcount_file = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/processed_data/cellcounts/cellcounts.covariates.txt"
+  # covs_file = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/input_data/covariates.txt"
+  # fam_file = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/processed_data/genetic_data/data.fam"
+  # out = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/processed_data/methylation_data/smoking_prediction"
 
   message("Generate phenotype for GWAS on smoking.")
   
@@ -26,10 +30,9 @@ main = function () {
   covs <- read.table(covs_file, header=T, stringsAsFactors=FALSE)
   fam <- read.table(fam_file, stringsAsFactors=FALSE)[,1:2]
   smok <- read.table(paste0(out, ".txt"), header = T, stringsAsFactors = FALSE)
-  m <- match(fam[,2], covs[,1])
-  covs <- covs[m,]
-  
-  
+  covs <- covs[match(fam[,2], covs$IID),]
+  smok <- smok[match(fam[,2], smok$IID),]
+
   # Check if the age and sex are validate
   age_index <- grep("^age_numeric$", names(covs), ignore.case=TRUE)
   count_age <- length(unique(covs[,age_index]))
@@ -87,6 +90,7 @@ main = function () {
   
 
   # calculate the residual model of smoking
+  phen <- phen_value[fam[,2], phen_value$IID,]
   phen <- subset(phen_value, select = -c(IID))
   if (ncol(phen) == 1 && colnames(phen) == 'Smoking'){
     write.table(smok, file=paste0(out, ".smok.plink"), row=F, col=F, qu=F)

@@ -43,7 +43,7 @@ ${gcta} \
   		--grm-sparse ${grmfile_fast}  \
         --fastGWA-mlm \
   		--pheno ${smoking_pred}.smok.plink \
-		--qcovar ${section_10_dir}/gaws10_pc.eigenvec \
+		--qcovar ${home_directory}/processed_data/genetic_data/gaws10_pc.eigenvec \
 		--autosome \
 		--h2-limit 100 \
 		--thread-num ${nthreads} \
