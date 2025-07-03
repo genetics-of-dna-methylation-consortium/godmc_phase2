@@ -11,6 +11,21 @@ print_version
 #### fucntions for version comparsion ############## 
 source resources/logs/check_logs.sh
 
+
+#### fucntions for checking if the files has been updated ############## 
+check_file_updated () {
+	file=$1
+	script_name=$2
+	if find "$file" -newermt "2025-07-01" | grep -q .; then
+    	echo "File $file was modified after 01 July."
+	else
+		echo "Problem: File $file was NOT modified after 01 July."
+		echo "Please rerun the corresponding scripts $script_name after git pull."
+		exit 1
+	fi
+}
+
+
 #### fucntions for checking log files ############## 
 
 check_logs () {
@@ -26,7 +41,9 @@ check_logs () {
 }
 
 #### fucntions for checking output files ############## 
-check_results_03a () {
+
+check_results_10a () {
+
 	if [ -f "${section_03_dir}/age_prediction.pdf" ]; then
 		echo "Plot of age predictions is present"
 	else
@@ -34,6 +51,7 @@ check_results_03a () {
 		exit 1
 	fi
 
+	check_file_updated "${section_03_dir}/age_prediction.pdf" "10a"
 	
 	if [ -f "${section_03_dir}/age_prediction_correlation.png" ]; then
 		echo "Plot of correleation on age predictions is present"
@@ -42,12 +60,25 @@ check_results_03a () {
 		exit 1
 	fi
 
+	check_file_updated "${section_03_dir}/age_prediction_correlation.png" "03a"
+
 	if [ -f "${section_03_dir}/age_prediction_stats.csv" ]; then
 		echo "Statistic table of age predictions is present"
 	else
 		echo "Problem: Statistic table of of age predictions is absent"
 		exit 1
 	fi
+
+	check_file_updated "${section_03_dir}/age_prediction_stats.csv" "10a"
+
+	if [ -f "${section_03_dir}/age_prediction_stats_models.csv" ]; then
+		echo "Statistic table of age predictions of models is present"
+	else
+		echo "Problem: Statistic table of of age predictions of models is absent"
+		exit 1
+	fi
+
+	check_file_updated "${section_03_dir}/age_prediction_stats_models.csv" "10a"
 
 	if [ -f "${section_03_dir}/age_prediction_stats_corrsd.csv" ]; then
 		echo "Correleation table of age predictions is present"
@@ -56,24 +87,20 @@ check_results_03a () {
 		exit 1
 	fi
 
-	if [ -f "${smoking_pred_plot}" ]; then
-		echo "Smoking prediction plot is present"
-	else
-		echo "Problem: Smoking prediction plot file not present"
-		exit 1
-	fi
-
-}
-
-check_results_10a () {
+	check_file_updated "${section_03_dir}/age_prediction_stats_corrsd.csv" "10a"
 
 	GWASresults=$(find ${section_10_dir} -type f -name "*.fastGWA" | wc -l)
-	if [ $GWASresults -gt 4 ]; then
+	if [ $GWASresults -gt 10 ]; then
 		echo "The GWAS results are present"
 	else
 		echo "Problem: GWAS has not been performed successfully"
 	    exit 1
 	fi
+
+	for file in $(find ${section_10_dir} -type f -name "*.fastGWA");
+	do
+		check_file_updated "$file" "10a"
+	done
 
 	MANplot=$(find ${section_10_dir} -type f -name "*_manhattan.pdf" | wc -l)
 	if [ $MANplot -gt 4 ]; then
@@ -83,6 +110,11 @@ check_results_10a () {
 		exit 1
 	fi
 
+	for file in $(find ${section_10_dir} -type f -name "*_manhattan.pdf");
+	do
+		check_file_updated "$file" "10a"
+	done
+
 	QQplot=$(find ${section_10_dir} -type f -name "*_qqplot.jpeg" | wc -l)
 	if [ $QQplot -gt 4 ]; then
 		echo "QQ plots of age accelerations are present"
@@ -91,6 +123,12 @@ check_results_10a () {
 		exit 1
 	fi
 
+	for file in $(find ${section_10_dir} -type f -name "*_qqplot.jpeg");
+	do
+		check_file_updated "$file" "10a"
+	done
+
+	
 }
 
 check_results_10b () {
@@ -103,9 +141,33 @@ check_results_10b () {
 		exit 1
 	fi
 
+	for file in $(find ${section_10_dir} -type f -name "heritability_*.hsq");
+	do
+		check_file_updated "$file" "10b"
+	done
+
 }
 
 check_results_11a () {
+
+	if [ -f "${smoking_pred_plot}" ]; then
+		echo "Smoking prediction plot is present"
+	else
+		echo "Problem: Smoking prediction plot is not present"
+		exit 1
+	fi
+
+	check_file_updated "${smoking_pred_plot}" "11a"
+
+	if [ -f "${home_directory}/results/11/smoking_stats.csv" ]; then
+		echo "Statistic table of preicted smoking is present"
+	else
+		echo "Problem: Statistic table of preicted smoking is not present"
+		exit 1
+	fi
+
+	check_file_updated "${home_directory}/results/11/smoking_stats.csv" "11a"
+
 	if [ -f "${section_11_dir}/gwas_smoking.fastGWA" ] && [ -f "${section_11_dir}/gwas_smoking_PCA.fastGWA"  ]; then
 		echo "The GWAS result of smoking is present"
 	else
@@ -113,12 +175,18 @@ check_results_11a () {
 		exit 1
 	fi
 	
+	check_file_updated "${section_11_dir}/gwas_smoking.fastGWA" "11a"
+	check_file_updated "${section_11_dir}/gwas_smoking_PCA.fastGWA" "11a"
+
 	if [ -f "${section_11_dir}/gwas_smoking_manhattan.pdf" ] && [ -f "${section_11_dir}/gwas_smoking_PCA_manhattan.pdf" ]; then
 		echo "Manhattan plot of smoking is present"
 	else
 		echo "Problem: Manhattan plot of smoking is absent"
 		exit 1
 	fi
+
+	check_file_updated "${section_11_dir}/gwas_smoking_manhattan.pdf" "11a"
+	check_file_updated "${section_11_dir}/gwas_smoking_PCA_manhattan.pdf" "11a"
 	
 	
 	if [ -f "${section_11_dir}/gwas_smoking_qqplot.jpeg" ] && [ -f "${section_11_dir}/gwas_smoking_PCA_qqplot.jpeg" ]; then
@@ -127,6 +195,10 @@ check_results_11a () {
 		echo "Problem: QQ plot of smoking is absent"
 		exit 1
 	fi
+
+	check_file_updated "${section_11_dir}/gwas_smoking_qqplot.jpeg" "11a"
+	check_file_updated "${section_11_dir}/gwas_smoking_PCA_qqplot.jpeg" "11a"
+
 	
 }
 
@@ -138,21 +210,22 @@ check_results_11b () {
 		exit 1
 	fi
 
+	check_file_updated "${section_11_dir}/heritability_smoking.hsq" "11b"
 	
 }
 
 
 ### check the log files and the output files for 03a, 10 and 11 ############## 
-script_names=( "03a-methylation_variables.sh" "10a-gwas_aar.sh" "10b-gwas_aar.sh" "11a-gwas_smoking.sh" "11b-gwas_smoking.sh" )
-logfile_names=( "${section_03a_logfile}"  "${section_10a_logfile}" "${section_10b_logfile}" "${section_11a_logfile}" "${section_11b_logfile}" )
-script_number=( "03a" "10a" "10b" "11a" "11b" )
+script_names=( "10a-gwas_aar.sh" "10b-gwas_aar.sh" "11a-gwas_smoking.sh" "11b-gwas_smoking.sh" )
+logfile_names=( "${section_10a_logfile}" "${section_10b_logfile}" "${section_11a_logfile}" "${section_11b_logfile}" )
+script_number=( "10a" "10b" "11a" "11b" )
 
 
 for index in "${!script_names[@]}"
 do
 	script=${script_names[$index]}
 	log=${logfile_names[$index]}
-	num_script=${script_number[index]}
+	num_script=${script_number[$index]}
 
 	echo ""
   	echo "Checking log files for $script"
@@ -173,6 +246,7 @@ echo "Compressing the outputs from 03a, 10 and 11"
 cd ${home_directory}
 
 tar -zcf results/AgeSmokGWAS2025_${study_name}.tgz results/03/logs_a/log.txt results/03/age_prediction.pdf results/03/age_prediction_correlation.png results/03/age_prediction_stats.csv results/03/age_prediction_stats_corrsd.csv results/03/smoking_prediction.pdf results/03/cohort_descriptives_commonids.RData results/10 results/11 
+tar -zcf results/AgeSmokGWAStest_${study_name}.tgz results/03/logs_a/log.txt results/03/age_prediction* results/03/smoking_prediction.pdf results/03/cohort_descriptives_commonids.RData results/10 results/11 
 
 echo "Successfully created results archives ${home_directory}/results/11/AgeSmokGWAS2025_${study_name}.tgz"
 
@@ -185,7 +259,7 @@ md5sum -c AgeSmokGWAS2025_${study_name}.tgz.md5sum
 gpg --output AgeSmokGWAS2025_${study_name}.tgz.gpg --symmetric --cipher-algo AES256 AgeSmokGWAS2025_${study_name}.tgz
 echo ""
 #echo "Please download the follwing files to your own local machine and upload via the link of https://drive.google.com/drive/folders/19T0aSzh7xX6rX17pe6HBNImMYjoZEGSW?usp=sharing."
-echo "!!!!!!Please noted: the link has been updated and the old link will not work any more!!!!!!"
+echo "!!!!!!Please noted: the link of GoogleDrive has been updated and the old one will not work any more!!!!!!"
 echo "!!!!!!Please noted: Please upload the file named with 2025 which is the updated folder!!!!!!"
 echo "Please download the following files to your own local machine and upload via the link of https://drive.google.com/drive/folders/1CvrU4qDNJSS2J8a_MtlGm33UCDzVby5Y?usp=sharing."
 echo "1. " ${home_directory}/results/AgeSmokGWAS2025_${study_name}.tgz.md5sum
