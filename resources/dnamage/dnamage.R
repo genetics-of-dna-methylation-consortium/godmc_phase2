@@ -110,6 +110,94 @@ cal.stats <- function(AgePredTable, PhenVal, AgeValid, SexValid, SD){
   return(outtemp)
 }
 
+# Calculate the summary statistics
+cal.M.stats <- function(AgePredTable, PhenVal, AgeValid, SexValid, ClockName){
+  # pre-phase
+  temp = merge(AgePredTable, PhenVal, by.x = 'IID', by.y = 'IID')
+
+  M1 = lm(PredAge ~ ., subset(temp, select = -c(Smoking, IID)), na.action=na.exclude)
+  M2 = lm(PredAge ~ ., subset(temp, select = -c(IID)), na.action=na.exclude)
+
+  coefM1 = as.data.frame(summary(M1)$coefficients)
+  coefM2 = as.data.frame(summary(M2)$coefficients)
+
+  stats_name = c("Min","Mean", "Median", "Max", "SD", "Rsquared", "AdjRsquared", 
+               "Intercept", "SEIntercept","PvalIntercept")
+
+  statsM0 = c(min(temp$PredAge), mean(temp$PredAge), median(temp$PredAge), max(temp$PredAge), sd(temp$PredAge),rep(NA,5))
+  statsM1 = c(min(residuals(M1)), mean(residuals(M1)),median(residuals(M1)),max(residuals(M1)), summary(M1)$sigma,
+              summary(M1)$r.squared, summary(M1)$adj.r.squared,
+              coefM1["(Intercept)","Estimate"], coefM1["(Intercept)","Std. Error"],
+              coefM1["(Intercept)","Pr(>|t|)"])
+  statsM2 = c(min(residuals(M2)), mean(residuals(M2)),median(residuals(M2)),max(residuals(M2)), summary(M2)$sigma,
+              summary(M2)$r.squared, summary(M2)$adj.r.squared,
+              coefM2["(Intercept)","Estimate"], coefM2["(Intercept)","Std. Error"],
+              coefM2["(Intercept)","Pr(>|t|)"])
+
+  coefM1 <- coefM1[rownames(coefM1) != "(Intercept)", ]
+  coefM2 <- coefM1[rownames(coefM2) != "(Intercept)", ]
+
+  if (AgeValid){
+    stats_name = c(stats_name,"CorAge_numeric","SEAge_numeric","PvalAge_numeric")
+    
+    statsM0Age = cor.test(temp$PredAge,temp$Age, method = "p", na.action=na.exclude)
+    statsM0 = c(statsM0, statsM0Age$estimate, unname(sqrt((1 - statsM0Age$estimate^2)/statsM0Age$parameter)),
+                statsM0Age$p.value)
+    statsM1 = c(statsM1, coefM1["Age_numeric","Estimate"], coefM1["Age_numeric","Std. Error"],
+                coefM1["Age_numeric","Pr(>|t|)"])
+    statsM2 = c(statsM2, coefM2["Age_numeric","Estimate"], coefM2["Age_numeric","Std. Error"],
+                coefM2["Age_numeric","Pr(>|t|)"])
+    
+    coefM1 <- coefM1[rownames(coefM1) != "Age_numeric", ]
+    coefM2 <- coefM2[rownames(coefM2) != "Age_numeric", ]
+  } 
+
+  if (SexValid){
+    stats_name = c(stats_name,"CorSex_factor","SESex_factor","PvalSex_factor")
+    
+    statsM0Sex = t.test(PredAge ~ Sex_factor, temp, na.action=na.exclude)
+    statsM0 = c(statsM0, statsM0Sex$statistic, statsM0Sex$stderr, statsM0Sex$p.value)
+    statsM1 = c(statsM1, coefM1["Sex_factorM","Estimate"], coefM1["Sex_factorM","Std. Error"],
+                coefM1["Sex_factorM","Pr(>|t|)"])
+    statsM2 = c(statsM2, coefM2["Sex_factorM","Estimate"], coefM2["Sex_factorM","Std. Error"],
+                coefM2["Sex_factorM","Pr(>|t|)"])
+    
+    coefM1 <- coefM1[rownames(coefM1) != "Sex_factorM", ]
+    coefM2 <- coefM2[rownames(coefM2) != "Sex_factorM", ]
+ }
+
+  stats_name = c(stats_name,"CorSmoking","SESmoking","PvalSmoking")
+  statsM0Smok = cor.test(temp$PredAge,temp$Smoking, method = "p", na.action=na.exclude)
+  statsM0 = c(statsM0, statsM0Smok$estimate, unname(sqrt((1 - statsM0Smok$estimate^2)/statsM0Smok$parameter)),
+              statsM0Smok$p.value)
+  statsM1 = c(statsM1, rep(NA,3))
+  statsM2 = c(statsM2, coefM2["Smoking","Estimate"], coefM2["Smoking","Std. Error"],
+              coefM2["Smoking","Pr(>|t|)"])
+  summaryM2 = coefM2[-which(rownames(coefM2)=="Smoking"),]
+  
+  sigM1 <- coefM1[coefM1$`Pr(>|t|)` < 0.05, ]
+  sigM2 <- coefM2[coefM2$`Pr(>|t|)` < 0.05, ] 
+  
+  if (nrow(sigM1) > 0 ){
+    print(paste0(ClockName,":Coefficients table of Module1 with Sig variables========="))
+    print(sigM1)
+  }
+
+  if (nrow(sigM1) > 0 ){
+    print(paste0(ClockName,":Coefficients table of Module2 with Sig variables========="))
+    print(sigM1)
+  }
+  
+  out = data.frame(StatsValue = stats_name,
+                  StatsPredAge = statsM0,
+                  StatsM1 = statsM1,
+                  StatsM2 = statsM2)
+  colnames(out) = c("StatsValue", ClockName, paste0(ClockName,"M1"),paste0(ClockName,"M2"))
+  rownames(out) = out$StatsValue
+  out = out[,-1]
+
+  return(out)
+}
 
 # Calculate residual divided by SD
 generate.aar <- function(AgePredTable, PhenVal, ClockName){
@@ -121,11 +209,11 @@ generate.aar <- function(AgePredTable, PhenVal, ClockName){
   if(ncol(phen) == 1 && colnames(phen) == "Smoking"){
     AgePredTable$PredAgeSD = AgePredTable$PredAge/sd(AgePredTable$PredAge)
   } else {
-    module = residuals(lm(temp$PredAge ~ ., subset(temp, select = -c(Smoking, IID)), na.action=na.exclude))
+    module = residuals(lm(PredAge ~ ., data = subset(temp, select = -c(Smoking, IID)), na.action=na.exclude))
     AgePredTable$PredAgeSD = module/sd(module)
   }
   
-  moduless = residuals(lm(temp$PredAge ~ ., subset(temp, select = -c(IID)), na.action=na.exclude))
+  moduless = residuals(lm(PredAge ~ ., data = subset(temp, select = -c(IID)), na.action=na.exclude))
   AgePredTable$PredAgessSD = moduless / sd(moduless)
   AgePredTable = subset(AgePredTable, select = c(IID, PredAge, PredAgeSD, PredAgessSD))
   colnames(AgePredTable) = c('IID', ClockName, paste0(ClockName, 'SD'), paste0(ClockName, 'ssSD'))
@@ -233,6 +321,15 @@ main <- function()
   smoking_file <- arguments[8]
   cellcount_file <- arguments[9]
   
+  beta_file = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/processed_data/methylation_data/methylation_no_outliers.Robj"
+  cov_file = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/processed_data/covariate_data/covariates_intersectids.txt"
+  fam_file = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/processed_data/genetic_data/data.fam"
+  out_file = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/processed_data/methylation_data/age_prediction"
+  age_plot = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/results/03/age_prediction"
+  SD = 5
+  age_stats = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/results/03/age_prediction_stats"
+  smoking_file = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/processed_data/methylation_data/smoking_prediction.txt"
+  cellcount_file = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/processed_data/cellcounts/cellcounts.covariates.txt"
   
   message("Getting probe parameters")#######################################
   #dnamage_probeAnnotation=read.csv("resources/dnamage/probeAnnotation21kdatMethUsed.csv.gz")
@@ -336,6 +433,7 @@ main <- function()
     # summary on module statistic
     name_sumstats <- c(name_sumstats, 'DNAmAge')
     sumstats<- rbind(sumstats, cal.stats(AgePredTable=dnampred, PhenVal=phen_value, AgeValid=age_valid, SexValid=sex_valid, SD))
+    modulestatsDNA <- cal.M.stats(AgePredTable=dnampred, PhenVal=phen_value, AgeValid=age_valid, SexValid=sex_valid, ClockName = 'DNAmAge')
     # age acceleration residual prediction
     dnampred <- generate.aar(AgePredTable=dnampred, PhenVal=phen_value, ClockName = 'DNAmAge')
     # plot
@@ -356,6 +454,7 @@ main <- function()
     # summary on module statistic
     name_sumstats <- c(name_sumstats, 'PhenoAge')
     sumstats<- rbind(sumstats, cal.stats(AgePredTable=phenpred, PhenVal=phen_value, AgeValid=age_valid, SexValid=sex_valid, SD))
+    modulestatsPheno <- cal.M.stats(AgePredTable=phenpred, PhenVal=phen_value, AgeValid=age_valid, SexValid=sex_valid, ClockName = 'PhenoAge')
     # age acceleration residual prediction
     phenpred <- generate.aar(AgePredTable=phenpred, PhenVal=phen_value, ClockName='PhenoAge')
     # plot
@@ -373,6 +472,7 @@ main <- function()
     # summary on module statistic
     name_sumstats <- c(name_sumstats, 'DunedinPACE')
     sumstats <- rbind(sumstats, cal.stats(AgePredTable=pacepred, PhenVal=phen_value, AgeValid=age_valid, SexValid=sex_valid, SD))
+    modulestatsDun <- cal.M.stats(AgePredTable=pacepred, PhenVal=phen_value, AgeValid=age_valid, SexValid=sex_valid, ClockName = 'DunedinPACE')
     # age acceleration residual prediction
     pacepred <-  generate.aar(AgePredTable=pacepred, PhenVal=phen_value, ClockName='DunedinPACE')
     # plot
@@ -427,6 +527,9 @@ main <- function()
                           "SexEstPostFilter", "SexSEPostFilter", "SexPPostFilter")
   write.csv(sumstats, file = paste0(age_stats, ".csv"))	
   
+  modulestats <- cbind(modulestatsDNA, modulestatsPheno, modulestatsDun)
+  write.csv(modulestats, file = paste0(age_stats, "_models.csv"), row.names = TRUE, quote = FALSE, na = "NA", col.names=T, sep=",")	
+
   # output age acceleration files and correlation matrix files
   colnames(fam) <- c('FID', 'IID')
   if (exists('dnampred')) {
