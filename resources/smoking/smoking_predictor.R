@@ -30,8 +30,8 @@ predict.smoking <- function(Illig_data, mbeta)
 	mbeta_down <- mbeta[rownames(mbeta) %in% Illig_data_down$cpgs,]
 	mbeta_up <- mbeta[rownames(mbeta) %in% Illig_data_up$cpgs, ]
 
-  mbeta_down <- imputation(mbeta_down)
-  mbeta_up <- imputation(mbeta_up)
+	mbeta_down <- imputation(mbeta_down)
+	mbeta_up <- imputation(mbeta_up)
 	
 	# sort Illig data by Cpg name
 	Illig_data_up <- Illig_data_up[order(Illig_data_up$cpgs),]
