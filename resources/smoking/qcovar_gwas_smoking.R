@@ -90,7 +90,7 @@ main = function () {
   
 
   # calculate the residual model of smoking
-  phen <- phen_value[fam[,2], phen_value$IID,]
+  phen <- phen_value[match(fam[,2], phen_value$IID),]
   phen <- subset(phen_value, select = -c(IID))
   if (ncol(phen) == 1 && colnames(phen) == 'Smoking'){
     write.table(smok, file=paste0(out, ".smok.plink"), row=F, col=F, qu=F)
