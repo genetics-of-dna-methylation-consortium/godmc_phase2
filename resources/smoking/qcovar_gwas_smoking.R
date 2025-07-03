@@ -18,11 +18,9 @@ main = function () {
   covs_file <- arguments[2]
   fam_file <- arguments[3]
   out <- arguments[4]
+  stats_out <- arguments[5]
 
-  # cellcount_file = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/processed_data/cellcounts/cellcounts.covariates.txt"
-  # covs_file = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/input_data/covariates.txt"
-  # fam_file = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/processed_data/genetic_data/data.fam"
-  # out = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/processed_data/methylation_data/smoking_prediction"
+
 
   message("Generate phenotype for GWAS on smoking.")
   
@@ -91,15 +89,32 @@ main = function () {
 
   # calculate the residual model of smoking
   phen <- phen_value[match(fam[,2], phen_value$IID),]
-  phen <- subset(phen_value, select = -c(IID))
+  phen <- subset(phen, select = -c(IID))
+  stats_name <- c("Min","Mean", "Median", "Max", "SD")
+  smok_M0 <- c(min(phen$Smoking), mean(phen$Smoking), median(phen$Smoking), max(phen$Smoking), sd(phen$Smoking))
   if (ncol(phen) == 1 && colnames(phen) == 'Smoking'){
+    message("There is no covariate to adjust for smoking residuals.")
     write.table(smok, file=paste0(out, ".smok.plink"), row=F, col=F, qu=F)
+    smok_sum <- data.frame( stats_name, smok_M0)
   }else{
     SmokModel <- residuals(lm(phen$Smoking ~ ., phen, na.action=na.exclude))
     fam$residual <- SmokModel / sd(SmokModel)
+    M1 <- lm(phen$Smoking ~ ., phen, na.action=na.exclude)
+    coefM1 <- summary(M1)$coefficients
+    stats_name <- c(stats_name, "Rsquared", "AdjRsquared", "Intercept", "SEIntercept","PvalIntercept")
+    smok_sum <- data.frame( stats_name, smok_M0 = c(smok_M0, rep(NA, 5)), 
+                            smok_M1 = c(min(SmokModel), mean(SmokModel), 
+                            median(SmokModel), max(SmokModel), sd(SmokModel),
+                            summary(M1)$r.squared, summary(M1)$adj.r.squared,
+                            coefM1["(Intercept)","Estimate"], coefM1["(Intercept)","Std. Error"],
+                            coefM1["(Intercept)","Pr(>|t|)"]))
+    print("Summary table for smoking model==========================")
+    print(summary(M1))
     write.table(fam, file=paste0(out, ".smok.plink"), row=F, col=F, qu=F)
   }
-  
+
+  write.table(smok_sum, file=paste0(stats_out, ".csv"), row.names=F, col.names=T, sep=",", quote=F)
+
   
 }
 
