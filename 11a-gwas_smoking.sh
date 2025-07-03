@@ -8,6 +8,16 @@ touch ${section_11a_logfile}
 exec &> >(tee ${section_11a_logfile})
 print_version
 
+# Step 0: epi Smoking score prediction ###################################
+${R_directory}Rscript resources/smoking/smoking_predictor.R \
+		${methylation_no_outliers} \
+		${bfile}.fam \
+		${smoking_pred} \
+		${smoking_pred_plot} \
+		${smoking_pred_SD} \
+		${covariates} 
+
+
 
 # Step 1: Check if cellcount is generated ###################################
 if [ "${sorted_methylation}" = "yes" ]
@@ -22,7 +32,8 @@ ${R_directory}Rscript resources/smoking/qcovar_gwas_smoking.R \
 	      ${cellcounts_cov} \
 	      ${covariates} \
           ${bfile}.fam \
-	      ${smoking_pred}
+	      ${smoking_pred} \
+		  ${home_directory}/results/11/smoking_stats
 
 
 # Step 3:GWAS of smoking ###################################
