@@ -321,15 +321,6 @@ main <- function()
   smoking_file <- arguments[8]
   cellcount_file <- arguments[9]
   
-  beta_file = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/processed_data/methylation_data/methylation_no_outliers.Robj"
-  cov_file = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/processed_data/covariate_data/covariates_intersectids.txt"
-  fam_file = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/processed_data/genetic_data/data.fam"
-  out_file = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/processed_data/methylation_data/age_prediction"
-  age_plot = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/results/03/age_prediction"
-  SD = 5
-  age_stats = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/results/03/age_prediction_stats"
-  smoking_file = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/processed_data/methylation_data/smoking_prediction.txt"
-  cellcount_file = "/lustre/home/sww208/GoDMC/DataSetGoDMC/scz_ab_eur/processed_data/cellcounts/cellcounts.covariates.txt"
   
   message("Getting probe parameters")#######################################
   #dnamage_probeAnnotation=read.csv("resources/dnamage/probeAnnotation21kdatMethUsed.csv.gz")
