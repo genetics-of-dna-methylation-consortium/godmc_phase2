@@ -13,6 +13,24 @@ source resources/logs/check_logs.sh
 
 
 #### fucntions for checking if the files has been updated ############## 
+
+check_script_updated () {
+	script=$1
+	commitdate=$(git log -1 --pretty=format:%cd --date=short "$script")
+	echo "$commitdate"
+	# convert to seconds since epoch
+	commitdate=$(date -d "$commitdate" +%s)
+	updatedate=$(date -d "2025-06-30" +%s)
+
+	if [ "$commitdate" -gt "$updatedate" ]; then
+		echo "Script $script_name was updated after 01 July 2025."
+	else
+		echo "Problem: Script $script_name was NOT updated after 01 July 2025."
+		echo "Please rerun the corresponding scripts after git pull."
+		exit 1
+	fi
+}
+
 check_file_updated () {
 	file=$1
 	script_name=$2
@@ -72,9 +90,9 @@ check_results_10a () {
 	check_file_updated "${section_03_dir}/age_prediction_stats.csv" "10a"
 
 	if [ -f "${section_03_dir}/age_prediction_stats_models.csv" ]; then
-		echo "Statistic table of age predictions of models is present"
+		echo "Statistic table of age predictions for each clock is present"
 	else
-		echo "Problem: Statistic table of of age predictions of models is absent"
+		echo "Problem: Statistic table of of age predictions for each clock is absent"
 		exit 1
 	fi
 
@@ -216,7 +234,7 @@ check_results_11b () {
 
 
 ### check the log files and the output files for 03a, 10 and 11 ############## 
-script_names=( "10a-gwas_aar.sh" "10b-gwas_aar.sh" "11a-gwas_smoking.sh" "11b-gwas_smoking.sh" )
+script_names=( "10a-gwas_aar.sh" "10b-heritability_aar.sh" "11a-gwas_smoking.sh" "11b-heritability_smoking.sh" )
 logfile_names=( "${section_10a_logfile}" "${section_10b_logfile}" "${section_11a_logfile}" "${section_11b_logfile}" )
 script_number=( "10a" "10b" "11a" "11b" )
 
@@ -228,6 +246,10 @@ do
 	num_script=${script_number[$index]}
 
 	echo ""
+	echo "Checking if the $script has been updated"
+
+	check_script_updated ${scripts_directory}/${script}
+
   	echo "Checking log files for $script"
 
 	check_logs ${log} ${script} ${num_script}
@@ -246,7 +268,6 @@ echo "Compressing the outputs from 03a, 10 and 11"
 cd ${home_directory}
 
 tar -zcf results/AgeSmokGWAS2025_${study_name}.tgz results/03/logs_a/log.txt results/03/age_prediction.pdf results/03/age_prediction_correlation.png results/03/age_prediction_stats.csv results/03/age_prediction_stats_corrsd.csv results/03/smoking_prediction.pdf results/03/cohort_descriptives_commonids.RData results/10 results/11 
-tar -zcf results/AgeSmokGWAStest_${study_name}.tgz results/03/logs_a/log.txt results/03/age_prediction* results/03/smoking_prediction.pdf results/03/cohort_descriptives_commonids.RData results/10 results/11 
 
 echo "Successfully created results archives ${home_directory}/results/11/AgeSmokGWAS2025_${study_name}.tgz"
 
