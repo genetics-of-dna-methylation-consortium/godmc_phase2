@@ -17,6 +17,7 @@ i=1
 for clock_name in $clock_names
 do
   echo "Runing SNP heritability for " $clock_name $i
+
   ${gcta} \
           --grm ${grmfile_all}_gaws10  \
           --reml \
@@ -24,6 +25,15 @@ do
           --pheno ${age_pred}.plink \
           --out ${section_10_dir}/heritability_${clock_name} \
           --thread-num ${nthreads}
+  
+  ${gcta} \
+        --grm ${grmfile_all}_gaws10  \
+        --reml \
+        --mpheno $i \
+        --pheno ${age_pred}.plink \
+        --qcovar ${home_directory}/processed_data/genetic_data/gaws10_pc.eigenvec \
+        --out ${section_10_dir}/heritability_${clock_name}_PCA \
+        --thread-num ${nthreads}
   
   i=$(($i+1))
 done

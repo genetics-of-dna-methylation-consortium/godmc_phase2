@@ -16,6 +16,14 @@ print_version
           --pheno ${smoking_pred}.smok.plink \
           --out ${section_11_dir}/heritability_smoking \
           --thread-num ${nthreads}
+
+  ${gcta} \
+          --grm ${grmfile_all}_gaws10  \
+          --reml \
+          --qcovar ${home_directory}/processed_data/genetic_data/gaws10_pc.eigenvec \
+          --pheno ${smoking_pred}.smok.plink \
+          --out ${section_11_dir}/heritability_smoking_PCA \
+          --thread-num ${nthreads}
           
 echo "Successfully finished the calculation on SNP heritability for smoking!"          
         
