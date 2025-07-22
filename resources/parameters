@@ -25,6 +25,7 @@ section_17_dir="${home_directory}/results/17"
 
 section_01_logfiles="${section_01_dir}/logs/log${timetemp}.txt"
 section_01_logfile="${section_01_dir}/logs/log.txt"
+section_01b_logfile="${section_01_dir}/logs_b/log.txt"
 section_02a_logfile="${section_02_dir}/logs_a/log.txt"
 section_02b_logfile="${section_02_dir}/logs_b/log.txt"
 section_03a_logfile="${section_03_dir}/logs_a/log.txt"
