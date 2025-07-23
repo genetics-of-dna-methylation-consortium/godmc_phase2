@@ -22,6 +22,7 @@ file_PRS_pheno_pc_plots <- paste(res_dir,"/",study_name,"_PRS_",PRS,"_meth_pcs_n
 
 #read PRS data
 df_PRS <- read.table(PRS_file,header=T,comment.char="")
+df_PRS$IID <- as.character(df_PRS$IID)
 
 #standarise and save PRS
 df_PRS$SCORE <- scale(df_PRS$SCORE1_AVG)
@@ -41,6 +42,8 @@ message("Correlation plots for PRS and cell counts being generated")
 message("")
 
 df_cc <- fread(paste(cell_counts_file))
+df_cc$IID <- as.character(df_cc$IID)
+
 df_merge_cc <- inner_join(df_PRS, df_cc, by = "IID")
 
 list_cc <- list()
