@@ -29,7 +29,6 @@ dependencies:
   - c-ares=1.34.4
   - ca-certificates=2025.2.25
   - cached-property=1.5.2
-  - cached_property=1.5.2
   - cairo=1.18.4
   - certifi=2025.1.31
   - cffi=1.17.1
@@ -463,5 +462,3 @@ dependencies:
     - hail==0.2.135
     - onnx==1.17.0
 #    - pyspark==3.5.0
-
-prefix: "/user/work/er20212/opt/miniforge3/envs/deep_mqtl"
