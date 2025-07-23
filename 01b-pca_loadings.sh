@@ -10,6 +10,8 @@ print_version
 
 # please install hail from https://hail.is/docs/0.2/getting_started.html before running this script
 
+mamba activate hail_env
+
 echo "Running global PCA"
 ${Python3_directory}python "${scripts_directory}/resources/datacheck/global_pca.py" \
     "${section_01_dir}/logs_b/hail.log" \
