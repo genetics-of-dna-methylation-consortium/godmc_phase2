@@ -28,6 +28,7 @@ R_directory=""
 
 # Full path to the python directory if you can't use the "module load" command to open python.
 Python_directory=""
+Python3_directory=""
 
 # Methylation array (one of the following: 450k, epic, or epic2. Please note that names are case-sensitive)
 methylation_array="epic"
