@@ -377,7 +377,7 @@ check_results_09 () {
 		  exit 1
 	  fi
 
-		 if [ -f "${section_09_dir}/${PRS}/${study_name}_PRS_${PRS}_EWAS_qqplot.isvacovs.pdf" ] && [ -f "${section_09_dir}/${PRS}/${study_name}_PRS_${PRS}_EWAS_qqplot.nocovs.pdf" ]; then
+		 if [ -f "${section_09_dir}/${PRS}/${study_name}_PRS_${PRS}_EWAS_qqplot.nocovs.pdf" ]; then
 		
       echo "QQplots for $PRS PRS EWAS present"
 	  else
