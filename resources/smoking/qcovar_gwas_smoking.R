@@ -8,7 +8,7 @@
 # please don't hesitate to reach out to the developer for assistance at s.w.wang@exeter.ac.uk.
 
 ###############################mian function###################################
-
+suppressPackageStartupMessages(library(ggplot2))
 
 main = function () {
   library(tibble)
@@ -46,7 +46,7 @@ main = function () {
     valid_vector <- c('IID')
   }else if (count_age == 1 & count_sex == 1){
     message("Age variable is contant, which should not be considered.")
-    message("Sex variable has 1 level.")
+    message(paste0("Sex variable has 1 level, which is ", unique(covs[, sex_index])))
     message("There is no sex factor but age numeric should be considered.")
     valid_vector <- c('IID')
   }else if (count_age == 1 & count_sex != 1){
@@ -66,7 +66,8 @@ main = function () {
   
   phen_value <- subset(covs, select = valid_vector) 
   phen_value <- merge(phen_value, smok[,c('IID', 'Smoking')], by.x="IID", by.y="IID", all.x=TRUE)
-
+  sex_vaild = FALSE
+  message(paste0("Sex factor is ",sex_vaild))
   # Check if the cellcount is available
   if (cellcount_file == 'NULL') {
     message("No predicted cell count matrix provided.")
@@ -113,9 +114,70 @@ main = function () {
     write.table(fam, file=paste0(out, ".smok.plink"), row=F, col=F, qu=F)
   }
 
-  write.table(smok_sum, file=paste0(stats_out, ".csv"), row.names=F, col.names=T, sep=",", quote=F)
-
   
+  if (sex_vaild == TRUE) {
+    message("Collecting statistics on smoking score based on the gender")
+    smok_sum$smok_F = c(min(smok$Smoking[phen$Sex_factor == "F"]), 
+                                  mean(smok$Smoking[phen$Sex_factor == "F"]), 
+                                  median(smok$Smoking[phen$Sex_factor == "F"]), 
+                                  max(smok$Smoking[phen$Sex_factor == "F"]), 
+                                  sd(smok$Smoking[phen$Sex_factor == "F"]), rep(NA, 5))
+    smok_sum$smok_M = c(min(smok$Smoking[phen$Sex_factor == "M"]), 
+                                  mean(smok$Smoking[phen$Sex_factor == "M"]), 
+                                  median(smok$Smoking[phen$Sex_factor == "M"]), 
+                                  max(smok$Smoking[phen$Sex_factor == "M"]), 
+                                  sd(smok$Smoking[phen$Sex_factor == "M"]), rep(NA, 5))
+
+    
+    pdf(file = paste0(stats_out, "_density.pdf"), width=8, height=6)
+    par(mfrow=c(1,1))
+    smokF_density <- density(smok$Smoking[phen$Sex_factor == "F"])
+    smokM_density <- density(smok$Smoking[phen$Sex_factor == "M"])
+    smok_density <- density(smok$Smoking)
+    plot(smok_density, xlab = "Smoking score", col = "white", cex.main=1, cex=0.7,
+         xlim = c(min(smok_density$x - 5), max(smok_density$x + 5)), 
+         ylim = c(0, max(smok_density$y + 0.02)), 
+         main = "Density plot of smoking score")
+    polygon(smok_density, col = alpha("#ffba49", 0.6))
+    polygon(smokF_density, col = alpha("#ef5b5b", 0.6))
+    polygon(smokM_density, col = alpha("#1982c4", 0.6))
+    legend("topleft", legend = c("Overall", "Female", "Male"), pch = 19, col = c("#ffba49","#ef5b5b","#1982c4"), inset = 0.01)
+
+    par(mfrow=c(1,2))
+    boxplot(Smoking~Sex_factor, data=phen,
+      main="boxplots for female and male",
+      xlab="Female and Male",ylab="Smoking score",
+      col=c("#ef5b5b", "#1982c4"))
+    
+    boxplot(phen$Smoking, data=phen,
+      main="boxplots of smoking score",
+      xlab="Overall",ylab="Smoking score",
+      col=c("#ffba49"))
+
+    dev.off()
+  }else{
+    message("There is no statistics on smoking score based on the geneder, as the sex factor is not valid.")
+    pdf(file = paste0(stats_out, "_density.pdf"), width=10, height=6)
+    par(mfrow=c(1,2))
+    smok_density <- density(smok$Smoking)
+    plot(smok_density, xlab = "Smoking score", col = "white", cex.main=1, cex=0.7,
+         xlim = c(min(smok_density$x - 5), max(smok_density$x + 5)), 
+         ylim = c(0, max(smok_density$y + 0.02)), 
+         main = "Density plot of smoking score")
+    polygon(smok_density, col = alpha("#ffba49", 0.6))
+    legend("topleft", legend = c("Overall"), pch = 19, col = c("#ffba49"), inset = 0.01)
+    
+    boxplot(phen$Smoking, data=phen,
+      main="boxplots of smoking score",
+      xlab="Overall",ylab="Smoking score",
+      col=c("#ffba49"))
+
+    dev.off()
+  }
+
+  write.table(smok_sum, file=paste0(stats_out, ".csv"), row.names=F, col.names=T, sep=",", quote=F)
+  message("Summary table for smoking model is saved to ", paste0(stats_out, ".csv"))
+  message("Summary plot for smoking model is saved to ", paste0(stats_out, "_density.pdf"))
 }
 
 main()
