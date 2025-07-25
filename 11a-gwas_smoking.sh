@@ -8,16 +8,20 @@ touch ${section_11a_logfile}
 exec &> >(tee ${section_11a_logfile})
 print_version
 
-# Step 0: epi Smoking score prediction ###################################
-${R_directory}Rscript resources/smoking/smoking_predictor.R \
-		${methylation_no_outliers} \
-		${bfile}.fam \
-		${smoking_pred} \
-		${smoking_pred_plot} \
-		${smoking_pred_SD} \
-		${covariates} 
-
-
+# Step 0: Check if epi Smoking score is predicted ###################################
+if [ -f "${smoking_pred}.txt" ]
+then
+  	echo "The epi smoking socre has been predicted, skipping the step."
+else
+  	echo "The epi smoking socre hasn't been predicted, running the prediction."
+	${R_directory}Rscript resources/smoking/smoking_predictor.R \
+			${methylation_no_outliers} \
+			${bfile}.fam \
+			${smoking_pred} \
+			${smoking_pred_plot} \
+			${smoking_pred_SD} \
+			${covariates} 
+fi
 
 # Step 1: Check if cellcount is generated ###################################
 if [ "${sorted_methylation}" = "yes" ]

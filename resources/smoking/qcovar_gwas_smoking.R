@@ -66,8 +66,7 @@ main = function () {
   
   phen_value <- subset(covs, select = valid_vector) 
   phen_value <- merge(phen_value, smok[,c('IID', 'Smoking')], by.x="IID", by.y="IID", all.x=TRUE)
-  sex_vaild = FALSE
-  message(paste0("Sex factor is ",sex_vaild))
+
   # Check if the cellcount is available
   if (cellcount_file == 'NULL') {
     message("No predicted cell count matrix provided.")
