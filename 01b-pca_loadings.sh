@@ -15,14 +15,18 @@ if [ -z "$Python3_directory" ]; then
     # Users are using system default R & Python, activate conda environment
     if command -v mamba &> /dev/null; then
         CONDA_CMD="mamba"
+        # Initialize shell for current session
+        eval "$($CONDA_CMD shell hook --shell bash)"
     elif command -v conda &> /dev/null; then
         CONDA_CMD="conda"
+        # Initialize shell for current session
+        eval "$($CONDA_CMD shell.bash hook)"
     else
-        echo "Neither mamba nor conda found. Please install one of them first."
+        echo "ERROR: Neither mamba nor conda found."
+        echo "Please install one of them first or specify the R/Python directories in the config file"
         exit 1
     fi
-    # Initialize shell for current session
-    eval "$($CONDA_CMD shell hook --shell bash)"
+
     $CONDA_CMD activate hail_env
     echo "Current conda environment: $CONDA_DEFAULT_ENV"
 else
