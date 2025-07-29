@@ -9,6 +9,7 @@
 
 ###############################mian function###################################
 suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(dplyr))
 
 main = function () {
   library(tibble)
@@ -129,7 +130,6 @@ main = function () {
 
     
     pdf(file = paste0(stats_out, "_density.pdf"), width=8, height=6)
-    par(mfrow=c(1,1))
     smokF_density <- density(smok$Smoking[phen$Sex_factor == "F"])
     smokM_density <- density(smok$Smoking[phen$Sex_factor == "M"])
     smok_density <- density(smok$Smoking)
@@ -142,16 +142,23 @@ main = function () {
     polygon(smokM_density, col = alpha("#1982c4", 0.6))
     legend("topleft", legend = c("Overall", "Female", "Male"), pch = 19, col = c("#ffba49","#ef5b5b","#1982c4"), inset = 0.01)
 
-    par(mfrow=c(1,2))
-    boxplot(Smoking~Sex_factor, data=phen,
-      main="boxplots for female and male",
-      xlab="Female and Male",ylab="Smoking score",
-      col=c("#ef5b5b", "#1982c4"))
-    
-    boxplot(phen$Smoking, data=phen,
-      main="boxplots of smoking score",
-      xlab="Overall",ylab="Smoking score",
-      col=c("#ffba49"))
+    plot_data <- bind_rows(
+    phen %>% filter(Sex_factor == "M") %>% mutate(Group = "Smoking_M") %>% select(Value = Smoking, Group),
+    phen %>% filter(Sex_factor == "F") %>% mutate(Group = "Smoking_F") %>% select(Value = Smoking, Group),
+    phen %>% mutate(Group = "Smoking_score") %>% select(Value = Smoking, Group)
+  )
+
+    ggplot(plot_data, aes(x = Group, y = Value, fill = Group)) +
+    geom_violin(width=0.6) + geom_boxplot(width=0.1, color="grey", alpha=0.2) + 
+    scale_fill_manual(values = c(
+      "Smoking_score" = "#ffba49",
+      "Smoking_M" = "#ef5b5b",
+      "Smoking_F" = "#1982c4"
+    )) +
+    labs(title = "Boxplots of Predicted Smoking score", x = "Group", y = "Smoking Score") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "none")
 
     dev.off()
   }else{
@@ -167,7 +174,7 @@ main = function () {
     legend("topleft", legend = c("Overall"), pch = 19, col = c("#ffba49"), inset = 0.01)
     
     boxplot(phen$Smoking, data=phen,
-      main="boxplots of smoking score",
+      main="Boxplots of smoking score",
       xlab="Overall",ylab="Smoking score",
       col=c("#ffba49"))
 
