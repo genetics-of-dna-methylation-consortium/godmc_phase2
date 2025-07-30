@@ -39,6 +39,6 @@ ${Python3_directory}python "${scripts_directory}/resources/datacheck/global_pca.
     "${section_01_dir}/logs_b/hail.log" \
     "${bfile_raw}" \
     "${study_name}" \
-    "${scripts_directory}"
+    "${home_directory}"
 
 echo "Successfully completed godmc2 01b"

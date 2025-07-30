@@ -19,7 +19,7 @@ import os
 logfile = sys.argv[1]
 bfile = sys.argv[2]
 study_name = sys.argv[3]
-scripts_directory = sys.argv[4]
+home_directory = sys.argv[4]
 
 print("Study name:", study_name)
 mem = psutil.virtual_memory()
@@ -203,4 +203,4 @@ plt.ylabel('PC2')
 plt.title('Projection of Samples onto gnomAD PCA space')
 plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
 
-plt.savefig(f'{scripts_directory}/results/01/{study_name}_globalPCA.png', dpi=300, bbox_inches='tight')
+plt.savefig(f'{home_directory}/results/01/{study_name}_globalPCA.png', dpi=300, bbox_inches='tight')
