@@ -10,6 +10,14 @@ print_version
 
 
 # Step 0: re-run the epigenetic clocks for age###################################
+${R_directory}Rscript resources/smoking/smoking_predictor.R \
+		${methylation_no_outliers} \
+		${bfile}.fam \
+		${smoking_pred} \
+		${smoking_pred_plot} \
+		${smoking_pred_SD} \
+		${covariates} 
+
 ${R_directory}Rscript resources/dnamage/dnamage.R \
 		${methylation_no_outliers} \
 		${covariates_intersect} \
@@ -21,6 +29,11 @@ ${R_directory}Rscript resources/dnamage/dnamage.R \
 		${smoking_pred}.txt \
 		${cellcounts_cov} 
 
+${R_directory}Rscript resources/dnamage/epiageacc_plot.R \
+		${age_pred}.RData \
+		${age_pred_plot}
+
+cp ${age_pred_plot}* ${section_10_dir}/
 
 # Step 1: run the GCTA-GRM: calculating the genetic relationship matrix from autosomal SNPs
 
