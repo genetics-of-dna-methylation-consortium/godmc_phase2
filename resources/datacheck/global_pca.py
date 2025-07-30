@@ -20,6 +20,7 @@ logfile = sys.argv[1]
 bfile = sys.argv[2]
 study_name = sys.argv[3]
 home_directory = sys.argv[4]
+scripts_directory = sys.argv[5]
 
 print("Study name:", study_name)
 mem = psutil.virtual_memory()
