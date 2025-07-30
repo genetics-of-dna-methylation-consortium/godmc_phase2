@@ -25,5 +25,5 @@ print_version
           --out ${section_11_dir}/heritability_smoking_PCA \
           --thread-num ${nthreads}
           
-echo "Successfully finished the calculation on SNP heritability for smoking!"          
+echo "Successfully finished the calculation on SNP heritability for epi smoking score!"          
         
