@@ -38,6 +38,5 @@ do
   i=$(($i+1))
 done
 
-
 echo "Successfully finished the calculation on SNP heritability for age accelerations!"
 
