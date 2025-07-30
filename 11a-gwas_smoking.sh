@@ -39,6 +39,7 @@ ${R_directory}Rscript resources/smoking/qcovar_gwas_smoking.R \
 	      ${smoking_pred} \
 		  ${home_directory}/results/11/smoking_stats
 
+cp ${smoking_pred_plot} ${section_11_dir}/
 
 # Step 3:GWAS of smoking ###################################
 echo "Running GWAS for smoking."
@@ -84,4 +85,4 @@ ${R_directory}Rscript resources/genetics/plot_gwas.R \
 
 rm -f ${section_11_dir}/GWAlist.txt
 
-echo "Successfully finished the GWAS on smoking!"
+echo "Successfully finished the GWAS on epi smoking score!"
