@@ -20,16 +20,27 @@ check_script_updated () {
 	echo "$commitdate"
 	# convert to seconds since epoch
 	commitdate=$(date -d "$commitdate" +%s)
-	updatedate=$(date -d "2025-06-30" +%s)
+	updatedate=$(date -d "2025-07-25" +%s)
 
 	if [ "$commitdate" -gt "$updatedate" ]; then
-		echo "Script $script_name was updated after 01 July 2025."
+		echo "Script $script_name was updated after 25 July 2025."
 	else
-		echo "Problem: Script $script_name was NOT updated after 01 July 2025."
+		echo "Problem: Script $script_name was NOT updated after 25 July 2025."
 		echo "Please rerun the corresponding scripts after git pull."
 		exit 1
 	fi
 }
+
+check_file_exists () {
+	file=$1
+	if [ -f "$file" ]; then
+		echo "$file is present"
+	else
+		echo "Problem: $file is absent"
+		exit 1
+	fi
+}
+
 
 check_file_updated () {
 	file=$1
@@ -62,50 +73,12 @@ check_logs () {
 
 check_results_10a () {
 
-	if [ -f "${section_03_dir}/age_prediction.pdf" ]; then
-		echo "Plot of age predictions is present"
-	else
-		echo "Problem: the plot of age predictions is absent"
-		exit 1
-	fi
+	for output in .pdf _density.pdf _box_violin.pdf _correlation.png _stats.csv _stats_models.csv _stats_corrsd.csv
+	do
+		check_file_exists "${section_10_dir}/age_prediction${output}"
+		check_file_updated "${section_10_dir}/age_prediction${output}" "10a"
+	done
 
-	check_file_updated "${section_03_dir}/age_prediction.pdf" "10a"
-	
-	if [ -f "${section_03_dir}/age_prediction_correlation.png" ]; then
-		echo "Plot of correleation on age predictions is present"
-	else
-		echo "Problem: the plot of age predictions is absent"
-		exit 1
-	fi
-
-	check_file_updated "${section_03_dir}/age_prediction_correlation.png" "03a"
-
-	if [ -f "${section_03_dir}/age_prediction_stats.csv" ]; then
-		echo "Statistic table of age predictions is present"
-	else
-		echo "Problem: Statistic table of of age predictions is absent"
-		exit 1
-	fi
-
-	check_file_updated "${section_03_dir}/age_prediction_stats.csv" "10a"
-
-	if [ -f "${section_03_dir}/age_prediction_stats_models.csv" ]; then
-		echo "Statistic table of age predictions for each clock is present"
-	else
-		echo "Problem: Statistic table of of age predictions for each clock is absent"
-		exit 1
-	fi
-
-	check_file_updated "${section_03_dir}/age_prediction_stats_models.csv" "10a"
-
-	if [ -f "${section_03_dir}/age_prediction_stats_corrsd.csv" ]; then
-		echo "Correleation table of age predictions is present"
-	else
-		echo "Problem: Correleation table of of age predictions is absent"
-		exit 1
-	fi
-
-	check_file_updated "${section_03_dir}/age_prediction_stats_corrsd.csv" "10a"
 
 	GWASresults=$(find ${section_10_dir} -type f -name "*.fastGWA" | wc -l)
 	if [ $GWASresults -gt 10 ]; then
@@ -146,7 +119,6 @@ check_results_10a () {
 		check_file_updated "$file" "10a"
 	done
 
-	
 }
 
 check_results_10b () {
@@ -168,23 +140,11 @@ check_results_10b () {
 
 check_results_11a () {
 
-	if [ -f "${smoking_pred_plot}" ]; then
-		echo "Smoking prediction plot is present"
-	else
-		echo "Problem: Smoking prediction plot is not present"
-		exit 1
-	fi
-
+	check_file_exists "${smoking_pred_plot}"
 	check_file_updated "${smoking_pred_plot}" "11a"
 
-	if [ -f "${home_directory}/results/11/smoking_stats.csv" ]; then
-		echo "Statistic table of preicted smoking is present"
-	else
-		echo "Problem: Statistic table of preicted smoking is not present"
-		exit 1
-	fi
-
-	check_file_updated "${home_directory}/results/11/smoking_stats.csv" "11a"
+	check_file_exists "${section_11_dir}/smoking_stats.csv"
+	check_file_updated "${section_11_dir}/smoking_stats.csv" "11a"
 
 	if [ -f "${section_11_dir}/gwas_smoking.fastGWA" ] && [ -f "${section_11_dir}/gwas_smoking_PCA.fastGWA"  ]; then
 		echo "The GWAS result of smoking is present"
@@ -267,7 +227,7 @@ echo ""
 echo "Compressing the outputs from 03a, 10 and 11"
 cd ${home_directory}
 
-tar -zcf results/AgeSmokGWAS2025_${study_name}.tgz results/03/logs_a/log.txt results/03/age_prediction* results/03/smoking_prediction.pdf results/03/cohort_descriptives_commonids.RData results/10 results/11 
+tar -zcf results/AgeSmokGWAS2025_${study_name}.tgz results/10 results/11 
 
 echo "Successfully created results archives ${home_directory}/results/11/AgeSmokGWAS2025_${study_name}.tgz"
 
