@@ -14,13 +14,13 @@ print_version
 if [ -z "$Python3_directory" ]; then
     # Users are using system default R & Python, activate conda environment
     if command -v mamba &> /dev/null; then
+        echo "Using mamba to activate the environment"
         CONDA_CMD="mamba"
-        # Initialize shell for current session
-        eval "$($CONDA_CMD shell hook --shell bash)"
+
     elif command -v conda &> /dev/null; then
+        echo "Using conda to activate the environment"
         CONDA_CMD="conda"
-        # Initialize shell for current session
-        eval "$($CONDA_CMD shell.bash hook)"
+
     else
         echo "ERROR: Neither mamba nor conda found."
         echo "Please install one of them first or specify the R/Python directories in the config file"
@@ -40,6 +40,6 @@ ${Python3_directory}python "${scripts_directory}/resources/datacheck/global_pca.
     "${bfile_raw}" \
     "${study_name}" \
     "${home_directory}" \
-    "${scripts_directory}" \
+    "${scripts_directory}"
 
 echo "Successfully completed godmc2 01b"
