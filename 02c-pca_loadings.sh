@@ -34,10 +34,18 @@ else
     echo "Custom R/Python directories specified"
 fi
 
-echo "Running global PCA"
+echo "Running global PCA with raw data"
 ${Python3_directory}python "${scripts_directory}/resources/datacheck/global_pca.py" \
-    "${section_01_dir}/logs_b/hail.log" \
+    "${section_02_dir}/logs_c/hail_raw.log" \
     "${bfile_raw}" \
+    "${study_name}" \
+    "${home_directory}" \
+    "${scripts_directory}"
+
+echo "Running global PCA with cleaned data"
+${Python3_directory}python "${scripts_directory}/resources/datacheck/global_pca.py" \
+    "${section_02_dir}/logs_c/hail_cleaned.log" \
+    "${bfile}" \
     "${study_name}" \
     "${home_directory}" \
     "${scripts_directory}"
