@@ -238,6 +238,12 @@ main <- function()
   if (phen_valid) {matrixcol = c(matrixcol, "PhenoAge", "PhenoAgeSD", "PhenoAgessSD")}
   if (pace_valid) {matrixcol = c(matrixcol, "DunedinPACE", "DunedinPACESD", "DunedinPACEssSD")}
 
+  message("Bug maker 1 ==========================")
+  print(cortable[1:5,])
+  print(matrixcol)
+  print(colnames(cortable))
+  message("Bug maker 2 ==========================")
+
   if (length(matrixcol) > 3) {
     png(file = paste0(age_plot, "_correlation.png"), width=1400, height=800)
     matrixtable = subset(cortable, select = matrixcol)
