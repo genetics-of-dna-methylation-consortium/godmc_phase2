@@ -3,39 +3,32 @@
 source resources/setup.sh "$@"
 set -- $concatenated
 
-mkdir -p "${section_01_dir}/logs_b/"
+mkdir -p "${section_02_dir}/logs_c/"
 
-exec &> >(tee ${section_01b_logfile})
+exec &> >(tee ${section_02c_logfile})
 print_version
 
 # please install hail from https://hail.is/docs/0.2/getting_started.html before running this script
 
 # Activate the environment
 if [ -z "$Python3_directory" ]; then
-    # Users are using system default R & Python, activate conda environment
     if command -v mamba &> /dev/null; then
-        echo "Using mamba to activate the environment"
-        CONDA_CMD="mamba"
-
+        echo "Using mamba to run the script"
+        RUN_CMD="mamba run -n hail_env"
     elif command -v conda &> /dev/null; then
-        echo "Using conda to activate the environment"
-        CONDA_CMD="conda"
-
+        echo "Using conda to run the script"
+        RUN_CMD="conda run -n hail_env"
     else
         echo "ERROR: Neither mamba nor conda found."
-        echo "Please install one of them first or specify the R/Python directories in the config file"
         exit 1
     fi
-
-    $CONDA_CMD activate hail_env
-    echo "Current conda environment: $CONDA_DEFAULT_ENV"
 else
-    # Users have specified custom R/Python directories
-    echo "Custom R/Python directories specified"
+    RUN_CMD="${Python3_directory}"
 fi
 
 echo "Running global PCA with raw data"
-${Python3_directory}python "${scripts_directory}/resources/datacheck/global_pca.py" \
+echo "RUN_CMD is: $RUN_CMD"
+$RUN_CMD python "${scripts_directory}/resources/datacheck/global_pca.py" \
     "${section_02_dir}/logs_c/hail_raw.log" \
     "${bfile_raw}" \
     "${study_name}" \
@@ -43,11 +36,11 @@ ${Python3_directory}python "${scripts_directory}/resources/datacheck/global_pca.
     "${scripts_directory}"
 
 echo "Running global PCA with cleaned data"
-${Python3_directory}python "${scripts_directory}/resources/datacheck/global_pca.py" \
+$RUN_CMD python "${scripts_directory}/resources/datacheck/global_pca.py" \
     "${section_02_dir}/logs_c/hail_cleaned.log" \
     "${bfile}" \
     "${study_name}" \
     "${home_directory}" \
     "${scripts_directory}"
 
-echo "Successfully completed godmc2 01b"
+echo "Successfully completed godmc2 02c"
