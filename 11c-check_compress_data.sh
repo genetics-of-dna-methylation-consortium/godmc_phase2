@@ -224,7 +224,7 @@ done
 
 #### Compress the output files from 03a, 10a, 10b, 11a and 11b ############## 
 echo ""
-echo "Compressing the outputs from 03a, 10 and 11"
+echo "Compressing the outputs from 10 and 11"
 cd ${home_directory}
 
 tar -zcf results/AgeSmokGWAS2025_${study_name}.tgz results/10 results/11 
