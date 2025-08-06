@@ -17,8 +17,17 @@ if [ -z "$Python3_directory" ]; then
             echo "found hail_env environment in mamba"
             echo "Using mamba to run the script"
             RUN_CMD="mamba run -n hail_env"
+        elif command -v conda &> /dev/null; then
+            if conda env list | grep -qE 'hail_env(\s|$)'; then
+                echo "found hail_env environment in conda"
+                echo "Using conda to run the script"
+                RUN_CMD="conda run -n hail_env"
+            else
+                echo "ERROR: hail_env environment does not exist in mamba or conda. Please ensure hail_env exists."
+                exit 1
+            fi
         else
-            echo "ERROR: mamba found, but hail_env environment does not exist. Please ensure hail_env exists."
+            echo "ERROR: mamba found, but hail_env environment does not exist, and conda not found."
             exit 1
         fi
     elif command -v conda &> /dev/null; then
