@@ -233,7 +233,7 @@ main <- function()
 
   #### scatter plot of correlation matrix
   message("Generating scatter plot matrix ==========================")
-  if (age_valid) {matrixcol = c("Age_numeric")}
+  if (age_valid) {matrixcol = c("Age_numeric")}else{matrixcol = c("")}
   if (dna_valid) {matrixcol = c(matrixcol, "DNAmAge", "DNAmAgeSD", "DNAmAgessSD")}
   if (phen_valid) {matrixcol = c(matrixcol, "PhenoAge", "PhenoAgeSD", "PhenoAgessSD")}
   if (pace_valid) {matrixcol = c(matrixcol, "DunedinPACE", "DunedinPACESD", "DunedinPACEssSD")}
