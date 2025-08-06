@@ -204,4 +204,13 @@ plt.ylabel('PC2')
 plt.title('Projection of Samples onto gnomAD PCA space')
 plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
 
-plt.savefig(f'{home_directory}/results/01/{study_name}_globalPCA.png', dpi=300, bbox_inches='tight')
+if 'raw' in logfile:
+    print("Logfile indicates raw data")
+    suffix = '_rawdat'
+elif 'clean' in logfile:
+    print("Logfile indicates clean data")
+    suffix = '_cleandat'
+else:
+    suffix = ''
+
+plt.savefig(f'{home_directory}/results/01/{study_name}_globalPCA{suffix}.png', dpi=300, bbox_inches='tight')
