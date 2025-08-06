@@ -233,16 +233,10 @@ main <- function()
 
   #### scatter plot of correlation matrix
   message("Generating scatter plot matrix ==========================")
-  if (age_valid) {matrixcol = c("Age_numeric")}else{matrixcol = c("")}
+  if (age_valid) {matrixcol = c("Age_numeric")}else{matrixcol = c()}
   if (dna_valid) {matrixcol = c(matrixcol, "DNAmAge", "DNAmAgeSD", "DNAmAgessSD")}
   if (phen_valid) {matrixcol = c(matrixcol, "PhenoAge", "PhenoAgeSD", "PhenoAgessSD")}
   if (pace_valid) {matrixcol = c(matrixcol, "DunedinPACE", "DunedinPACESD", "DunedinPACEssSD")}
-
-  message("Bug maker 1 ==========================")
-  print(cortable[1:5,])
-  print(matrixcol)
-  print(colnames(cortable))
-  message("Bug maker 2 ==========================")
 
   if (length(matrixcol) > 3) {
     png(file = paste0(age_plot, "_correlation.png"), width=1400, height=800)
