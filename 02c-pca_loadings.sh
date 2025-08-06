@@ -26,16 +26,16 @@ else
     RUN_CMD="${Python3_directory}"
 fi
 
-echo "Running global PCA with raw data"
-echo "RUN_CMD is: $RUN_CMD"
-$RUN_CMD python "${scripts_directory}/resources/datacheck/global_pca.py" \
-    "${section_02_dir}/logs_c/hail_raw.log" \
-    "${bfile_raw}" \
-    "${study_name}" \
-    "${home_directory}" \
-    "${scripts_directory}"
+# echo "Running global PCA with raw data"
+# echo "RUN_CMD is: $RUN_CMD"
+# $RUN_CMD python "${scripts_directory}/resources/datacheck/global_pca.py" \
+#     "${section_02_dir}/logs_c/hail_raw.log" \
+#     "${bfile_raw}" \
+#     "${study_name}" \
+#     "${home_directory}" \
+#     "${scripts_directory}"
 
-echo "Running global PCA with cleaned data"
+echo "Running global PCA with cleaned data from 02a"
 $RUN_CMD python "${scripts_directory}/resources/datacheck/global_pca.py" \
     "${section_02_dir}/logs_c/hail_cleaned.log" \
     "${bfile}" \
