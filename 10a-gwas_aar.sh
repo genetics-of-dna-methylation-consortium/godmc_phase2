@@ -9,6 +9,31 @@ exec &> >(tee ${section_10a_logfile})
 print_version
 
 
+# Step 0: re-run the epigenetic clocks for age###################################
+${R_directory}Rscript resources/smoking/smoking_predictor.R \
+		${methylation_no_outliers} \
+		${bfile}.fam \
+		${smoking_pred} \
+		${smoking_pred_plot} \
+		${smoking_pred_SD} \
+		${covariates} 
+
+${R_directory}Rscript resources/dnamage/dnamage.R \
+		${methylation_no_outliers} \
+		${covariates_intersect} \
+		${bfile}.fam \
+		${age_pred} \
+		${age_pred_plot} \
+		${age_pred_SD} \
+		${age_pred_sumstats} \
+		${smoking_pred}.txt \
+		${cellcounts_cov} 
+
+${R_directory}Rscript resources/dnamage/epiageacc_plot.R \
+		${age_pred}.RData \
+		${age_pred_plot}
+
+cp ${age_pred_plot}* ${section_10_dir}/
 
 # Step 1: run the GCTA-GRM: calculating the genetic relationship matrix from autosomal SNPs
 
@@ -33,7 +58,7 @@ ${gcta} \
 ${gcta} \
 	--grm ${grmfile_all}_gaws10 \
 	--pca 20 \
-	--out ${section_10_dir}/gaws10_pc
+	--out ${home_directory}/processed_data/genetic_data/gaws10_pc
 
 ${gcta} \
 	--grm ${grmfile_all}_gaws10 \
@@ -48,17 +73,17 @@ echo 'Done on making bK sparse'
 
 # Step 3: fastGWA ###################################
 i=1
-tail -n +2 ${age_pred}.txt > ${section_10_dir}/age_acc.plink
+tail -n +2 ${age_pred}.txt > ${age_pred}.plink
 clock_names=$(cut -d" " -f 3- ${age_pred}.txt | head -n 1)
 
 for clock_name in $clock_names
-do  
+do
     ${gcta} \
           --bfile ${bfile}  \
           --grm-sparse ${grmfile_fast} \
           --fastGWA-mlm \
           --mpheno $i \
-          --pheno ${section_10_dir}/age_acc.plink \
+          --pheno ${age_pred}.plink \
           --h2-limit 100 \
           --out ${section_10_dir}/${clock_name}
 
@@ -69,8 +94,8 @@ do
           --fastGWA-mlm \
           --mpheno $i \
 		  --h2-limit 100 \
-		  --qcovar ${section_10_dir}/gaws10_pc.eigenvec \
-          --pheno ${section_10_dir}/age_acc.plink \
+		  --qcovar ${home_directory}/processed_data/genetic_data/gaws10_pc.eigenvec \
+          --pheno ${age_pred}.plink \
 		  --thread-num ${nthreads} \
           --out ${section_10_dir}/${clock_name}_PCA
 

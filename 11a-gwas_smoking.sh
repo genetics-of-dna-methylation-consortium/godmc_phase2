@@ -8,6 +8,20 @@ touch ${section_11a_logfile}
 exec &> >(tee ${section_11a_logfile})
 print_version
 
+# Step 0: Check if epi Smoking score is predicted ###################################
+if [ -f "${smoking_pred}.txt" ]
+then
+  	echo "The epi smoking socre has been predicted, skipping the step."
+else
+  	echo "The epi smoking socre hasn't been predicted, running the prediction."
+	${R_directory}Rscript resources/smoking/smoking_predictor.R \
+			${methylation_no_outliers} \
+			${bfile}.fam \
+			${smoking_pred} \
+			${smoking_pred_plot} \
+			${smoking_pred_SD} \
+			${covariates} 
+fi
 
 # Step 1: Check if cellcount is generated ###################################
 if [ "${sorted_methylation}" = "yes" ]
@@ -22,8 +36,10 @@ ${R_directory}Rscript resources/smoking/qcovar_gwas_smoking.R \
 	      ${cellcounts_cov} \
 	      ${covariates} \
           ${bfile}.fam \
-	      ${smoking_pred}
+	      ${smoking_pred} \
+		  ${home_directory}/results/11/smoking_stats
 
+cp ${smoking_pred_plot} ${section_11_dir}/
 
 # Step 3:GWAS of smoking ###################################
 echo "Running GWAS for smoking."
@@ -43,7 +59,7 @@ ${gcta} \
   		--grm-sparse ${grmfile_fast}  \
         --fastGWA-mlm \
   		--pheno ${smoking_pred}.smok.plink \
-		--qcovar ${section_10_dir}/gaws10_pc.eigenvec \
+		--qcovar ${home_directory}/processed_data/genetic_data/gaws10_pc.eigenvec \
 		--autosome \
 		--h2-limit 100 \
 		--thread-num ${nthreads} \
@@ -69,4 +85,4 @@ ${R_directory}Rscript resources/genetics/plot_gwas.R \
 
 rm -f ${section_11_dir}/GWAlist.txt
 
-echo "Successfully finished the GWAS on smoking!"
+echo "Successfully finished the GWAS on epi smoking score!"
