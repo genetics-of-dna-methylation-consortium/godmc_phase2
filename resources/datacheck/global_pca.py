@@ -213,4 +213,4 @@ elif 'clean' in logfile:
 else:
     suffix = ''
 
-plt.savefig(f'{home_directory}/results/01/{study_name}_globalPCA{suffix}.png', dpi=300, bbox_inches='tight')
+plt.savefig(f'{home_directory}/results/02/{study_name}_globalPCA{suffix}.png', dpi=300, bbox_inches='tight')
