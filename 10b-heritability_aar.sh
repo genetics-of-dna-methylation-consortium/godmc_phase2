@@ -38,5 +38,7 @@ do
   i=$(($i+1))
 done
 
+rm ${age_pred}.plink
+
 echo "Successfully finished the calculation on SNP heritability for age accelerations!"
 

@@ -122,6 +122,7 @@ ${R_directory}Rscript resources/genetics/plot_gwas.R \
 
 rm -f ${section_10_dir}/GWAlist.txt
 
+
 echo "Successfully finished the GWAS on age accelerations!"
 
 
