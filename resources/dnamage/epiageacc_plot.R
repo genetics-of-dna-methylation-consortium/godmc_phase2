@@ -110,10 +110,9 @@ main <- function()
 
   message("Generating density plots for age accelerations==========================")
   pdf(file = paste0(age_plot, "_density.pdf"), width=12, height=6)
+  par(mfrow=c(1,2))
   if (age_valid){
-    par(mfrow=c(1,2))
     message("Plotting density plots on chronological age, DNAmAge and PhenoAge")
-
     # Chronological age
     legendname = c("Chronological Age")
     densitycolor = c("#ff595e")
@@ -124,47 +123,53 @@ main <- function()
         main = "Density plot of chronological age and predicted age")
     polygon(agedensity, col = alpha("#ff595e", 0.6))
     abline(v =mean(cortable$Age_numeric), lty=2, col="#ff595e")
-  
-    # DNAmAge
+  }else{
     if (dna_valid) {
       dnadensity = density(cortable$DNAmAge)
+      plot(dnadensity, xlab = "Predicted Age", col = "white", cex.main=1, cex=0.7,
+      xlim = c(0, max(dnadensity$x) + 10), 
+      ylim = c(0, max(dnadensity$y) + max(dnadensity$y)/4), 
+      main = "Density plot of predicted age")
       polygon(dnadensity, col = alpha("#ffca3a", 0.6))
       abline(v=mean(cortable$DNAmAge), lty=2, col= "#ffca3a")
-      legendname = c(legendname, "DNAmAge")
-      densitycolor = c(densitycolor, "#ffca3a")
-    }
-    
-    # PhenoAge
-    if (phen_valid){
-      phendensity = density(cortable$PhenoAge)
-      polygon(phendensity, col = alpha( "#8ac926", 0.6))
-      abline(v=mean(cortable$PhenoAge), lty=2, col= "#8ac926")
-      legendname = c(legendname, "PhenoAge")
-      densitycolor = c(densitycolor, "#8ac926")
-    }
-    legend("topleft", legend = legendname, pch = 19, col = densitycolor, inset = 0.01)
-
-    # DunedinPACE
-    if (pace_valid){
-      message("Plotting density plots on DunedinPCAE")
-      pacedensity = density(cortable$DunedinPACE)
-      plot(pacedensity, xlab = "Pace of Aging", col = "white", cex.main=1, cex=0.7,
-          main = "Density plot of DunedinPCAE")
-      polygon(pacedensity, col = alpha("#1982c4", 0.6))
-      abline(v=mean(cortable$DunedinPACE), lty=2, col="#1982c4")
-    }
-
-    # Density by sex
-    if (sex_valid) {
-      par(mfrow=c(1,3))
-      if (dna_valid){density.plot.by.sex(cortable, c("DNAmAge", "DNAmAgeSD", "DNAmAgessSD"))}
-      if (phen_valid){density.plot.by.sex(cortable, c("PhenoAge", "PhenoAgeSD", "PhenoAgessSD"))}
-      if (pace_valid){density.plot.by.sex(cortable, c("DunedinPACE", "DunedinPACESD", "DunedinPACEssSD"))}
+      legendname = c("DNAmAge")
+      densitycolor = c("#ffca3a")
     }else{
-      message("Warning: Due to the sex variable not being valid, the density plot based sex will not be plotted.")
+      message("Warning: DNAmAge does not exist, please check.")
     }
-  
   }
+    
+  # PhenoAge
+  if (phen_valid){
+    phendensity = density(cortable$PhenoAge)
+    polygon(phendensity, col = alpha( "#8ac926", 0.6))
+    abline(v=mean(cortable$PhenoAge), lty=2, col= "#8ac926")
+    legendname = c(legendname, "PhenoAge")
+    densitycolor = c(densitycolor, "#8ac926")
+  }
+  legend("topleft", legend = legendname, pch = 19, col = densitycolor, inset = 0.01)
+
+  # DunedinPACE
+  if (pace_valid){
+    message("Plotting density plots on DunedinPCAE")
+    pacedensity = density(cortable$DunedinPACE)
+    plot(pacedensity, xlab = "Pace of Aging", col = "white", cex.main=1, cex=0.7,
+        main = "Density plot of DunedinPCAE")
+    polygon(pacedensity, col = alpha("#1982c4", 0.6))
+    abline(v=mean(cortable$DunedinPACE), lty=2, col="#1982c4")
+  }
+  
+  # Density by sex
+  if (sex_valid) {
+    par(mfrow=c(1,3))
+    if (dna_valid){density.plot.by.sex(cortable, c("DNAmAge", "DNAmAgeSD", "DNAmAgessSD"))}
+    if (phen_valid){density.plot.by.sex(cortable, c("PhenoAge", "PhenoAgeSD", "PhenoAgessSD"))}
+    if (pace_valid){density.plot.by.sex(cortable, c("DunedinPACE", "DunedinPACESD", "DunedinPACEssSD"))}
+  }else{
+    message("Warning: Due to the sex variable not being valid, the density plot based sex will not be plotted.")
+  }
+  
+  
   dev.off()
   message(paste0("Density plots saved to ", age_plot, "_density.pdf"))
 
@@ -233,7 +238,7 @@ main <- function()
 
   #### scatter plot of correlation matrix
   message("Generating scatter plot matrix ==========================")
-  if (age_valid) {matrixcol = c("Age_numeric")}
+  if (age_valid) {matrixcol = c("Age_numeric")}else{matrixcol = c()}
   if (dna_valid) {matrixcol = c(matrixcol, "DNAmAge", "DNAmAgeSD", "DNAmAgessSD")}
   if (phen_valid) {matrixcol = c(matrixcol, "PhenoAge", "PhenoAgeSD", "PhenoAgessSD")}
   if (pace_valid) {matrixcol = c(matrixcol, "DunedinPACE", "DunedinPACESD", "DunedinPACEssSD")}
