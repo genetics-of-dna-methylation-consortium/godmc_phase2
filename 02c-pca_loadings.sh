@@ -11,6 +11,7 @@ print_version
 # please install hail from https://hail.is/docs/0.2/getting_started.html before running this script
 if [ -z "$Python3_directory" ]; then
     if command -v mamba &> /dev/null; then
+        # Check if mamba is available and contains hail_env environment
         if mamba env list | awk 'NF > 0 && $1 !~ /^#/ && $1 !~ /^\// {print $1}' | grep -Fxq 'hail_env'; then
             echo "found hail_env environment in mamba"
             echo "Using mamba to run the script"
@@ -19,6 +20,7 @@ if [ -z "$Python3_directory" ]; then
     fi
 
     if [ -z "$RUN_CMD" ] && command -v conda &> /dev/null; then
+        # Check if conda is available and contains hail_env environment
         if conda env list | awk 'NF > 0 && $1 !~ /^#/ && $1 !~ /^\// {print $1}' | grep -Fxq 'hail_env'; then
             echo "found hail_env environment in conda"
             echo "Using conda to run the script"
