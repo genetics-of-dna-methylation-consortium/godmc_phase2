@@ -53,7 +53,19 @@ main = function(){
   for (filename in filenames) {
     message("Reading in ", filename ," GWAS results")
     GWAS_result = fread(filename, header = T, data.table=F)
-    outname = unlist(strsplit(filename, "[.]"))[[1]]
+    
+    # extract the outname from the full path of the fastGWA file
+    if (length(unlist(strsplit(filename, "[.]"))) == 2){
+    	unlist(strsplit(filename1, "[.]"))[[1]]
+    }else if ( length(unlist(strsplit(filename, "[.]"))) == 3 ){
+    	paste(unlist(strsplit(filename, "[.]"))[1], unlist(strsplit(filename, "[.]"))[2], sep = ".")
+    }else if (length(unlist(strsplit(filename, "[.]"))) == 4){
+    	paste(unlist(strsplit(filename, "[.]"))[1], unlist(strsplit(filename, "[.]"))[2],unlist(strsplit(filename, "[.]"))[3], sep = ".")
+    }else{
+    	message("Error: Please check the output path. Exit..")
+    	quit(save = "no")
+    }
+
     
     if(length(unique(GWAS_result[,chr_column])) > 30){
       stop("Wrong chromosome column specified")
