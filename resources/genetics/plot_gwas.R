@@ -56,11 +56,11 @@ main = function(){
     
     # extract the outname from the full path of the fastGWA file
     if (length(unlist(strsplit(filename, "[.]"))) == 2){
-    	unlist(strsplit(filename1, "[.]"))[[1]]
+    	outname=unlist(strsplit(filename, "[.]"))[[1]]
     }else if ( length(unlist(strsplit(filename, "[.]"))) == 3 ){
-    	paste(unlist(strsplit(filename, "[.]"))[1], unlist(strsplit(filename, "[.]"))[2], sep = ".")
+    	outname=paste(unlist(strsplit(filename, "[.]"))[1], unlist(strsplit(filename, "[.]"))[2], sep = ".")
     }else if (length(unlist(strsplit(filename, "[.]"))) == 4){
-    	paste(unlist(strsplit(filename, "[.]"))[1], unlist(strsplit(filename, "[.]"))[2],unlist(strsplit(filename, "[.]"))[3], sep = ".")
+    	outname=paste(unlist(strsplit(filename, "[.]"))[1], unlist(strsplit(filename, "[.]"))[2],unlist(strsplit(filename, "[.]"))[3], sep = ".")
     }else{
     	message("Error: Please check the output path. Exit..")
     	quit(save = "no")
