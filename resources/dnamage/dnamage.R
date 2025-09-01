@@ -458,7 +458,8 @@ main <- function()
     message(head(pacepred))
     # plot
     age.plot(AgePredTable=pacepred, PhenVal=phen_value, AgeValid=age_valid, ClockName=colnames(pacepred)[-1], SD)
-    pacedensity <- density(pacepred$DunedinPACE)
+    pacedensity <- density(pacepred$DunedinPACE,na.rm = TRUE)
+    message("Number of missing DunedinPACE values: ", sum(is.na(pacepred$DunedinPACE)))
     pace_valid <- TRUE
   } else {
     message("ERROR: Failure on prediction on DunedinPACE by using PACEProjector function")
