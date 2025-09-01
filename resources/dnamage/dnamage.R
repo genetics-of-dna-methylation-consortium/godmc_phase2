@@ -202,11 +202,11 @@ generate.aar <- function(AgePredTable, PhenVal, ClockName){
     AgePredTable$PredAgeSD = AgePredTable$PredAge/sd(AgePredTable$PredAge)
   } else {
     module = residuals(lm(PredAge ~ ., data = subset(temp, select = -c(Smoking, IID)), na.action=na.exclude))
-    AgePredTable$PredAgeSD = module/sd(module)
+    AgePredTable$PredAgeSD = module/sd(module,na.rm=TRUE)
   }
   
   moduless = residuals(lm(PredAge ~ ., data = subset(temp, select = -c(IID)), na.action=na.exclude))
-  AgePredTable$PredAgessSD = moduless / sd(moduless)
+  AgePredTable$PredAgessSD = moduless / sd(moduless,na.rm=TRUE)
   AgePredTable = subset(AgePredTable, select = c(IID, PredAge, PredAgeSD, PredAgessSD))
   colnames(AgePredTable) = c('IID', ClockName, paste0(ClockName, 'SD'), paste0(ClockName, 'ssSD'))
   
@@ -393,54 +393,54 @@ main <- function()
   name_sumstats <- c()
   sumstats <- c()
   
-  # message(" ")
-  # message("Predicting DNAmAge")#############################################
-  # # filter to clock probes
-  # DNA_overlap <- intersect(dnamage_datclock$CpGmarker[-1], rownames(norm.beta))
-  # DNA_beta <- norm.beta[match(DNA_overlap, rownames(norm.beta)),]
-  # nsamples <- dim(DNA_beta)[[2]]
-  # nprobes <- dim(DNA_beta)[[1]]
-  # cat(paste( "The methylation dataset used to calculate DNAmAge contains", nsamples, "samples (e.g. arrays) and ", nprobes, " probes.\n"))
+  message(" ")
+  message("Predicting DNAmAge")#############################################
+  # filter to clock probes
+  DNA_overlap <- intersect(dnamage_datclock$CpGmarker[-1], rownames(norm.beta))
+  DNA_beta <- norm.beta[match(DNA_overlap, rownames(norm.beta)),]
+  nsamples <- dim(DNA_beta)[[2]]
+  nprobes <- dim(DNA_beta)[[1]]
+  cat(paste( "The methylation dataset used to calculate DNAmAge contains", nsamples, "samples (e.g. arrays) and ", nprobes, " probes.\n"))
   
-  # if (length(DNA_overlap) == 0 ) {
-  #   message("ERROR: No overlapping CpGs: Can't proceed with age prediction for DNAmAge")
-  # } else if (nsamples == 0 | nprobes == 0){
-  #   message("ERROR: There must be a data input error since there seem to be no either samples or zero probes.")
-  # } else{
-  #   dnampred <- dnam.age(x = DNA_beta, DatClock = dnamage_datclock)
-  #   # summary on module statistic
-  #   name_sumstats <- c(name_sumstats, 'DNAmAge')
-  #   sumstats<- rbind(sumstats, cal.stats(AgePredTable=dnampred, PhenVal=phen_value, AgeValid=age_valid, SexValid=sex_valid, SD))
-  #   modulestatsDNA <- cal.M.stats(AgePredTable=dnampred, PhenVal=phen_value, AgeValid=age_valid, SexValid=sex_valid, ClockName = 'DNAmAge')
-  #   # age acceleration residual prediction
-  #   dnampred <- generate.aar(AgePredTable=dnampred, PhenVal=phen_value, ClockName = 'DNAmAge')
-  #   # plot
-  #   age.plot(AgePredTable=dnampred, PhenVal=phen_value, AgeValid=age_valid, ClockNames=colnames(dnampred)[-1], SD=SD)
-  #   dnadensity <- density(dnampred[,2])
-  #   dna_valid <- TRUE
-  # }
+  if (length(DNA_overlap) == 0 ) {
+    message("ERROR: No overlapping CpGs: Can't proceed with age prediction for DNAmAge")
+  } else if (nsamples == 0 | nprobes == 0){
+    message("ERROR: There must be a data input error since there seem to be no either samples or zero probes.")
+  } else{
+    dnampred <- dnam.age(x = DNA_beta, DatClock = dnamage_datclock)
+    # summary on module statistic
+    name_sumstats <- c(name_sumstats, 'DNAmAge')
+    sumstats<- rbind(sumstats, cal.stats(AgePredTable=dnampred, PhenVal=phen_value, AgeValid=age_valid, SexValid=sex_valid, SD))
+    modulestatsDNA <- cal.M.stats(AgePredTable=dnampred, PhenVal=phen_value, AgeValid=age_valid, SexValid=sex_valid, ClockName = 'DNAmAge')
+    # age acceleration residual prediction
+    dnampred <- generate.aar(AgePredTable=dnampred, PhenVal=phen_value, ClockName = 'DNAmAge')
+    # plot
+    age.plot(AgePredTable=dnampred, PhenVal=phen_value, AgeValid=age_valid, ClockNames=colnames(dnampred)[-1], SD=SD)
+    dnadensity <- density(dnampred[,2])
+    dna_valid <- TRUE
+  }
   
-  # message(" ")
-  # message("Predicting Phenoage")############################################
-  # Pheno_overlap <- match(phenoage_coeff$CpG[-1], rownames(norm.beta))
-  # Pheno_overlap <- Pheno_overlap[!is.na(Pheno_overlap)]
+  message(" ")
+  message("Predicting Phenoage")############################################
+  Pheno_overlap <- match(phenoage_coeff$CpG[-1], rownames(norm.beta))
+  Pheno_overlap <- Pheno_overlap[!is.na(Pheno_overlap)]
   
-  # if (length(!is.na(Pheno_overlap)) < 50) {
-  #   message("ERROR: Less overlapping CpGs: Can't proceed with age prediction for PhenoAge")
-  # } else {
-  #   pre_phen <- pheno.age(beta = norm.beta, PhenoAgeCoeff = phenoage_coeff)
-  #   phenpred <- data.frame(IID = row.names(pre_phen), PredAge = pre_phen[,1])
-  #   # summary on module statistic
-  #   name_sumstats <- c(name_sumstats, 'PhenoAge')
-  #   sumstats<- rbind(sumstats, cal.stats(AgePredTable=phenpred, PhenVal=phen_value, AgeValid=age_valid, SexValid=sex_valid, SD))
-  #   modulestatsPheno <- cal.M.stats(AgePredTable=phenpred, PhenVal=phen_value, AgeValid=age_valid, SexValid=sex_valid, ClockName = 'PhenoAge')
-  #   # age acceleration residual prediction
-  #   phenpred <- generate.aar(AgePredTable=phenpred, PhenVal=phen_value, ClockName='PhenoAge')
-  #   # plot
-  #   age.plot(AgePredTable=phenpred, PhenVal=phen_value, AgeValid=age_valid, ClockNames=colnames(phenpred)[-1], SD)
-  #   phendensity <- density(phenpred$PhenoAge)
-  #   phen_valid <- TRUE
-  # }
+  if (length(!is.na(Pheno_overlap)) < 50) {
+    message("ERROR: Less overlapping CpGs: Can't proceed with age prediction for PhenoAge")
+  } else {
+    pre_phen <- pheno.age(beta = norm.beta, PhenoAgeCoeff = phenoage_coeff)
+    phenpred <- data.frame(IID = row.names(pre_phen), PredAge = pre_phen[,1])
+    # summary on module statistic
+    name_sumstats <- c(name_sumstats, 'PhenoAge')
+    sumstats<- rbind(sumstats, cal.stats(AgePredTable=phenpred, PhenVal=phen_value, AgeValid=age_valid, SexValid=sex_valid, SD))
+    modulestatsPheno <- cal.M.stats(AgePredTable=phenpred, PhenVal=phen_value, AgeValid=age_valid, SexValid=sex_valid, ClockName = 'PhenoAge')
+    # age acceleration residual prediction
+    phenpred <- generate.aar(AgePredTable=phenpred, PhenVal=phen_value, ClockName='PhenoAge')
+    # plot
+    age.plot(AgePredTable=phenpred, PhenVal=phen_value, AgeValid=age_valid, ClockNames=colnames(phenpred)[-1], SD)
+    phendensity <- density(phenpred$PhenoAge)
+    phen_valid <- TRUE
+  }
   
   message(" ")
   message("Predicting, adjusting and standardizing DunedinPACE")########################################
