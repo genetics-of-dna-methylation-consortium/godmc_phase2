@@ -17,9 +17,9 @@ suppressPackageStartupMessages(library(ggpubr))
 density.plot.by.sex <- function(CorTable, ClockNames) {
   par(mfrow=c(1,3))
   for (ClockName in ClockNames) {
-      PredAgeDansity <- density(CorTable[[ClockName]])
-      density_F <- density(CorTable[CorTable$Sex_factor == "F", ClockName])
-      density_M <- density(CorTable[CorTable$Sex_factor == "M", ClockName])
+      PredAgeDansity <- density(CorTable[[ClockName]], na.rm=TRUE)
+      density_F <- density(CorTable[CorTable$Sex_factor == "F", ClockName], na.rm=TRUE)
+      density_M <- density(CorTable[CorTable$Sex_factor == "M", ClockName], na.rm=TRUE)
       
       plot(PredAgeDansity, xlab = ClockName, col = "white", cex.main=1, cex=0.7,
         xlim = c(min(PredAgeDansity$x) - min(PredAgeDansity$x)/4, max(PredAgeDansity$x) + max(PredAgeDansity$x)/4), 
@@ -152,11 +152,11 @@ main <- function()
   # DunedinPACE
   if (pace_valid){
     message("Plotting density plots on DunedinPCAE")
-    pacedensity = density(cortable$DunedinPACE)
+    pacedensity = density(cortable$DunedinPACE, na.rm=TRUE)
     plot(pacedensity, xlab = "Pace of Aging", col = "white", cex.main=1, cex=0.7,
         main = "Density plot of DunedinPCAE")
     polygon(pacedensity, col = alpha("#1982c4", 0.6))
-    abline(v=mean(cortable$DunedinPACE), lty=2, col="#1982c4")
+    abline(v=mean(cortable$DunedinPACE, na.rm=TRUE), lty=2, col="#1982c4")
   }
   
   # Density by sex
