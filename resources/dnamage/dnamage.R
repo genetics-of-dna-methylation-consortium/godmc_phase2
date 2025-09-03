@@ -455,11 +455,13 @@ main <- function()
     modulestatsDun <- cal.M.stats(AgePredTable=pacepred, PhenVal=phen_value, AgeValid=age_valid, SexValid=sex_valid, ClockName = 'DunedinPACE')
     # age acceleration residual prediction
     pacepred <-  generate.aar(AgePredTable=pacepred, PhenVal=phen_value, ClockName='DunedinPACE')
-    message(head(pacepred))
+    message(summary(pacepred))
+    message("Number of missing DunedinPACE values: ", sum(is.na(pacepred$DunedinPACE)))
+    message("Samples with missing DunedinPACE values:")
+    message(pacepred[which(is.na(pacepred$DunedinPACE)),])
     # plot
     age.plot(AgePredTable=pacepred, PhenVal=phen_value, AgeValid=age_valid, ClockName=colnames(pacepred)[-1], SD)
     pacedensity <- density(pacepred$DunedinPACE,na.rm = TRUE)
-    message("Number of missing DunedinPACE values: ", sum(is.na(pacepred$DunedinPACE)))
     pace_valid <- TRUE
   } else {
     message("ERROR: Failure on prediction on DunedinPACE by using PACEProjector function")
