@@ -124,7 +124,8 @@ cal.M.stats <- function(AgePredTable, PhenVal, AgeValid, SexValid, ClockName){
   stats_name = c("Min","Mean", "Median", "Max", "SD", "Rsquared", "AdjRsquared", 
                "Intercept", "SEIntercept","PvalIntercept")
 
-  statsM0 = c(min(temp$PredAge), mean(temp$PredAge), median(temp$PredAge), max(temp$PredAge), sd(temp$PredAge),rep(NA,5))
+  PredAgestat = na.omit(AgePredTable$PredAge)
+  statsM0 = c(min(PredAgestat), mean(PredAgestat), median(PredAgestat), max(PredAgestat), sd(PredAgestat),rep(NA,5))
   statsM1 = c(min(residuals(M1)), mean(residuals(M1)),median(residuals(M1)),max(residuals(M1)), summary(M1)$sigma,
               summary(M1)$r.squared, summary(M1)$adj.r.squared,
               coefM1["(Intercept)","Estimate"], coefM1["(Intercept)","Std. Error"],
@@ -531,8 +532,8 @@ main <- function()
   } else {
     corstat <- subset(cortable, select = -c(IID))
   }
-  std <- function(x) round(sd(x)/sqrt(length(x)), digits=4)
-  corstats = as.data.frame(cor(corstat))
+  std <- function(x) round(sd(x, na.rm=T)/sqrt(length(!is.na(x))), digits=4)
+  corstats = as.data.frame(cor(corstat, use="pair"))
   corstats$SD = apply(corstat,2,std)
   corstats$mean = apply(corstat,2,mean)
   write.csv(corstats, file = paste0(age_stats, "_corrsd.csv"))
