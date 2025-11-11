@@ -254,6 +254,20 @@ hase_encoding="${home_directory}/processed_data/hase/encoding"
 hase_mapping="${home_directory}/processed_data/hase/mapped"
 hase_single_site="${home_directory}/processed_data/hase/single_site"
 
+#HASE1 for sexchr meQTLs
+hase_in_female='./processed_data/hase/hase_in_female'
+hase_in_male='./processed_data/hase/hase_in_male'
+hase_converting_female='./processed_data/hase/hase_converting_female'
+hase_converting_male='./processed_data/hase/hase_converting_male'
+hase_mapping_female='./processed_data/hase/mapped_female'
+hase_mapping_male='./processed_data/hase/mapped_male'
+hase_encoding_female='./processed_data/hase/encoding_female'
+hase_encoding_male='./processed_data/hase/encoding_male'
+hase_pheno_female='./processed_data/hase/hase_pheno_female'
+hase_pheno_male='./processed_data/hase/hase_pheno_male'
+hase_single_site_female='./processed_data/hase/single_site_female'
+hase_single_site_male='./processed_data/hase/single_site_male'
+
 #vmeQTL
 meth_vmeQTL_directory="${home_directory}/processed_data/methylation_data/vmeQTL"
 meth_vmeQTL_input_chr="${meth_vmeQTL_directory}/meth_vmeQTL_input.chr"
