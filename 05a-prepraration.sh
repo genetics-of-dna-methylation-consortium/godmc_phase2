@@ -18,7 +18,7 @@ mkdir -p ${hase_mapping_male}
 # female samples
 if [ -f ${transformed_methylation_adjusted_pcs}.Female.chrX.csv ];
 then
-    awk -F' ' '$34 == "F" {print $1}' ./processed_data/methylation_data/all_covariates.txt > ${hase_in_female}/female_id
+    awk -F' ' '$34 == "F" {print $1}' ${covariates_combined}.txt > ${hase_in_female}/female_id
     awk 'NR==FNR {ids[$1]; next} $2 in ids' ${hase_in_female}/female_id ${hase_dir_in}/data.fam | cut -f 1-2 > ${hase_in_female}/female_fid_id
     ${plink2} --bfile ${hase_dir_in}/data --keep ${hase_in_female}/female_fid_id --make-bed --out ${hase_in_female}/data
     rm ${hase_in_female}/data.log
@@ -49,7 +49,7 @@ fi
 # male samples
 if [ -f ${transformed_methylation_adjusted_pcs}.Male.chrX.csv ];
 then
-    awk -F' ' '$34 == "M" {print $1}' ./processed_data/methylation_data/all_covariates.txt > ${hase_in_male}/male_id
+    awk -F' ' '$34 == "M" {print $1}' ${covariates_combined}.txt > ${hase_in_male}/male_id
     awk 'NR==FNR {ids[$1]; next} $2 in ids' ${hase_in_male}/male_id ${hase_dir_in}/data.fam | cut -f 1-2 > ${hase_in_male}/male_fid_id
     ${plink2} --bfile ${hase_dir_in}/data --keep ${hase_in_male}/male_fid_id --make-bed --out ${hase_in_male}/data
     rm ${hase_in_male}/data.log
