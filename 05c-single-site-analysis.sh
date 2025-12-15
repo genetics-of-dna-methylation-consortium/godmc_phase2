@@ -32,12 +32,12 @@ then
     mkdir -p ${home_directory}/results/05/meta_inputs_female/use_data/probes
     mkdir -p ${home_directory}/results/05/meta_inputs_female/use_data/genotype
 
-    mv ${hase_single_site_female}/*npy ${home_directory}/results/05/meta_inputs_female/part_dev
-    mv ${hase_encoding_female}/encode_genotype/*h5 ${home_directory}/results/05/meta_inputs_female/use_data/genotype/
-    mv ${hase_encoding_female}/encode_individuals/*h5 ${home_directory}/results/05/meta_inputs_female/use_data/individuals/
-    mv ${hase_converting_female}/probes/$study_name.h5 ${home_directory}/results/05/meta_inputs_female/use_data/probes/
-    mv ${hase_mapping_female}/*npy ${home_directory}/results/05/meta_inputs_female/mapping/
-    mv ${hase_encoding_female}/encode_phenotype/*.csv ${home_directory}/results/05/meta_inputs_female/use_data/phenotypes/
+    cp ${hase_single_site_female}/*npy ${home_directory}/results/05/meta_inputs_female/part_dev
+    cp ${hase_encoding_female}/encode_genotype/*h5 ${home_directory}/results/05/meta_inputs_female/use_data/genotype/
+    cp ${hase_encoding_female}/encode_individuals/*h5 ${home_directory}/results/05/meta_inputs_female/use_data/individuals/
+    cp ${hase_converting_female}/probes/$study_name.h5 ${home_directory}/results/05/meta_inputs_female/use_data/probes/
+    cp ${hase_mapping_female}/*npy ${home_directory}/results/05/meta_inputs_female/mapping/
+    cp ${hase_encoding_female}/encode_phenotype/*.csv ${home_directory}/results/05/meta_inputs_female/use_data/phenotypes/
 fi
 
 if [ -f ${transformed_methylation_adjusted_pcs}.Male.chrX.csv ];
@@ -60,12 +60,12 @@ then
     mkdir -p ${home_directory}/results/05/meta_inputs_male/use_data/probes
     mkdir -p ${home_directory}/results/05/meta_inputs_male/use_data/genotype
 
-    mv ${hase_single_site_female}/*npy ${home_directory}/results/05/meta_inputs_male/part_dev
-    mv ${hase_encoding_female}/encode_genotype/*h5 ${home_directory}/results/05/meta_inputs_male/use_data/genotype/
-    mv ${hase_encoding_female}/encode_individuals/*h5 ${home_directory}/results/05/meta_inputs_male/use_data/individuals/
-    mv ${hase_converting_female}/probes/$study_name.h5 ${home_directory}/results/05/meta_inputs_male/use_data/probes/
-    mv ${hase_mapping_female}/*npy ${home_directory}/results/05/meta_inputs_male/mapping/
-    mv ${hase_encoding_female}/encode_phenotype/*.csv ${home_directory}/results/05/meta_inputs_male/use_data/phenotypes/
+    cp ${hase_single_site_male}/*npy ${home_directory}/results/05/meta_inputs_male/part_dev
+    cp ${hase_encoding_male}/encode_genotype/*h5 ${home_directory}/results/05/meta_inputs_male/use_data/genotype/
+    cp ${hase_encoding_male}/encode_individuals/*h5 ${home_directory}/results/05/meta_inputs_male/use_data/individuals/
+    cp ${hase_converting_male}/probes/$study_name.h5 ${home_directory}/results/05/meta_inputs_male/use_data/probes/
+    cp ${hase_mapping_male}/*npy ${home_directory}/results/05/meta_inputs_male/mapping/
+    cp ${hase_encoding_male}/encode_phenotype/*.csv ${home_directory}/results/05/meta_inputs_male/use_data/phenotypes/
 fi
 
 echo "Single site analysis successfully completed"
