@@ -295,6 +295,15 @@ gemma="${scripts_directory}/resources/bin/gemma"
 hase="${scripts_directory}/resources/bin/hase"
 osca="${scripts_directory}/resources/bin/osca"
 smr="${scripts_directory}/resources/bin/smr-1.3.1"
+glint="${scripts_directory}/resources/bin/glint-1.0.4/glint.py"
+
+# format_data
+grm_base="${home_directory}/processed_data/genetic_data/data.grm"
+phenotype_file="${home_directory}/input_files/phenotypes.Rdata"
+glint_output_path="${home_directory}/output_files/"
+
+# run_glint_plots
+glint_ewas="${home_directory}/glint_ewas.glint.lmm.txt"
 
 # Functions
 
