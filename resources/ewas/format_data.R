@@ -10,10 +10,10 @@ phen_name <- arguments[3] # ADHD
 #covs_file <- arguments[4] # methylation data already adjusted for covs
 #cellcounts_cov <- arguments[4] # cell counts already adjusted for at this point in godmc
 meth_pcs_file <- arguments[4] # meth PCs will be covariates in the EWAS
-DEEP_scripts_directory <- arguments[5] # DEEP_mqtls github repository
+#DEEP_scripts_directory <- arguments[5] # DEEP_mqtls github repository
 # study_specific_vars <- arguments[6] # not used in this case - EWAS covariates excluding smoking, cell counts, sex (which are already in this script)
-output_path <- arguments[6] 
-output_extension <- arguments[7] 
+output_path <- arguments[5] 
+output_extension <- arguments[6] 
 
 
 library(genio)

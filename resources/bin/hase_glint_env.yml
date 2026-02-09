@@ -1,0 +1,13 @@
+name: hase_py2_glint
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=2.7.18
+  - pip
+  - setuptools=44.0.0
+  - hdf5=1.10.5
+  - libblas
+  - liblapack
+  - pkg-config
+  - cython
