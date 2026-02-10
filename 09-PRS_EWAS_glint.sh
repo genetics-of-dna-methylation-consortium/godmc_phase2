@@ -11,10 +11,10 @@ print_version
 
 ####
 # additional glint section for testing
+#source ~/.bashrc
+#conda activate hase_py2_glint
 
-conda activate hase_py2_glint
-
-if["${related}" = "yes"]
+if [ "${related}" = "yes" ]
 then
 mkdir -p $glint_output_path
 # get unrelated IDs

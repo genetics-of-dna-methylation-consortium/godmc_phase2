@@ -7,11 +7,7 @@ arguments <- commandArgs(T)
 grm_name <- arguments[1] # [base name of input files]
 beta_file <- arguments[2] # methylation Robj - named norm.beta
 phen_name <- arguments[3] # ADHD
-#covs_file <- arguments[4] # methylation data already adjusted for covs
-#cellcounts_cov <- arguments[4] # cell counts already adjusted for at this point in godmc
-meth_pcs_file <- arguments[4] # meth PCs will be covariates in the EWAS
-#DEEP_scripts_directory <- arguments[5] # DEEP_mqtls github repository
-# study_specific_vars <- arguments[6] # not used in this case - EWAS covariates excluding smoking, cell counts, sex (which are already in this script)
+covs_file <- arguments[4] # methylation data already adjusted for covs
 output_path <- arguments[5] 
 output_extension <- arguments[6]
 home_dir<-arguments[7]
@@ -74,48 +70,13 @@ if(sum(!is.na(pheno[["SCORE"]])) < 10)
   q()
 }
 pheno<-na.omit(pheno)
+lab_name<-which(names(pheno%in%c("SCORE")))
+names(pheno)[lab_name]<-paste0("PRS_",phen_name)
 
-# load meth PCs
-message("Loading non genetic methylation PCs")
-
-meth_pcs_file_test<-list.files(paste(meth_pcs_file,".txt",sep=""))
-
-if(length(meth_pcs_file_test)>1){
-pcs<-read.table(paste(meth_pcs_file,".txt",sep=""),sep=" ",header=T)
-rownames(pcs) <- pcs$IID}  
-
-#cell_counts <- read.table(cellcounts_cov, header=T)
-#rownames(cell_counts) <- cell_counts$IID
-
-### no covs being used
-### #logic variables of whether we have cov file; then load in covs
-### l_cov <- ifelse(covs_file != "NULL",TRUE,FALSE)
-### if(l_cov) 
-### {
-###   msg <- paste("Loading covariates for", phen_name)
-###   message(msg)
-###   
-###   covs <- read.table(covs_file, he=T, stringsAsFactors=FALSE)
-###   g<-grep("factor",names(covs))
-###   if(length(g)>1){ 
-###     for (i in 1:length(g)){
-###       covs[,g[i]]<-as.factor(covs[,g[i]])
-###       if(length(levels(covs[,g[i]]))==1)
-###         covs<-covs[,-g[i]]
-###     }
-###   }
-###   
-###   g<-grep("numeric",names(covs))
-###   if(length(g)>1){ 
-###     for (i in 1:length(g)){
-###       covs[,g[i]]<-as.numeric(as.character(covs[,g[i]]))
-###     }
-###   }
-###   
-###   rownames(covs) <- covs$IID
-###   
-### }
-
+# load covariates
+message("Loading covariates")
+covs<-read.table(covs_file,sep=" ",header=T)
+rownames(covs) <- covs$IID 
 
 
 # match up DNAm and grm IDs and make sure they're in the same order
@@ -124,73 +85,14 @@ norm.beta <- norm.beta[,participants]
 grm_mat <- grm_mat[,participants]
 grm_mat <- grm_mat[participants,]
 stopifnot(identical(colnames(norm.beta),colnames(grm_mat)))
-#cell_counts <- cell_counts[participants,]
-pheno <- pheno[rownames(pheno) %in% participants, , drop = FALSE]
 
-if(length(meth_pcs_file_test)>1){
-pcs <- pcs[participants,]
-stopifnot(identical(rownames(pheno),rownames(pcs)))}
+idx<-match(participants,row.names(pheno))
+pheno<-pheno[idx,]
+idx<-match(participants,row.names(covs))
+covs<-covs[idx,]
 
-
+stopifnot(identical(rownames(pheno),rownames(covs)))
 stopifnot(identical(rownames(pheno),colnames(norm.beta)))
-
-
-### cell counts already adjusted for
-### # Cell counts file organisation
-### # 1. detect cell count panel prefixes
-### # This will not be needed if you have only generated cell counts with one panel
-### cell_count_cols <- setdiff(colnames(cell_counts), c("FID","IID"))
-### cellcount_panel_prefixes <- unique(sub("\\..*", "", cell_count_cols))
-### message("Detected cell count panel prefixes: ", paste(cellcount_panel_prefixes, collapse = ", "))
-### # 2. del treg cell types if present
-### celltypes <- grep(paste0("^(", paste0(cellcount_panel_prefixes, collapse="|"), ")"), colnames(cell_counts), value = TRUE)
-### celltypes <- celltypes[!grepl("treg", celltypes, ignore.case = TRUE)]
-### cell_counts <- cell_counts[,c("IID",celltypes)]
-### # 3. del nRBC if mean age > 1
-### if(mean(pheno$Age_numeric) < 1){
-###   message("Keeping nRBC as mean age is less than 1")
-### } else {
-###   message("Removing nRBC as mean age is greater than 1")
-###   celltypes <- celltypes[!grepl("nRBC", celltypes, ignore.case = TRUE)]
-### }
-### cell_counts <- cell_counts[,c("IID",celltypes)]
-### # 4. del columns with no variation
-### cell_counts <- remove_constant_cols(cell_counts, "cell_counts")
-
-### no covs
-#### rm Age_numeric and Sex_factor if no variation
-#### change these col names as appropriate
-###if (length(unique(na.omit(pheno$Age_numeric))) < 3) {
-###  message("Age_numeric has no variation (only one value). Removing Age_numeric column from pheno.")
-###  pheno$Age_numeric <- NULL
-###}
-###if (length(unique(na.omit(pheno$Sex_factor))) < 2) {
-###  message("Sex_factor has no variation (only one value). Removing Sex_factor column from pheno.")
-###  pheno$Sex_factor <- NULL
-###}
-###
-###has_study_vars <- !(length(study_specific_vars) == 1 && is.na(study_specific_vars))
-###make_covs <- function(base) {
-###  if (has_study_vars) {
-###    unique(c(base, celltypes, study_specific_vars))
-###  } else {
-###    unique(c(base, celltypes))
-###  }
-###}
-
-# remove if only one cell count panel removed:
-#cellcount_panel <- cellcount_panel_prefixes[1]
-pheno_panel <- pheno
-
-# add cell counts to pheno_panel
-##cell_counts_colnames <- grep(paste0("^", cellcount_panel, "\\."), colnames(cell_counts), value = TRUE)
-##cellcounts_temp <- cell_counts[,c("IID",cell_counts_colnames)]
-##cellcounts_temp <- filter_correlated_cols(cellcounts_temp, setdiff(colnames(cellcounts_temp), "IID"), thresh = 0.9, method ="pearson")
-##pheno_panel <- merge(pheno_panel, cellcounts_temp, by="IID")
-rownames(pheno_panel) <- pheno_panel$IID
-pheno_panel <- pheno_panel[participants,]
-
-message("Final phenotype dataframe columns: ", paste(colnames(pheno_panel), collapse = ", "))
 
 # save out DNAm
 write.table(norm.beta, file=paste0(output_path,"dnam_for_glint_",output_extension,".txt"),na = "NaN", sep = "\t", quote=FALSE, col.names = NA, row.names = TRUE)
@@ -198,8 +100,6 @@ write.table(norm.beta, file=paste0(output_path,"dnam_for_glint_",output_extensio
 # save out grm removing col and row names 
 write.table(grm_mat, file=paste0(output_path,"grm_for_glint_",output_extension,".txt"),sep = "\t", quote = FALSE, col.names = F, row.names = F)
 
-# write out phenotype file (age is phenotype - this may need to be changed)
-phenofile <- pheno_panel[, c("IID", phen_name)]
 # Write out
 write.table(
   phenofile,
@@ -210,19 +110,18 @@ write.table(
   quote = FALSE
 )
 
-pheno_panel$Sex_factor <- ifelse(pheno_panel$Sex_factor == "M", 1,
-                                 ifelse(pheno_panel$Sex_factor == "F", 0, NA))
+if(length(which(names(covs)%in%Sex_factor))>0){
+covs$Sex_factor <- ifelse(covs$Sex_factor == "M", 1,
+                                 ifelse(covs$Sex_factor == "F", 0, NA))}
 
 # write out covariates file 
 #needs to be meth PCs
 #ewas_covars_age <- make_covs(c("Sex_factor", "p_smoking_mcigarette"))
 
-if(length(meth_pcs_file_test)>1){
-covarfile <- pcs
-print(head(covarfile))
+
 # Write out
 write.table(
-  covarfile,
+  covs,
   file = paste0(output_path,"covariates_for_glint_",output_extension,".txt"),
   sep = "\t",
   row.names = FALSE,
