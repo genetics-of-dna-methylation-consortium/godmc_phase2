@@ -35,21 +35,21 @@ echo "convert grm to txt file"
     "${covariates_combined}.txt" \
     "${glint_output_path}" \
     "all" \
-    "${home_directory}"
+    "${home_directory}/glint"
 
   echo "Successfully completed conversion to text files for glint (all participants)"
 
 # convert grmfile_all to txt file - unrelated participants 
 # changed from ${PRS} because we only need ADHD
 echo "convert grm to txt file"
-  echo ${R_directory}Rscript resources/ewas/format_data.R \
+  ${R_directory}Rscript resources/ewas/format_data.R \
     "${grm_glint_unrelated_base}" \
     "${methylation_no_outliers}" \
     "ADHD" \
     "${covariates_combined}.txt" \
     "${glint_output_path}" \
     "unrelated" \
-    "${home_directory}"
+    "${home_directory}/glint"
 
 echo "Successfully completed conversion to text files for glint (unrelated participants)"
 
