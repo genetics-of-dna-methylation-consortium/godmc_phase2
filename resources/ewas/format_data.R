@@ -110,7 +110,7 @@ write.table(
   quote = FALSE
 )
 
-if(length(which(names(covs)%in%Sex_factor))>0){
+if(length(which(names(covs)%in%c("Sex_factor")))>0){
 covs$Sex_factor <- ifelse(covs$Sex_factor == "M", 1,
                                  ifelse(covs$Sex_factor == "F", 0, NA))}
 
