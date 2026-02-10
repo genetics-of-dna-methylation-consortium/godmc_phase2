@@ -70,7 +70,7 @@ if(sum(!is.na(pheno[["SCORE"]])) < 10)
   q()
 }
 pheno<-na.omit(pheno)
-lab_name<-which(names(pheno%in%c("SCORE")))
+lab_name<-which(names(pheno)%in%c("SCORE"))
 names(pheno)[lab_name]<-paste0("PRS_",phen_name)
 
 # load covariates
@@ -87,9 +87,9 @@ grm_mat <- grm_mat[participants,]
 stopifnot(identical(colnames(norm.beta),colnames(grm_mat)))
 
 idx<-match(participants,row.names(pheno))
-pheno<-pheno[idx,]
+pheno<-pheno[idx, , drop = FALSE]
 idx<-match(participants,row.names(covs))
-covs<-covs[idx,]
+covs<-covs[idx, , drop = FALSE]
 
 stopifnot(identical(rownames(pheno),rownames(covs)))
 stopifnot(identical(rownames(pheno),colnames(norm.beta)))
@@ -113,11 +113,6 @@ write.table(
 if(length(which(names(covs)%in%Sex_factor))>0){
 covs$Sex_factor <- ifelse(covs$Sex_factor == "M", 1,
                                  ifelse(covs$Sex_factor == "F", 0, NA))}
-
-# write out covariates file 
-#needs to be meth PCs
-#ewas_covars_age <- make_covs(c("Sex_factor", "p_smoking_mcigarette"))
-
 
 # Write out
 write.table(
