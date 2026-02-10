@@ -13,13 +13,14 @@ meth_pcs_file <- arguments[4] # meth PCs will be covariates in the EWAS
 #DEEP_scripts_directory <- arguments[5] # DEEP_mqtls github repository
 # study_specific_vars <- arguments[6] # not used in this case - EWAS covariates excluding smoking, cell counts, sex (which are already in this script)
 output_path <- arguments[5] 
-output_extension <- arguments[6] 
+output_extension <- arguments[6]
+home_dir<-arguments[7]
 
 
 library(genio)
 
-source(paste0(scripts_directory,"/resources/datacheck/fn_rm_constant_col.R"))
-source(paste0(scripts_directory,"/resources/datacheck/fn_rm_highlycor.R"))
+#source(paste0("./resources/datacheck/fn_rm_constant_col.R"))
+#source(paste0("./resources/datacheck/fn_rm_highlycor.R"))
 
 # impute.matrix borrowed from meffil
 impute.matrix <- function(x, margin=1, fun=function(x) mean(x, na.rm=T)) {
@@ -61,11 +62,13 @@ norm.beta <- impute.matrix(norm.beta,1)
 # organise pheno data
 phen_file <- paste(home_dir,"/processed_data/genetic_data/PRS_",phen_name,".sscore",sep="")
 message(paste("Loading PRS data for",phen_name))
+
 pheno <- read.table(phen_file, header=T, stringsAsFactors=FALSE)
 rownames(pheno) <- pheno$IID
 pheno<-pheno[,which(names(pheno)%in%c("IID","SCORE"))]
 pheno <- subset(pheno, IID %in% colnames(norm.beta), select="SCORE")
-if(sum(!is.na(phen[["SCORE"]])) < 10)
+
+if(sum(!is.na(pheno[["SCORE"]])) < 10)
 {
   message("There are fewer than 10 individuals remaining. Stopping the analysis.")
   q()
@@ -74,8 +77,12 @@ pheno<-na.omit(pheno)
 
 # load meth PCs
 message("Loading non genetic methylation PCs")
+
+meth_pcs_file_test<-list.files(paste(meth_pcs_file,".txt",sep=""))
+
+if(length(meth_pcs_file_test)>1){
 pcs<-read.table(paste(meth_pcs_file,".txt",sep=""),sep=" ",header=T)
-rownames(pcs) <- pcs$IID  
+rownames(pcs) <- pcs$IID}  
 
 #cell_counts <- read.table(cellcounts_cov, header=T)
 #rownames(cell_counts) <- cell_counts$IID
@@ -118,9 +125,13 @@ grm_mat <- grm_mat[,participants]
 grm_mat <- grm_mat[participants,]
 stopifnot(identical(colnames(norm.beta),colnames(grm_mat)))
 #cell_counts <- cell_counts[participants,]
-pheno <- pheno[participants,]
+pheno <- pheno[rownames(pheno) %in% participants, , drop = FALSE]
+
+if(length(meth_pcs_file_test)>1){
 pcs <- pcs[participants,]
-stopifnot(identical(rownames(pheno),rownames(pcs)))
+stopifnot(identical(rownames(pheno),rownames(pcs)))}
+
+
 stopifnot(identical(rownames(pheno),colnames(norm.beta)))
 
 
@@ -205,6 +216,8 @@ pheno_panel$Sex_factor <- ifelse(pheno_panel$Sex_factor == "M", 1,
 # write out covariates file 
 #needs to be meth PCs
 #ewas_covars_age <- make_covs(c("Sex_factor", "p_smoking_mcigarette"))
+
+if(length(meth_pcs_file_test)>1){
 covarfile <- pcs
 print(head(covarfile))
 # Write out
@@ -216,3 +229,4 @@ write.table(
   col.names = TRUE,
   quote = FALSE
 )
+}
