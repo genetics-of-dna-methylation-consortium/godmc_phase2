@@ -15,8 +15,6 @@ home_dir<-arguments[7]
 
 library(genio)
 
-#source(paste0("./resources/datacheck/fn_rm_constant_col.R"))
-#source(paste0("./resources/datacheck/fn_rm_highlycor.R"))
 
 # impute.matrix borrowed from meffil
 impute.matrix <- function(x, margin=1, fun=function(x) mean(x, na.rm=T)) {
