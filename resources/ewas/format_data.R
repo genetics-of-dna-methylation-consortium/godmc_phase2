@@ -102,7 +102,7 @@ write.table(grm_mat, file=paste0(output_path,"grm_for_glint_",output_extension,"
 
 # Write out
 write.table(
-  phenofile,
+  pheno,
   file = paste0(output_path,"phenotypes_for_glint_",output_extension,".txt"),
   sep = "\t",
   row.names = FALSE,
