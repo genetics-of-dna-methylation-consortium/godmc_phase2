@@ -75,7 +75,8 @@ names(pheno)[lab_name]<-paste0("PRS_",phen_name)
 message("Loading covariates")
 covs<-read.table(covs_file,sep=" ",header=T)
 rownames(covs) <- covs$IID 
-
+w<-which(names(covs)%in%c("IID"))
+covs<-covs[,-w]
 
 # match up DNAm and grm IDs and make sure they're in the same order
 participants <- as.character(intersect(colnames(norm.beta),colnames(grm_mat)))
@@ -103,7 +104,7 @@ write.table(
   pheno,
   file = paste0(output_path,"/phenotypes_for_glint_",output_extension,".txt"),
   sep = "\t",
-  row.names = FALSE,
+  row.names = TRUE,
   col.names = TRUE,
   quote = FALSE
 )
@@ -117,7 +118,7 @@ write.table(
   covs,
   file = paste0(output_path,"/covariates_for_glint_",output_extension,".txt"),
   sep = "\t",
-  row.names = FALSE,
+  row.names = TRUE,
   col.names = TRUE,
   quote = FALSE
 )
