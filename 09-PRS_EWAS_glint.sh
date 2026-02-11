@@ -35,7 +35,7 @@ echo "convert grm to txt file"
     "${covariates_combined}.txt" \
     "${glint_output_path}" \
     "all" \
-    "${home_directory}/glint"
+    "${home_directory}"
 
   echo "Successfully completed conversion to text files for glint (all participants)"
 
@@ -49,7 +49,7 @@ echo "convert grm to txt file"
     "${covariates_combined}.txt" \
     "${glint_output_path}" \
     "unrelated" \
-    "${home_directory}/glint"
+    "${home_directory}"
 
 echo "Successfully completed conversion to text files for glint (unrelated participants)"
 

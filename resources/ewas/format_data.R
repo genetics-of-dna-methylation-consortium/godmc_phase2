@@ -93,15 +93,15 @@ stopifnot(identical(rownames(pheno),rownames(covs)))
 stopifnot(identical(rownames(pheno),colnames(norm.beta)))
 
 # save out DNAm
-write.table(norm.beta, file=paste0(output_path,"dnam_for_glint_",output_extension,".txt"),na = "NaN", sep = "\t", quote=FALSE, col.names = NA, row.names = TRUE)
+write.table(norm.beta, file=paste0(output_path,"/dnam_for_glint_",output_extension,".txt"),na = "NaN", sep = "\t", quote=FALSE, col.names = NA, row.names = TRUE)
 
 # save out grm removing col and row names 
-write.table(grm_mat, file=paste0(output_path,"grm_for_glint_",output_extension,".txt"),sep = "\t", quote = FALSE, col.names = F, row.names = F)
+write.table(grm_mat, file=paste0(output_path,"/grm_for_glint_",output_extension,".txt"),sep = "\t", quote = FALSE, col.names = F, row.names = F)
 
 # Write out
 write.table(
   pheno,
-  file = paste0(output_path,"phenotypes_for_glint_",output_extension,".txt"),
+  file = paste0(output_path,"/phenotypes_for_glint_",output_extension,".txt"),
   sep = "\t",
   row.names = FALSE,
   col.names = TRUE,
@@ -115,7 +115,7 @@ covs$Sex_factor <- ifelse(covs$Sex_factor == "M", 1,
 # Write out
 write.table(
   covs,
-  file = paste0(output_path,"covariates_for_glint_",output_extension,".txt"),
+  file = paste0(output_path,"/covariates_for_glint_",output_extension,".txt"),
   sep = "\t",
   row.names = FALSE,
   col.names = TRUE,
