@@ -66,9 +66,9 @@ $glint --datafile  ${glint_output_path}/dnam_for_glint_unrelated.txt --covarfile
 echo "run glint ewas"
 
 # run glint EWAS
-$glint --datafile ${glint_output_path}/datafile_for_glint_all.glint --ewas --lmm --pheno ADHD --kinship ${glint_output_path}/grm_for_glint_all.txt  --out ${glint_output_path}/glint_ewas_all
+$glint --datafile ${glint_output_path}/datafile_for_glint_all.glint --ewas --lmm --pheno PRS_ADHD --kinship ${glint_output_path}/grm_for_glint_all.txt  --out ${glint_output_path}/glint_ewas_all
 
-$glint --datafile ${glint_output_path}/datafile_for_glint_unrelated.glint --ewas --lmm --pheno ADHD --kinship ${glint_output_path}/grm_for_glint_unrelated.txt  --out ${glint_output_path}/glint_ewas_unrelated
+$glint --datafile ${glint_output_path}/datafile_for_glint_unrelated.glint --ewas --lmm --pheno PRS_ADHD --kinship ${glint_output_path}/grm_for_glint_unrelated.txt  --out ${glint_output_path}/glint_ewas_unrelated
 
 
   echo "Successfully completed glint EWAS"
