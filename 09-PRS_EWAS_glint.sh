@@ -66,9 +66,9 @@ $glint --datafile  ${glint_output_path}/dnam_for_glint_unrelated.txt --covarfile
 echo "run glint ewas"
 
 # run glint EWAS
-$glint --datafile ${glint_output_path}/datafile_for_glint_all.glint --ewas --lmm --pheno PRS_ADHD --kinship ${glint_output_path}/grm_for_glint_all.txt  --out ${glint_output_path}/glint_ewas_all
+$glint --datafile ${glint_output_path}/datafile_for_glint_all.glint --ewas --lmm --pheno PRS_ADHD --kinship ${glint_output_path}/grm_for_glint_all.txt  --out ${glint_ewas}/glint_ewas_all
 
-$glint --datafile ${glint_output_path}/datafile_for_glint_unrelated.glint --ewas --lmm --pheno PRS_ADHD --kinship ${glint_output_path}/grm_for_glint_unrelated.txt  --out ${glint_output_path}/glint_ewas_unrelated
+$glint --datafile ${glint_output_path}/datafile_for_glint_unrelated.glint --ewas --lmm --pheno PRS_ADHD --kinship ${glint_output_path}/grm_for_glint_unrelated.txt  --out ${glint_ewas}/glint_ewas_unrelated
 
 
   echo "Successfully completed glint EWAS"
@@ -76,18 +76,18 @@ $glint --datafile ${glint_output_path}/datafile_for_glint_unrelated.glint --ewas
 # run plots script
 echo "running glint plots"
   ${R_directory}Rscript resources/ewas/glint_plots.R \
-    ${glint_ewas_all} \
-    ${glint_output_path} \
-    ${study_name} \
-    ${meth_array} \
-    all
+    "${glint_ewas}" \
+    "${glint_output_path}" \
+    "${study_name}" \
+    "${methylation_array}" \
+    "all"
 
   ${R_directory}Rscript resources/ewas/glint_plots.R \
-    ${glint_ewas_unrelated} \
-    ${glint_output_path} \
-    ${study_name} \
-    ${meth_array} \
-    unrelated
+    "${glint_ewas}" \
+    "${glint_output_path}" \
+    "${study_name}" \
+    "${methylation_array}" \
+    "unrelated"
 
 
   echo "Successfully completed glint Manhattan and qq plots"
@@ -95,33 +95,32 @@ echo "running glint plots"
 # run glint-original ewas comparison
 echo "running glint comparison"
   ${R_directory}Rscript resources/ewas/original_glint_comparison.R \
-    ${glint_ewas_all} \
-    ${glint_output_path} \
-    ${section_09_dir}/ADHD \
-    ${study_name} \
-    ADHD \
-    all
+    "${glint_ewas}" \
+    "${glint_output_path}" \
+    "${section_09_dir}/ADHD" \
+    "${study_name}" \
+    "ADHD" \
+    "all"
 
   ${R_directory}Rscript resources/ewas/original_glint_comparison.R \
-    ${glint_ewas_unrelated} \
-    ${glint_output_path} \
-    ${section_09_dir}/ADHD \
-    ${study_name} \
-    ADHD \
-    unrelated
-
+    "${glint_ewas}" \
+    "${glint_output_path}" \
+    "${section_09_dir}/ADHD" \
+    "${study_name}" \
+    "ADHD" \
+    "unrelated"
 
   echo "Successfully completed glint-original ewas comparison"
 
 # run all-unrelated glint ewas comparison
 echo "running all-unrelated glint comparison"
   ${R_directory}Rscript resources/ewas/glint_plots_all_unrelated.R \
-    ${glint_ewas_all} \
-    ${glint_ewas_unrelated} \
-    ${glint_output_path} \
-    ${section_09_dir}/ADHD \
-    ${study_name} \
-    ADHD
+    "${glint_ewas}" \
+    "${glint_ewas}" \
+    "${glint_output_path}" \
+    "${section_09_dir}/ADHD" \
+    "${study_name}" \
+    "ADHD"
 
   echo "Successfully completed all-unrelated ewas comparison"
 

@@ -6,9 +6,11 @@ arguments <- commandArgs(T)
 glint_ewas <- arguments[1] 
 output_path <- arguments[2]
 study_name <- arguments[3]
-meth_array <- arguments[4]
-output_extension <- arguments[5] 
+meth_array <- as.character(arguments[4])
+output_extension <- as.character(arguments[5])
 
+cat(output_extension,"\n")
+cat(meth_array,"\n")
 
 library(ggplot2)
 library(ggrepel)
@@ -92,7 +94,7 @@ meffil.ewas.miami.plot.1 <- function(results, sig.threshold=0.05/nrow(results_in
 # load meta-analysis data and run miami plot
 # Load EWAS results
 ewas <- read.table(
-  glint_ewas,
+  paste0(glint_ewas,"/glint_ewas_",output_extension,".glint.lmm.txt"),
   header = TRUE,
   sep = ",",
   stringsAsFactors = FALSE
@@ -125,7 +127,7 @@ print(head(results_info))
 results_info$gene <- sapply(strsplit(results_info$gene.symbol,';'), "[", 1)
 miami_out <- meffil.ewas.miami.plot.1(results_info,sig.threshold=0.05/nrow(results_info),
                                       title=paste0("Miami plot: ",plot.title))
-jpeg(filename = paste0(output_path,"/",study_name,"_glint_ewas_miami_plot_",output_extension,".jpg"),width = 7, height = 4, units = "in", res = 600)
+jpeg(filename = paste0(glint_ewas,"/",study_name,"_glint_ewas_miami_plot_",output_extension,".jpg"),width = 7, height = 4, units = "in", res = 600)
 print(miami_out)
 dev.off()
 
@@ -205,7 +207,7 @@ qq.lambda <- function(p.values, method="median", B=100) {
 qq_out <- meffil.ewas.qq.plot(results_info,sig.threshold=0.05/nrow(results_info),
                               title=paste0(plot.title))
 
-jpeg(filename = paste0(output_path,"/",study_name,"_glint_ewas_qq_plot_",output_extension,".jpg"),width = 4, height = 4, units = "in", res = 600)
+jpeg(filename = paste0(glint_ewas,"/",study_name,"_glint_ewas_qq_plot_",output_extension,".jpg"),width = 4, height = 4, units = "in", res = 600)
 print(qq_out)
 dev.off()
 

@@ -12,17 +12,16 @@ output_extension <- arguments[6]
 library(ggplot2)
 
 glint_ewas <- read.table(
-  glint_ewas,
+  paste0(glint_ewas,"/glint_ewas_",output_extension,".glint.lmm.txt"),
   header = TRUE,
   sep = ",",
   stringsAsFactors = FALSE
 )
 
-
 load(paste0(res_dir,"/",study_name,"_PRS_",phen_name,"_EWAS_results.RData")) # ewas.ret
 
 # you may need to change these two lines depending on the format of the original EWAS
-original_ewas <- ewas.ret$all$table
+original_ewas <- ewas.ret$analyses$none$table
 # this is creating a column of cpg IDs
 original_ewas$name <- as.character(rownames(original_ewas))
 
@@ -42,7 +41,7 @@ plot_out <- ggplot() +
   geom_smooth(method = "lm", se = FALSE)+
   theme_minimal()
 
-jpeg(filename = paste0(output_path,"original_vs_glint_correlation_plot_",output_extension,".jpg"),width = 12, height = row_dimensions, units = "in", res = 600)
-print(makeplots)
+jpeg(filename = paste0("/",output_path,"original_vs_glint_correlation_plot_",output_extension,".jpg"),width = 12, height = 12, units = "in", res = 600)
+print(plot_out)
 dev.off()
 

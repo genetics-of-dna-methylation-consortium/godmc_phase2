@@ -299,7 +299,6 @@ glint="${scripts_directory}/resources/bin/glint-1.0.4/glint.py"
 
 # format_data - all participants
 grm_base="${home_directory}/processed_data/genetic_data/data.grm"
-#phenotype_file="${home_directory}/input_files/phenotypes.Rdata"
 glint_output_path="${home_directory}/glint"
 
 # format_data - unrelated participants
@@ -307,8 +306,9 @@ grm_glint_unrelated_base="${home_directory}/processed_data/genetic_data/data_gli
 grmfile_glint_unrelated="${home_directory}/processed_data/genetic_data/data_glint_unrelated"
 
 # run_glint_plots
-glint_ewas="${section_09_dir}/glint_output_files/glint_ewas.glint.lmm.txt"
-glint_ewas_unrelated="${section_09_dir}/glint_ewas_unrelated.glint.lmm.txt"
+#glint_ewas="${section_09_dir}/glint_output_files/glint_ewas.glint.lmm.txt"
+#glint_ewas_unrelated="${section_09_dir}/glint_ewas_unrelated.glint.lmm.txt"
+glint_ewas="${section_09_dir}/glint_output_files"
 
 # Functions
 

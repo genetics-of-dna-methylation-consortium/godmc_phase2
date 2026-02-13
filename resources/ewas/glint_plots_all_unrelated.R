@@ -1,17 +1,16 @@
 arguments <- commandArgs(T)
 
-glint_ewas_all <- arguments[1] 
-glint_ewas_unrelated <- arguments[2]
-output_path <- arguments[3]
-res_dir <- arguments[4] 
-study_name <- arguments[5]
-phen_name <- arguments[6]
+glint_ewas <- arguments[1]
+output_path <- arguments[2]
+res_dir <- arguments[3] 
+study_name <- arguments[4]
+phen_name <- arguments[5]
 
 
 library(ggplot2)
 
 glint_ewas_all <- read.table(
-  glint_ewas_all,
+  paste0(glint_ewas,"/glint_ewas_all.glint.lmm.txt"),
   header = TRUE,
   sep = ",",
   stringsAsFactors = FALSE
@@ -20,7 +19,7 @@ glint_ewas_all <- read.table(
 glint_ewas_all$se <- glint_ewas_all$beta/glint_ewas_all$statistic 
 
 glint_ewas_unrelated <- read.table(
-  glint_ewas_unrelated,
+  paste0(glint_ewas,"/glint_ewas_unrelated.glint.lmm.txt"),
   header = TRUE,
   sep = ",",
   stringsAsFactors = FALSE
@@ -45,8 +44,8 @@ plot_out <- ggplot() +
   geom_smooth(method = "lm", se = FALSE)+
   theme_minimal()
 
-jpeg(filename = paste0(output_path,"all_vs_unrelated_effect_correlation_plot.jpg"),width = 12, height = row_dimensions, units = "in", res = 600)
-print(makeplots)
+jpeg(filename = paste0("/",output_path,"all_vs_unrelated_effect_correlation_plot.jpg"),width = 12, height = 12, units = "in", res = 600)
+print(plot_out)
 dev.off()
 
 
@@ -59,6 +58,6 @@ plot_out <- ggplot() +
   geom_smooth(method = "lm", se = FALSE)+
   theme_minimal()
 
-jpeg(filename = paste0(output_path,"all_vs_unrelated_SE_correlation_plot.jpg"),width = 12, height = row_dimensions, units = "in", res = 600)
-print(makeplots)
+jpeg(filename = paste0("/",output_path,"all_vs_unrelated_SE_correlation_plot.jpg"),width = 12, height = 12, units = "in", res = 600)
+print(plot_out)
 dev.off()
