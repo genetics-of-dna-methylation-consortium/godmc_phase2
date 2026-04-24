@@ -410,8 +410,40 @@ check_results_14 () {
 		exit 1
 	fi
  
-  	if [ -f "${section_14_dir}/nc886_groups.txt" ]; then
+	if [ -f "${section_14_dir}/nc886_groups.txt" ]; then
 		rm ${section_14_dir}/nc886_groups.txt
   
 	fi
 	}
+
+check_results_15 () {
+
+	if [ -f "${ld_prepare_dir}/manifest.json" ]; then
+		echo "LD cohort scaffold manifest present"
+	else
+		echo "Problem: LD cohort scaffold manifest is absent"
+		exit 1
+	fi
+
+	if [ -f "${ld_prepare_dir}/variants.tsv.gz" ]; then
+		echo "LD cohort scaffold variants present"
+	else
+		echo "Problem: LD cohort scaffold variants are absent"
+		exit 1
+	fi
+
+	if [ -f "${ld_aggregate_dir}/pooled_manifest.json" ]; then
+		echo "LD pooled scaffold manifest present"
+	else
+		echo "Problem: LD pooled scaffold manifest is absent"
+		exit 1
+	fi
+
+	if [ -f "${ld_aggregate_dir}/qc_report.txt" ]; then
+		echo "LD pooled scaffold QC report present"
+	else
+		echo "Problem: LD pooled scaffold QC report is absent"
+		exit 1
+	fi
+
+}

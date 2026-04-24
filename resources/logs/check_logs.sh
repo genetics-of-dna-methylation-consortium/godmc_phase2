@@ -298,6 +298,26 @@ check_logs_14 () {
 
 }
 
+check_logs_15 () {
+
+	compare_version "15a"
+	if grep -i -q "Successfully prepared LD cohort scaffold outputs" ${section_15a_logfile}; then
+		echo "15a-ld_prepare_stats.sh completed successfully."
+	else
+		echo "Problem: 15a-ld_prepare_stats.sh did not complete successfully"
+		exit 1
+	fi
+
+	compare_version "15b"
+	if grep -i -q "Successfully prepared LD aggregation scaffold outputs" ${section_15b_logfile}; then
+		echo "15b-ld_aggregate_stats.sh completed successfully."
+	else
+		echo "Problem: 15b-ld_aggregate_stats.sh did not complete successfully"
+		exit 1
+	fi
+
+}
+
 
 check_logs_09 () {
 
@@ -331,5 +351,4 @@ check_logs_09 () {
 
 
 }
-
 

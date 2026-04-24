@@ -67,7 +67,8 @@ section_12_logfile="${section_12_dir}/logs/log.txt"
 section_13a_logfile="${section_13_dir}/logs_a/log.txt"
 section_13_logfile="${section_13_dir}/logs/log.txt"
 section_14_logfile="${section_14_dir}/logs/log.txt"
-section_15_logfile="${section_15_dir}/logs/log.txt"
+section_15a_logfile="${section_15_dir}/logs_a/log.txt"
+section_15b_logfile="${section_15_dir}/logs_b/log.txt"
 section_16a_logfile="${section_16_dir}/logs_a/log.txt"
 section_16b_logfile="${section_16_dir}/logs_b/log.txt"
 section_16c_logfile="${section_16_dir}/logs_c/log.txt"
@@ -239,6 +240,12 @@ gwas_smoking_dir="${home_directory}/results/11"
 gwas_cellcount_entropy_dir="${home_directory}/results/11"
 gwas_cellcounts_dir="${home_directory}/results/12"
 gwas_cellcounts_mvlmm_dir="${home_directory}/results/13"
+ld_dir="${section_15_dir}"
+ld_blocks_dir="${ld_dir}/blocks"
+ld_prepare_dir="${ld_dir}/cohort_stats"
+ld_aggregate_dir="${ld_dir}/pooled"
+ld_manifest="${ld_dir}/manifest.json"
+ld_qc_report="${ld_dir}/qc_report.txt"
 
 resname="res"
 
@@ -370,4 +377,3 @@ print_version () {
 	echo ""
 
 }
-
