@@ -1,13 +1,18 @@
 #!/usr/bin/env python
 
 import argparse
+import gzip
+import json
 from datetime import datetime, timezone
-from typing import Iterable
+from pathlib import Path
 
-from ld_io import JsonValue, ensure_dir, write_gzip_lines, write_json, write_text
+import numpy as np
+
 from ld_qc import (
+    COVARIATE_MATRIX_COLUMNS,
     DEFAULT_SCHEMA_ID,
     VariantRecord,
+    build_covariate_matrix,
     build_sample_alignment,
     build_variant_index,
     require_file,
@@ -28,20 +33,23 @@ def parse_args() -> argparse.Namespace:
 VARIANT_TSV_HEADER = "chr\tpos\tref\talt\tvariant_id"
 
 
-def _variant_lines(variants: list[VariantRecord]) -> Iterable[str]:
-    yield VARIANT_TSV_HEADER
-    for variant in variants:
-        yield (
-            f"{variant['chr']}\t{variant['pos']}\t{variant['ref']}\t"
-            f"{variant['alt']}\t{variant['variant_id']}"
-        )
+def _write_variants_tsv_gz(path: Path, variants: list[VariantRecord]) -> None:
+    with gzip.open(path, "wt", encoding="utf-8") as handle:
+        handle.write(VARIANT_TSV_HEADER + "\n")
+        for v in variants:
+            handle.write(
+                f"{v['chr']}\t{v['pos']}\t{v['ref']}\t"
+                f"{v['alt']}\t{v['variant_id']}\n"
+            )
 
 
 def main() -> None:
     args = parse_args()
 
-    output_dir = ensure_dir(args.output_dir)
-    blocks_dir = ensure_dir(output_dir / "blocks")
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    blocks_dir = output_dir / "blocks"
+    blocks_dir.mkdir(parents=True, exist_ok=True)
 
     for suffix in (".bed", ".bim", ".fam"):
         require_file(f"{args.bfile}{suffix}", f"cleaned genotype input {suffix}")
@@ -55,7 +63,15 @@ def main() -> None:
     variant_index = build_variant_index(f"{args.bfile}.bim")
     variant_counts = variant_index["counts"]
 
-    manifest: dict[str, JsonValue] = {
+    covariate_matrix = build_covariate_matrix(
+        sample_alignment["final_samples"], sample_alignment["covariates"]
+    )
+    d_matrix = covariate_matrix.T @ covariate_matrix
+    np.save(output_dir / "D.npy", d_matrix, allow_pickle=False)
+    d_rank = int(np.linalg.matrix_rank(d_matrix))
+    d_condition_number = float(np.linalg.cond(d_matrix))
+
+    manifest: dict[str, object] = {
         "study_name": args.study_name,
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "module": "15a",
@@ -83,12 +99,14 @@ def main() -> None:
         "covariate_schema": {
             "schema_id": DEFAULT_SCHEMA_ID,
             "required_columns": ["Age_numeric", "Sex_factor"],
+            "matrix_columns": COVARIATE_MATRIX_COLUMNS,
+            "sex_factor_recode": {"M": 1.0, "F": 2.0},
             "covariates_file": args.covariates,
         },
         "notes": [
-            "This scaffold validates required section-15 inputs and writes placeholder outputs.",
+            "D.npy is the dense covariate cross-product C^T C in float64.",
             "The default first-release covariate schema excludes cohort-specific genotype PCs.",
-            "Production A/B/D matrix generation is not implemented yet.",
+            "B/A block exports and per-variant genotype diagnostics are not implemented yet.",
             "variants.tsv.gz currently contains index columns only; per-variant genotype "
             "diagnostics will be added when .bed reading is implemented.",
         ],
@@ -114,14 +132,21 @@ def main() -> None:
         f"{variant_counts['excluded_non_autosomal']}",
         "Variants excluded as non-biallelic SNP: "
         f"{variant_counts['excluded_non_biallelic_snp']}",
-        "Next implementation step: read genotype calls from .bed for D_k export "
+        f"D matrix shape: {d_matrix.shape[0]} x {d_matrix.shape[1]}",
+        f"D matrix rank: {d_rank} (expected {len(COVARIATE_MATRIX_COLUMNS)})",
+        f"D matrix condition number: {d_condition_number:.6g}",
+        "Next implementation step: read genotype calls from .bed for B_k/A_k export "
         "and per-variant diagnostics.",
     ]
 
-    write_json(output_dir / "manifest.json", manifest)
-    write_gzip_lines(output_dir / "variants.tsv.gz", _variant_lines(variant_index["variants"]))
-    write_text(output_dir / "qc_report.txt", "\n".join(diagnostics) + "\n")
-    write_text(blocks_dir / ".gitkeep", "")
+    (output_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    _write_variants_tsv_gz(output_dir / "variants.tsv.gz", variant_index["variants"])
+    (output_dir / "qc_report.txt").write_text(
+        "\n".join(diagnostics) + "\n", encoding="utf-8"
+    )
+    (blocks_dir / ".gitkeep").write_text("", encoding="utf-8")
 
 
 if __name__ == "__main__":

@@ -432,6 +432,13 @@ check_results_15 () {
 		exit 1
 	fi
 
+	if [ -f "${ld_prepare_dir}/D.npy" ]; then
+		echo "LD cohort D matrix present"
+	else
+		echo "Problem: LD cohort D matrix is absent"
+		exit 1
+	fi
+
 	if [ -f "${ld_aggregate_dir}/pooled_manifest.json" ]; then
 		echo "LD pooled scaffold manifest present"
 	else

@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 import argparse
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ld_io import JsonValue, ensure_dir, write_json, write_text
 from ld_qc import DEFAULT_SCHEMA_ID, require_file
 
 
@@ -23,13 +23,14 @@ def main() -> None:
     args = parse_args()
 
     cohort_dir = Path(args.cohort_dir)
-    output_dir = ensure_dir(args.output_dir)
-    ensure_dir(output_dir / "blocks")
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "blocks").mkdir(parents=True, exist_ok=True)
 
     require_file(cohort_dir / "manifest.json", "section-15 cohort manifest")
     require_file(cohort_dir / "variants.tsv.gz", "section-15 cohort variants")
 
-    pooled_manifest: dict[str, JsonValue] = {
+    pooled_manifest: dict[str, object] = {
         "study_name": args.study_name,
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "module": "15b",
@@ -50,8 +51,11 @@ def main() -> None:
         ]
     )
 
-    write_json(output_dir / "pooled_manifest.json", pooled_manifest)
-    write_text(output_dir / "qc_report.txt", qc_report + "\n")
+    (output_dir / "pooled_manifest.json").write_text(
+        json.dumps(pooled_manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    (output_dir / "qc_report.txt").write_text(qc_report + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

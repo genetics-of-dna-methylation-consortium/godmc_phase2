@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import TypedDict
 
+import numpy as np
+
 
 type CovariateRow = dict[str, str]
 type CovariateTable = dict[str, CovariateRow]
@@ -10,6 +12,7 @@ class SampleAlignment(TypedDict):
     covariate_header: list[str]
     sample_counts: dict[str, int]
     final_samples: list[str]
+    covariates: CovariateTable
 
 
 class VariantRecord(TypedDict):
@@ -26,13 +29,15 @@ class VariantIndex(TypedDict):
 
 
 DEFAULT_SCHEMA_ID = "intercept_age_sex"
-DEFAULT_SCHEMA_COLUMNS: list[str] = [
+DEFAULT_SCHEMA_COLUMNS = [
     "Age_numeric",
     "Sex_factor",
 ]
-MISSING_VALUES: set[str] = {"", "NA", "NaN", "nan", "NAN", "N/A", "."}
-AUTOSOMES: set[str] = {str(c) for c in range(1, 23)}
-VALID_BASES: set[str] = {"A", "C", "G", "T"}
+COVARIATE_MATRIX_COLUMNS = ["intercept", "Age_numeric", "Sex_factor"]
+SEX_FACTOR_RECODE = {"M": 1.0, "F": 2.0}
+MISSING_VALUES = {"", "NA", "NaN", "nan", "NAN", "N/A", "."}
+AUTOSOMES = {str(c) for c in range(1, 23)}
+VALID_BASES = {"A", "C", "G", "T"}
 
 
 def require_file(path: str | Path, description: str) -> Path:
@@ -162,7 +167,37 @@ def build_sample_alignment(
         "covariate_header": covariate_header,
         "sample_counts": counts,
         "final_samples": final_samples,
+        "covariates": covariates,
     }
+
+
+def build_covariate_matrix(
+    final_samples: list[str], covariates: CovariateTable
+) -> np.ndarray:
+    if not final_samples:
+        raise ValueError("Cannot build covariate matrix from empty sample list")
+    matrix = np.empty((len(final_samples), len(COVARIATE_MATRIX_COLUMNS)), dtype=np.float64)
+    for i, iid in enumerate(final_samples):
+        if iid not in covariates:
+            raise KeyError(f"Sample {iid} missing from covariate table")
+        row = covariates[iid]
+        try:
+            age = float(row["Age_numeric"])
+        except (KeyError, ValueError) as exc:
+            raise ValueError(
+                f"Sample {iid} has invalid Age_numeric "
+                f"'{row.get('Age_numeric')}'"
+            ) from exc
+        sex_raw = row.get("Sex_factor", "")
+        if sex_raw not in SEX_FACTOR_RECODE:
+            raise ValueError(
+                f"Sample {iid} has unrecognised Sex_factor '{sex_raw}'; "
+                f"expected one of {sorted(SEX_FACTOR_RECODE)}"
+            )
+        matrix[i, 0] = 1.0
+        matrix[i, 1] = age
+        matrix[i, 2] = SEX_FACTOR_RECODE[sex_raw]
+    return matrix
 
 
 def build_variant_index(bim_path: str | Path) -> VariantIndex:
