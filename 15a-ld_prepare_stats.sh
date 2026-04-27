@@ -27,6 +27,7 @@ python resources/genetics/ld_prepare_stats.py \
 	--bfile ${bfile} \
 	--covariates ${covariates_intersect} \
 	--output-dir ${ld_prepare_dir} \
-	--log-file ${section_15a_logfile}
+	--log-file ${section_15a_logfile} \
+	--chromosome ${ld_chromosome}
 
 echo "Successfully prepared LD cohort scaffold outputs"

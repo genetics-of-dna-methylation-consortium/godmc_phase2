@@ -246,6 +246,7 @@ ld_prepare_dir="${ld_dir}/cohort_stats"
 ld_aggregate_dir="${ld_dir}/pooled"
 ld_manifest="${ld_dir}/manifest.json"
 ld_qc_report="${ld_dir}/qc_report.txt"
+ld_chromosome="${ld_chromosome:-all}"
 
 resname="res"
 

@@ -9,6 +9,7 @@ from ld_qc import DEFAULT_SCHEMA_ID, require_file
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse command-line options for central LD aggregation scaffolding."""
     parser = argparse.ArgumentParser(
         description="Prepare section-15 LD aggregation scaffold outputs"
     )
@@ -20,6 +21,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    """Validate cohort scaffold outputs and write placeholder pooled outputs."""
     args = parse_args()
 
     cohort_dir = Path(args.cohort_dir)

@@ -35,38 +35,20 @@ DEFAULT_SCHEMA_COLUMNS = [
 ]
 COVARIATE_MATRIX_COLUMNS = ["intercept", "Age_numeric", "Sex_factor"]
 SEX_FACTOR_RECODE = {"M": 1.0, "F": 2.0}
-MISSING_VALUES = {"", "NA", "NaN", "nan", "NAN", "N/A", "."}
 AUTOSOMES = {str(c) for c in range(1, 23)}
 VALID_BASES = {"A", "C", "G", "T"}
 
 
 def require_file(path: str | Path, description: str) -> Path:
+    """Return an existing file path or raise a clear missing-input error."""
     path = Path(path)
     if not path.is_file():
         raise FileNotFoundError(f"Missing {description}: {path}")
     return path
 
 
-def read_header(path: str | Path) -> list[str]:
-    with Path(path).open("r", encoding="utf-8") as handle:
-        first_line = handle.readline().strip()
-    if not first_line:
-        raise ValueError(f"File has no header: {path}")
-    return first_line.split()
-
-
-def validate_covariate_header(path: str | Path) -> list[str]:
-    header = read_header(path)
-    missing = [column for column in DEFAULT_SCHEMA_COLUMNS if column not in header]
-    if missing:
-        raise ValueError(
-            "Covariates file is missing required columns for section 15: "
-            + ", ".join(missing)
-        )
-    return header
-
-
 def read_fam_samples(path: str | Path) -> list[str]:
+    """Read sample IIDs from the second column of a PLINK FAM file."""
     samples: list[str] = []
     seen: set[str] = set()
     duplicates: set[str] = set()
@@ -90,6 +72,7 @@ def read_fam_samples(path: str | Path) -> list[str]:
 
 
 def read_covariates(path: str | Path) -> tuple[list[str], CovariateTable]:
+    """Read the whitespace-delimited covariate table keyed by IID."""
     path = Path(path)
     with path.open("r", encoding="utf-8") as handle:
         header_line = handle.readline().strip()
@@ -121,13 +104,10 @@ def read_covariates(path: str | Path) -> tuple[list[str], CovariateTable]:
     return header, covariates
 
 
-def has_missing_required_covariates(row: CovariateRow) -> bool:
-    return any(row[column] in MISSING_VALUES for column in DEFAULT_SCHEMA_COLUMNS)
-
-
 def build_sample_alignment(
     fam_path: str | Path, covariates_path: str | Path
 ) -> SampleAlignment:
+    """Align FAM samples to covariate rows in cleaned genotype sample order."""
     fam_samples = read_fam_samples(fam_path)
     covariate_header, covariates = read_covariates(covariates_path)
     missing_columns = [
@@ -139,28 +119,24 @@ def build_sample_alignment(
             + ", ".join(missing_columns)
         )
 
+    # Assemble list of individuals in both FAM and covariate files
     fam_sample_set = set(fam_samples)
     covariate_sample_set = set(covariates)
     samples_in_both = [iid for iid in fam_samples if iid in covariates]
-    final_samples = [
-        iid
-        for iid in samples_in_both
-        if not has_missing_required_covariates(covariates[iid])
-    ]
+    final_samples = samples_in_both
 
-    counts: dict[str, int] = {
+    counts = {
         "fam_sample_count": len(fam_samples),
         "covariate_sample_count": len(covariates),
         "samples_in_both_count": len(samples_in_both),
         "fam_without_covariates_count": len(fam_sample_set - covariate_sample_set),
         "covariates_without_fam_count": len(covariate_sample_set - fam_sample_set),
-        "missing_required_covariates_count": len(samples_in_both) - len(final_samples),
         "final_sample_count": len(final_samples),
     }
 
     if not final_samples:
         raise ValueError(
-            "No samples remain after FAM/covariate alignment and required covariate filtering"
+            "No samples remain after FAM/covariate alignment"
         )
 
     return {
@@ -174,6 +150,7 @@ def build_sample_alignment(
 def build_covariate_matrix(
     final_samples: list[str], covariates: CovariateTable
 ) -> np.ndarray:
+    """Build the frozen section-15 covariate matrix for aligned samples."""
     if not final_samples:
         raise ValueError("Cannot build covariate matrix from empty sample list")
     matrix = np.empty((len(final_samples), len(COVARIATE_MATRIX_COLUMNS)), dtype=np.float64)
@@ -200,8 +177,16 @@ def build_covariate_matrix(
     return matrix
 
 
-def build_variant_index(bim_path: str | Path) -> VariantIndex:
+def build_variant_index(
+    bim_path: str | Path, chromosome: str | None = None
+) -> VariantIndex:
+    """Build canonical autosomal variant records from a cleaned PLINK BIM file."""
     bim_path = Path(bim_path)
+    if chromosome is not None and chromosome not in AUTOSOMES:
+        raise ValueError(
+            f"Invalid chromosome filter '{chromosome}'; "
+            f"expected one of {sorted(AUTOSOMES, key=int)} or None for all autosomes"
+        )
     seen_keys: set[str] = set()
     duplicates: set[str] = set()
     kept: list[VariantRecord] = []
@@ -209,6 +194,7 @@ def build_variant_index(bim_path: str | Path) -> VariantIndex:
         "total_rows": 0,
         "kept_count": 0,
         "excluded_non_autosomal": 0,
+        "excluded_other_chromosome": 0,
         "excluded_non_biallelic_snp": 0,
     }
 
@@ -226,6 +212,10 @@ def build_variant_index(bim_path: str | Path) -> VariantIndex:
 
             if chr_raw not in AUTOSOMES:
                 counts["excluded_non_autosomal"] += 1
+                continue
+
+            if chromosome is not None and chr_raw != chromosome:
+                counts["excluded_other_chromosome"] += 1
                 continue
 
             ref = allele2.upper()
@@ -271,8 +261,13 @@ def build_variant_index(bim_path: str | Path) -> VariantIndex:
     counts["kept_count"] = len(kept)
 
     if not kept:
+        scope = (
+            f"chromosome {chromosome}"
+            if chromosome is not None
+            else "autosomes 1-22"
+        )
         raise ValueError(
-            f"No autosomal biallelic SNPs remain in BIM file: {bim_path}"
+            f"No biallelic SNPs remain on {scope} in BIM file: {bim_path}"
         )
 
     return {"variants": kept, "counts": counts}
