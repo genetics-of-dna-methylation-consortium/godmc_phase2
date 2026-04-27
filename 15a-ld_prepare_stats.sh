@@ -22,17 +22,10 @@ then
 	exit 1
 fi
 
-if [ ! -f "${pcs_all}" ]
-then
-	echo "Problem: genotype PCs are required at ${pcs_all}"
-	exit 1
-fi
-
 python resources/genetics/ld_prepare_stats.py \
 	--study-name ${study_name} \
 	--bfile ${bfile} \
 	--covariates ${covariates_intersect} \
-	--pcs ${pcs_all} \
 	--output-dir ${ld_prepare_dir} \
 	--log-file ${section_15a_logfile}
 

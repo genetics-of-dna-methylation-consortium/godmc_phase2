@@ -4,12 +4,14 @@ import argparse
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ld_io import ensure_dir, write_json, write_text
+from ld_io import JsonValue, ensure_dir, write_json, write_text
 from ld_qc import DEFAULT_SCHEMA_ID, require_file
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Prepare section-15 LD aggregation scaffold outputs")
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Prepare section-15 LD aggregation scaffold outputs"
+    )
     parser.add_argument("--study-name", required=True)
     parser.add_argument("--cohort-dir", required=True)
     parser.add_argument("--output-dir", required=True)
@@ -17,7 +19,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
     args = parse_args()
 
     cohort_dir = Path(args.cohort_dir)
@@ -27,7 +29,7 @@ def main():
     require_file(cohort_dir / "manifest.json", "section-15 cohort manifest")
     require_file(cohort_dir / "variants.tsv.gz", "section-15 cohort variants")
 
-    pooled_manifest = {
+    pooled_manifest: dict[str, JsonValue] = {
         "study_name": args.study_name,
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "module": "15b",
@@ -40,7 +42,7 @@ def main():
         ],
     }
 
-    qc_report = "\n".join(
+    qc_report: str = "\n".join(
         [
             "Section 15 pooled scaffold created successfully.",
             "Validated presence of cohort scaffold manifest and canonical variant stub.",
