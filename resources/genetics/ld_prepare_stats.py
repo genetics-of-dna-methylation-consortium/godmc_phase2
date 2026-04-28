@@ -8,6 +8,14 @@ from pathlib import Path
 
 import numpy as np
 
+from ld_hail import (
+    VariantDiagnostics,
+    compute_a_block_banded,
+    compute_b_block,
+    init_hail,
+    load_genotype_matrixtable,
+    prepare_for_cross_products,
+)
 from ld_qc import (
     COVARIATE_MATRIX_COLUMNS,
     DEFAULT_SCHEMA_ID,
@@ -48,17 +56,34 @@ def resolve_chromosome_filter(value: str) -> str | None:
     return value
 
 
-VARIANT_TSV_HEADER = "chr\tpos\tref\talt\tvariant_id"
+VARIANT_TSV_HEADER = (
+    "chr\tpos\tref\talt\tvariant_id\tn_nonmissing\tn_imputed\tgenotype_mean"
+)
 
 
-def _write_variants_tsv_gz(path: Path, variants: list[VariantRecord]) -> None:
-    """Write canonical variant index rows to a gzipped TSV file."""
+def _write_variants_tsv_gz(
+    path: Path,
+    variants: list[VariantRecord],
+    diagnostics: list[VariantDiagnostics],
+) -> None:
+    """Write canonical variant index rows + genotype diagnostics to gzipped TSV."""
+    if len(variants) != len(diagnostics):
+        raise ValueError(
+            f"variants/diagnostics length mismatch ({len(variants)} vs "
+            f"{len(diagnostics)})"
+        )
     with gzip.open(path, "wt", encoding="utf-8") as handle:
         handle.write(VARIANT_TSV_HEADER + "\n")
-        for v in variants:
+        for v, d in zip(variants, diagnostics):
+            if v["variant_id"] != d["variant_id"]:
+                raise ValueError(
+                    f"variant_id mismatch at row {v['variant_id']} vs "
+                    f"{d['variant_id']}"
+                )
             handle.write(
-                f"{v['chr']}\t{v['pos']}\t{v['ref']}\t"
-                f"{v['alt']}\t{v['variant_id']}\n"
+                f"{v['chr']}\t{v['pos']}\t{v['ref']}\t{v['alt']}\t"
+                f"{v['variant_id']}\t{d['n_nonmissing']}\t{d['n_imputed']}\t"
+                f"{d['genotype_mean']:.10g}\n"
             )
 
 
@@ -93,6 +118,26 @@ def main() -> None:
     d_rank = int(np.linalg.matrix_rank(d_matrix))
     d_condition_number = float(np.linalg.cond(d_matrix))
 
+    hail_log = Path(args.log_file).parent / "hail.log"
+    hail_meta = init_hail(hail_log)
+    mt = load_genotype_matrixtable(
+        bfile=args.bfile,
+        chromosome=chromosome_filter,
+        final_samples=sample_alignment["final_samples"],
+        variant_index=variant_index,
+    )
+    mt_imputed, genotype_diagnostics = prepare_for_cross_products(mt)
+
+    b_matrix = compute_b_block(mt_imputed, covariate_matrix)
+    np.save(output_dir / "B.npy", b_matrix, allow_pickle=False)
+    b_frobenius = float(np.linalg.norm(b_matrix))
+
+    a_blocks_meta = compute_a_block_banded(
+        mt_imputed,
+        variant_index,
+        out_dir=output_dir / "A_blocks",
+    )
+
     manifest = {
         "study_name": args.study_name,
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -106,9 +151,17 @@ def main() -> None:
             "counts": sample_counts,
         },
         "variant_index": {
-            "schema_version": "v0.2-index-only",
-            "columns": ["chr", "pos", "ref", "alt", "variant_id"],
-            "deferred_columns": ["n_nonmissing", "n_imputed", "genotype_mean"],
+            "schema_version": "v0.3-with-genotype-stats",
+            "columns": [
+                "chr",
+                "pos",
+                "ref",
+                "alt",
+                "variant_id",
+                "n_nonmissing",
+                "n_imputed",
+                "genotype_mean",
+            ],
             "chromosome_filter": args.chromosome,
             "filters_applied": [
                 f"chromosome {chromosome_filter}"
@@ -120,6 +173,7 @@ def main() -> None:
             "duplicate_key_policy": "hard fail on duplicate chr:pos:ref:alt",
             "sort_order": "chr (numeric), pos, ref, alt",
             "counts": variant_counts,
+            "n_samples_used": sample_counts["final_sample_count"],
         },
         "covariate_schema": {
             "schema_id": DEFAULT_SCHEMA_ID,
@@ -128,16 +182,29 @@ def main() -> None:
             "sex_factor_recode": {"M": 1.0, "F": 2.0},
             "covariates_file": args.covariates,
         },
+        "hail": hail_meta,
+        "B_block": {
+            "filename": "B.npy",
+            "shape": list(b_matrix.shape),
+            "dtype": str(b_matrix.dtype),
+            "rows": "variants.tsv.gz row order",
+            "columns": COVARIATE_MATRIX_COLUMNS,
+            "format": "numpy-npy-dense",
+        },
+        "A_blocks": a_blocks_meta,
         "notes": [
             "D.npy is the dense covariate cross-product C^T C in float64.",
+            "B.npy is the dense X^T C cross-product (variants x covariates), float64.",
+            "A_blocks/chr<C>/ contains per-chromosome upper-triangular banded "
+            "X X^T as Hail BlockMatrix directories within radius_bp physical distance.",
             "The default first-release covariate schema excludes cohort-specific genotype PCs.",
-            "B/A block exports and per-variant genotype diagnostics are not implemented yet.",
-            "variants.tsv.gz currently contains index columns only; per-variant genotype "
-            "diagnostics will be added when .bed reading is implemented.",
+            "Per-variant genotype diagnostics are computed via Hail and written to "
+            "variants.tsv.gz; missing calls are mean-imputed before downstream cross-products.",
         ],
     }
 
-    diagnostics = [
+    total_imputed = sum(d["n_imputed"] for d in genotype_diagnostics)
+    qc_lines = [
         "Section 15 cohort scaffold created successfully.",
         f"Covariate columns detected: {', '.join(covariate_columns)}",
         f"FAM samples: {sample_counts['fam_sample_count']}",
@@ -161,16 +228,30 @@ def main() -> None:
         f"D matrix shape: {d_matrix.shape[0]} x {d_matrix.shape[1]}",
         f"D matrix rank: {d_rank} (expected {len(COVARIATE_MATRIX_COLUMNS)})",
         f"D matrix condition number: {d_condition_number:.6g}",
-        "Next implementation step: read genotype calls from .bed for B_k/A_k export "
-        "and per-variant diagnostics.",
+        f"Hail version: {hail_meta['hail_version']}",
+        f"Mean-imputed genotype calls (sum over kept variants): {total_imputed}",
+        f"B matrix shape: {b_matrix.shape[0]} x {b_matrix.shape[1]}",
+        f"B Frobenius norm: {b_frobenius:.6g}",
+        f"A_blocks radius_bp: {a_blocks_meta['radius_bp']}",
+        f"A_blocks block_size: {a_blocks_meta['block_size']}",
+        "A_blocks per-chromosome variant counts: "
+        + ", ".join(
+            f"chr{c}={meta['n_variants']}"
+            for c, meta in a_blocks_meta["chromosomes"].items()
+        ),
+        "Next implementation step: pooled aggregation in 15b.",
     ]
 
     (output_dir / "manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    _write_variants_tsv_gz(output_dir / "variants.tsv.gz", variant_index["variants"])
+    _write_variants_tsv_gz(
+        output_dir / "variants.tsv.gz",
+        variant_index["variants"],
+        genotype_diagnostics,
+    )
     (output_dir / "qc_report.txt").write_text(
-        "\n".join(diagnostics) + "\n", encoding="utf-8"
+        "\n".join(qc_lines) + "\n", encoding="utf-8"
     )
     (blocks_dir / ".gitkeep").write_text("", encoding="utf-8")
 
