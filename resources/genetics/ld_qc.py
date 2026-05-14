@@ -37,6 +37,9 @@ COVARIATE_MATRIX_COLUMNS = ["intercept", "Age_numeric", "Sex_factor"]
 SEX_FACTOR_RECODE = {"M": 1.0, "F": 2.0}
 AUTOSOMES = {str(c) for c in range(1, 23)}
 VALID_BASES = {"A", "C", "G", "T"}
+MHC_CHROMOSOME = "6"
+MHC_START_BP = 28477797
+MHC_END_BP = 33448354
 
 
 def require_file(path: str | Path, description: str) -> Path:
@@ -196,6 +199,7 @@ def build_variant_index(
         "excluded_non_autosomal": 0,
         "excluded_other_chromosome": 0,
         "excluded_non_biallelic_snp": 0,
+        "excluded_mhc_region": 0,
     }
 
     with bim_path.open("r", encoding="utf-8") as handle:
@@ -235,6 +239,13 @@ def build_variant_index(
                 raise ValueError(
                     f"BIM row {line_number} has non-positive position {pos}: {bim_path}"
                 )
+
+            if (
+                chr_raw == MHC_CHROMOSOME
+                and MHC_START_BP <= pos <= MHC_END_BP
+            ):
+                counts["excluded_mhc_region"] += 1
+                continue
 
             variant_id = f"{chr_raw}:{pos}:{ref}:{alt}"
             if variant_id in seen_keys:

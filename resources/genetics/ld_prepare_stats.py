@@ -168,6 +168,7 @@ def main() -> None:
                 if chromosome_filter is not None
                 else "autosomes 1-22",
                 "biallelic SNPs (ref/alt in {A,C,G,T}, ref != alt)",
+                "MHC region chr6:28477797-33448354 excluded (GRCh37/hg19)",
             ],
             "ref_alt_convention": "ref = .bim column 6 (A2), alt = .bim column 5 (A1)",
             "duplicate_key_policy": "hard fail on duplicate chr:pos:ref:alt",
@@ -225,6 +226,8 @@ def main() -> None:
         f"{variant_counts['excluded_other_chromosome']}",
         "Variants excluded as non-biallelic SNP: "
         f"{variant_counts['excluded_non_biallelic_snp']}",
+        "Variants excluded in MHC region chr6:28477797-33448354: "
+        f"{variant_counts['excluded_mhc_region']}",
         f"D matrix shape: {d_matrix.shape[0]} x {d_matrix.shape[1]}",
         f"D matrix rank: {d_rank} (expected {len(COVARIATE_MATRIX_COLUMNS)})",
         f"D matrix condition number: {d_condition_number:.6g}",
