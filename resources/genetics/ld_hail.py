@@ -119,6 +119,13 @@ def load_genotype_matrixtable(
         )
     )
     mt = mt.filter_rows(hl.literal(expected_set).contains(mt.variant_id))
+    expected_order_index = {
+        variant_id: i for i, variant_id in enumerate(expected_order)
+    }
+    mt = mt.annotate_rows(
+        section15_variant_order=hl.literal(expected_order_index).get(mt.variant_id)
+    )
+    mt = mt.key_rows_by("section15_variant_order")
 
     fam_iids = [str(s) for s in mt.s.collect()]
     iid_to_index = {iid: i for i, iid in enumerate(fam_iids)}
@@ -254,11 +261,12 @@ def compute_a_block_banded(
 
     For each chromosome present in ``variant_index``, the MatrixTable is
     filtered to that chromosome, ``X`` is built as a Hail BlockMatrix from
-    the imputed ``GT_dosage`` entries, and each row chunk is multiplied by
-    the full chromosome matrix transpose. Each chunk is sparsified to
-    row-specific upper-triangular intervals within ``radius_bp`` physical
-    distance and written to ``{out_dir}/chr<C>/chunk_<N>/`` as a Hail
-    BlockMatrix directory. The dense ``p × p`` matrix is never materialised.
+    the imputed ``GT_dosage`` entries, and each row chunk is multiplied only
+    by the chromosome column interval needed to cover that chunk's 1 Mb
+    upper-triangular windows. Each chunk is then sparsified to row-specific
+    intervals and written to ``{out_dir}/chr<C>/chunk_<N>/`` as a Hail
+    BlockMatrix directory. The dense chromosome-wide ``p × p`` matrix is
+    never materialised.
 
     Returns a manifest dict describing the written artefacts.
     """
@@ -304,11 +312,16 @@ def compute_a_block_banded(
             chunk_name = f"chunk_{chunk_index:06d}"
             chunk_dir = chr_dir / chunk_name
 
+            col_start = row_start
+            col_stop = int(stops[row_start:row_stop].max())
+            col_indices = list(range(col_start, col_stop))
+
             x_chunk = x_h.filter_rows(row_indices)
-            a_chunk = x_chunk @ x_h.T
+            x_window = x_h.filter_rows(col_indices)
+            a_chunk = x_chunk @ x_window.T
             a_window = a_chunk.sparsify_row_intervals(
-                starts=idx[row_start:row_stop],
-                stops=stops[row_start:row_stop],
+                starts=idx[row_start:row_stop] - col_start,
+                stops=stops[row_start:row_stop] - col_start,
                 blocks_only=False,
             )
             a_window.write(str(chunk_dir), overwrite=True)
@@ -320,7 +333,9 @@ def compute_a_block_banded(
                     "row_start": int(row_start),
                     "row_stop": int(row_stop),
                     "n_rows": int(row_stop - row_start),
-                    "n_cols": int(n_variants),
+                    "column_start": int(col_start),
+                    "column_stop": int(col_stop),
+                    "n_cols": int(col_stop - col_start),
                     "row_index_base": "chromosome",
                     "column_index_base": "chromosome",
                 }
