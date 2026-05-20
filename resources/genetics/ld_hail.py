@@ -21,6 +21,8 @@ Allele convention:
 
 from __future__ import annotations
 
+import json
+import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
 
@@ -235,8 +237,9 @@ def compute_b_block(
     return (x_h @ c_bm).to_numpy()
 
 
-DEFAULT_LD_RADIUS_BP = 10_000_000
+DEFAULT_LD_RADIUS_BP = 1_000_000
 DEFAULT_A_BLOCK_SIZE = 4096
+DEFAULT_A_CHUNK_ROWS = 50_000
 
 
 def compute_a_block_banded(
@@ -245,19 +248,23 @@ def compute_a_block_banded(
     out_dir: str | Path,
     radius_bp: int = DEFAULT_LD_RADIUS_BP,
     block_size: int = DEFAULT_A_BLOCK_SIZE,
+    chunk_rows: int = DEFAULT_A_CHUNK_ROWS,
 ) -> dict:
-    """Compute and write the upper-triangular banded ``A_k = X X^T`` per chromosome.
+    """Compute and write chunked upper-triangular windowed ``A_k = X X^T``.
 
     For each chromosome present in ``variant_index``, the MatrixTable is
     filtered to that chromosome, ``X`` is built as a Hail BlockMatrix from
-    the imputed ``GT_dosage`` entries, the cross-product ``X @ X.T`` is
-    sparsified to the upper triangle within ``radius_bp`` physical
-    distance, and the result is written to ``{out_dir}/chr<C>/`` as a
-    Hail BlockMatrix directory. The dense ``p × p`` matrix is never
-    materialised.
+    the imputed ``GT_dosage`` entries, and each row chunk is multiplied by
+    the full chromosome matrix transpose. Each chunk is sparsified to
+    row-specific upper-triangular intervals within ``radius_bp`` physical
+    distance and written to ``{out_dir}/chr<C>/chunk_<N>/`` as a Hail
+    BlockMatrix directory. The dense ``p × p`` matrix is never materialised.
 
     Returns a manifest dict describing the written artefacts.
     """
+    if chunk_rows <= 0:
+        raise ValueError(f"chunk_rows must be positive; got {chunk_rows}")
+
     out_path = Path(out_dir)
     out_path.mkdir(parents=True, exist_ok=True)
 
@@ -280,27 +287,84 @@ def compute_a_block_banded(
         )
         idx = np.arange(n_variants, dtype=np.int64)
         max_idx_distance = int((j_max_inclusive - idx).max())
+        stops = j_max_inclusive + 1
+
+        chr_dir = out_path / f"chr{chrom}"
+        if chr_dir.exists():
+            shutil.rmtree(chr_dir)
+        chr_dir.mkdir(parents=True, exist_ok=True)
 
         mt_chr = mt.filter_rows(mt.locus.contig == chrom)
         x_h = BlockMatrix.from_entry_expr(mt_chr.GT_dosage, block_size=block_size)
-        a = x_h @ x_h.T
-        a_band = a.sparsify_band(
-            lower=0, upper=max_idx_distance, blocks_only=True
+
+        chunks = []
+        for chunk_index, row_start in enumerate(range(0, n_variants, chunk_rows)):
+            row_stop = min(row_start + chunk_rows, n_variants)
+            row_indices = list(range(row_start, row_stop))
+            chunk_name = f"chunk_{chunk_index:06d}"
+            chunk_dir = chr_dir / chunk_name
+
+            x_chunk = x_h.filter_rows(row_indices)
+            a_chunk = x_chunk @ x_h.T
+            a_window = a_chunk.sparsify_row_intervals(
+                starts=idx[row_start:row_stop],
+                stops=stops[row_start:row_stop],
+                blocks_only=False,
+            )
+            a_window.write(str(chunk_dir), overwrite=True)
+
+            chunks.append(
+                {
+                    "name": chunk_name,
+                    "directory": f"{out_path.name}/chr{chrom}/{chunk_name}",
+                    "row_start": int(row_start),
+                    "row_stop": int(row_stop),
+                    "n_rows": int(row_stop - row_start),
+                    "n_cols": int(n_variants),
+                    "row_index_base": "chromosome",
+                    "column_index_base": "chromosome",
+                }
+            )
+
+        chr_manifest = {
+            "chromosome": chrom,
+            "format": "hail-blockmatrix-row-interval-chunks",
+            "radius_bp": radius_bp,
+            "block_size": block_size,
+            "chunk_rows": chunk_rows,
+            "n_variants": int(n_variants),
+            "n_chunks": len(chunks),
+            "sparsification": "row_intervals",
+            "window_definition": (
+                "upper triangle, same chromosome, pos_j <= pos_i + radius_bp"
+            ),
+            "max_idx_distance_in_window": max_idx_distance,
+            "chunks": chunks,
+        }
+        (chr_dir / "manifest.json").write_text(
+            json.dumps(chr_manifest, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
         )
-        chr_dir = out_path / f"chr{chrom}"
-        a_band.write(str(chr_dir), overwrite=True)
 
         chromosomes_meta[chrom] = {
             "directory": f"{out_path.name}/chr{chrom}",
             "n_variants": int(n_variants),
-            "max_idx_distance_in_band": max_idx_distance,
+            "n_chunks": len(chunks),
+            "sparsification": "row_intervals",
+            "window_definition": (
+                "upper triangle, same chromosome, pos_j <= pos_i + radius_bp"
+            ),
+            "max_idx_distance_in_window": max_idx_distance,
             "block_size": block_size,
+            "chunk_rows": chunk_rows,
+            "chunks": chunks,
         }
 
     return {
         "directory": out_path.name,
-        "format": "hail-blockmatrix",
+        "format": "hail-blockmatrix-row-interval-chunks",
         "radius_bp": radius_bp,
         "block_size": block_size,
+        "chunk_rows": chunk_rows,
         "chromosomes": chromosomes_meta,
     }

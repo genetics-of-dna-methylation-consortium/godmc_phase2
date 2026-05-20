@@ -196,8 +196,9 @@ def main() -> None:
         "notes": [
             "D.npy is the dense covariate cross-product C^T C in float64.",
             "B.npy is the dense X^T C cross-product (variants x covariates), float64.",
-            "A_blocks/chr<C>/ contains per-chromosome upper-triangular banded "
-            "X X^T as Hail BlockMatrix directories within radius_bp physical distance.",
+            "A_blocks/chr<C>/chunk_<N>/ contains per-chromosome chunked "
+            "upper-triangular row-interval X X^T as Hail BlockMatrix directories "
+            "within radius_bp physical distance.",
             "The default first-release covariate schema excludes cohort-specific genotype PCs.",
             "Per-variant genotype diagnostics are computed via Hail and written to "
             "variants.tsv.gz; missing calls are mean-imputed before downstream cross-products.",
@@ -237,9 +238,15 @@ def main() -> None:
         f"B Frobenius norm: {b_frobenius:.6g}",
         f"A_blocks radius_bp: {a_blocks_meta['radius_bp']}",
         f"A_blocks block_size: {a_blocks_meta['block_size']}",
+        f"A_blocks chunk_rows: {a_blocks_meta['chunk_rows']}",
         "A_blocks per-chromosome variant counts: "
         + ", ".join(
             f"chr{c}={meta['n_variants']}"
+            for c, meta in a_blocks_meta["chromosomes"].items()
+        ),
+        "A_blocks per-chromosome chunk counts: "
+        + ", ".join(
+            f"chr{c}={meta['n_chunks']}"
             for c, meta in a_blocks_meta["chromosomes"].items()
         ),
         "Next implementation step: pooled aggregation in 15b.",
