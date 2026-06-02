@@ -21,10 +21,11 @@ Allele convention:
 
 from __future__ import annotations
 
+import gzip
 import json
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING
 
 import hail as hl
 import numpy as np
@@ -34,15 +35,13 @@ if TYPE_CHECKING:
     from ld_qc import VariantIndex
 
 
-class VariantDiagnostics(TypedDict):
-    variant_id: str
-    n_nonmissing: int
-    n_imputed: int
-    genotype_mean: float
-
-
 DEFAULT_N_PARTITIONS = 32
 HAIL_VERSION = hl.version()
+AUTOSOMES = {str(c) for c in range(1, 23)}
+VALID_BASES = {"A", "C", "G", "T"}
+MHC_CHROMOSOME = "6"
+MHC_START_BP = 28477797
+MHC_END_BP = 33448354
 
 _INITIALIZED = False
 
@@ -50,6 +49,9 @@ _INITIALIZED = False
 def init_hail(
     log_file: str | Path,
     n_partitions: int = DEFAULT_N_PARTITIONS,
+    local_cores: int | None = None,
+    driver_memory_gb: int | None = None,
+    tmp_dir: str | Path | None = None,
 ) -> dict[str, str]:
     """Initialise Hail once per process and return runtime metadata.
 
@@ -61,13 +63,45 @@ def init_hail(
     if not _INITIALIZED:
         log_path = Path(log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)
-        hl.init(log=str(log_path), quiet=True)
+        init_kwargs: dict = {"log": str(log_path), "quiet": True}
+        spark_conf: dict[str, str] = {}
+
+        if local_cores is not None:
+            if local_cores <= 0:
+                raise ValueError(f"local_cores must be positive; got {local_cores}")
+            init_kwargs["backend"] = "spark"
+            init_kwargs["local"] = f"local[{local_cores}]"
+
+        if driver_memory_gb is not None:
+            if driver_memory_gb <= 0:
+                raise ValueError(
+                    f"driver_memory_gb must be positive; got {driver_memory_gb}"
+                )
+            spark_conf["spark.driver.memory"] = f"{driver_memory_gb}g"
+
+        if spark_conf:
+            init_kwargs["spark_conf"] = spark_conf
+
+        if tmp_dir is not None:
+            tmp_path = Path(tmp_dir)
+            tmp_path.mkdir(parents=True, exist_ok=True)
+            local_tmp_path = tmp_path / "local"
+            local_tmp_path.mkdir(parents=True, exist_ok=True)
+            init_kwargs["tmp_dir"] = str(tmp_path)
+            init_kwargs["local_tmpdir"] = str(local_tmp_path)
+
+        hl.init(**init_kwargs)
         hl.default_reference("GRCh37")
         _INITIALIZED = True
 
     return {
         "hail_version": HAIL_VERSION,
         "n_partitions_default": str(n_partitions),
+        "local_cores": "default" if local_cores is None else str(local_cores),
+        "driver_memory_gb": (
+            "default" if driver_memory_gb is None else str(driver_memory_gb)
+        ),
+        "tmp_dir": "default" if tmp_dir is None else str(tmp_dir),
     }
 
 
@@ -103,10 +137,6 @@ def load_genotype_matrixtable(
     if chromosome is not None:
         mt = mt.filter_rows(mt.locus.contig == chromosome)
 
-    expected_records = variant_index["variants"]
-    expected_order = [v["variant_id"] for v in expected_records]
-    expected_set = set(expected_order)
-
     mt = mt.annotate_rows(
         variant_id=hl.delimit(
             [
@@ -118,14 +148,20 @@ def load_genotype_matrixtable(
             ":",
         )
     )
-    mt = mt.filter_rows(hl.literal(expected_set).contains(mt.variant_id))
-    expected_order_index = {
-        variant_id: i for i, variant_id in enumerate(expected_order)
-    }
-    mt = mt.annotate_rows(
-        section15_variant_order=hl.literal(expected_order_index).get(mt.variant_id)
+    autosomes = hl.literal(AUTOSOMES)
+    valid_bases = hl.literal(VALID_BASES)
+    row_is_valid_snp = (
+        autosomes.contains(mt.locus.contig)
+        & valid_bases.contains(mt.alleles[0])
+        & valid_bases.contains(mt.alleles[1])
+        & (mt.alleles[0] != mt.alleles[1])
     )
-    mt = mt.key_rows_by("section15_variant_order")
+    row_is_outside_mhc = ~(
+        (mt.locus.contig == MHC_CHROMOSOME)
+        & (mt.locus.position >= MHC_START_BP)
+        & (mt.locus.position <= MHC_END_BP)
+    )
+    mt = mt.filter_rows(row_is_valid_snp & row_is_outside_mhc)
 
     fam_iids = [str(s) for s in mt.s.collect()]
     iid_to_index = {iid: i for i, iid in enumerate(fam_iids)}
@@ -138,70 +174,26 @@ def load_genotype_matrixtable(
     column_order = [iid_to_index[s] for s in final_samples]
     mt = mt.choose_cols(column_order)
 
-    actual_order = mt.variant_id.collect()
-    if actual_order != expected_order:
-        if len(actual_order) != len(expected_order):
-            detail = (
-                f"row count mismatch: Hail returned {len(actual_order)}, "
-                f"variant_index expects {len(expected_order)}"
-            )
-        else:
-            first_diff = next(
-                (
-                    i
-                    for i, (a, b) in enumerate(zip(actual_order, expected_order))
-                    if a != b
-                ),
-                None,
-            )
-            detail = f"first mismatch at row index {first_diff}"
-        raise ValueError(
-            f"Hail post-filter locus order does not match variant_index "
-            f"({detail})"
-        )
-
     return mt
 
 
 def prepare_for_cross_products(
     mt: hl.MatrixTable,
-) -> tuple[hl.MatrixTable, list[VariantDiagnostics]]:
+    n_samples: int,
+) -> tuple[hl.MatrixTable, hl.Table]:
     """Annotate per-variant diagnostics, mean-impute genotype dosages.
 
     Returns the MatrixTable with a new ``GT_dosage`` entry field (float64;
-    missing calls replaced with the per-variant mean alt-allele count) and
-    a list of ``VariantDiagnostics`` in canonical row order. Hard-fails if
-    any variant has zero non-missing calls, since mean imputation would
-    produce NaN dosages and corrupt downstream ``B``/``A`` cross-products.
+    missing calls replaced with the per-variant mean alt-allele count), a
+    Hail Table of per-variant diagnostics in row order. Diagnostics are
+    returned as a lazy table so full-chromosome pilots do not collect or
+    aggregate millions of rows on the driver before the matrix work starts.
     """
-    n_cols = mt.count_cols()
     mt = mt.annotate_rows(
         n_nonmissing=hl.agg.count_where(hl.is_defined(mt.GT)),
         genotype_mean=hl.agg.mean(mt.GT.n_alt_alleles()),
     )
-    mt = mt.annotate_rows(n_imputed=n_cols - mt.n_nonmissing)
-
-    rows = (
-        mt.rows()
-        .select("variant_id", "n_nonmissing", "n_imputed", "genotype_mean")
-        .collect()
-    )
-    all_missing = [r.variant_id for r in rows if r.n_nonmissing == 0]
-    if all_missing:
-        raise ValueError(
-            f"{len(all_missing)} variants are entirely missing across all "
-            f"{n_cols} samples; first 5: {all_missing[:5]}"
-        )
-
-    diagnostics: list[VariantDiagnostics] = [
-        {
-            "variant_id": r.variant_id,
-            "n_nonmissing": int(r.n_nonmissing),
-            "n_imputed": int(r.n_imputed),
-            "genotype_mean": float(r.genotype_mean),
-        }
-        for r in rows
-    ]
+    mt = mt.annotate_rows(n_imputed=n_samples - mt.n_nonmissing)
 
     mt = mt.annotate_entries(
         GT_dosage=hl.coalesce(
@@ -209,12 +201,24 @@ def prepare_for_cross_products(
             mt.genotype_mean,
         )
     )
+    rows = mt.rows()
+    diagnostics = rows.select(
+        chr=rows.locus.contig,
+        pos=rows.locus.position,
+        ref=rows.alleles[0],
+        alt=rows.alleles[1],
+        variant_id=rows.variant_id,
+        n_nonmissing=rows.n_nonmissing,
+        n_imputed=rows.n_imputed,
+        genotype_mean=rows.genotype_mean,
+    )
     return mt, diagnostics
 
 
 def compute_b_block(
     mt: hl.MatrixTable,
     covariate_matrix: np.ndarray,
+    temp_dir: str | Path,
 ) -> np.ndarray:
     """Compute ``B_k = X^T C`` (variants × covariates) as a NumPy array.
 
@@ -224,29 +228,140 @@ def compute_b_block(
     in the same order (i.e. ``covariate_matrix[i]`` corresponds to the
     sample in ``mt`` column ``i``).
 
-    Returns a contiguous ``(n_variants, n_covariates)`` float64 array.
-    The intermediate Hail ``BlockMatrix`` for the genotype matrix stays
-    partitioned and is never materialised on the driver.
+    Returns a contiguous ``(n_variants, n_covariates)`` float64 array. This
+    deliberately avoids ``BlockMatrix.from_entry_expr`` because that path
+    materialises a dense ``variants × samples`` genotype matrix before the
+    tiny ``variants × covariates`` result is available.
+
+    The per-variant b-vectors are written to a directory of per-partition
+    TSV files via ``parallel="separate_header"`` and concatenated in
+    partition order on the Python side. A single-file export would force
+    Hail to collect every row to the driver, which OOMs the driver heap on
+    whole-chromosome inputs.
     """
+    if covariate_matrix.dtype != np.float64:
+        raise ValueError(
+            f"covariate_matrix must be float64; got {covariate_matrix.dtype}"
+        )
     n_samples = mt.count_cols()
     if covariate_matrix.shape[0] != n_samples:
         raise ValueError(
             f"covariate_matrix has {covariate_matrix.shape[0]} rows but "
             f"MatrixTable has {n_samples} samples; they must match exactly"
         )
-    if covariate_matrix.dtype != np.float64:
-        raise ValueError(
-            f"covariate_matrix must be float64; got {covariate_matrix.dtype}"
+
+    temp_path = Path(temp_dir) / "b_block"
+    if temp_path.exists():
+        shutil.rmtree(temp_path)
+    temp_path.mkdir(parents=True, exist_ok=True)
+    export_dir = temp_path / "B_rows.tsv.bgz"
+
+    covariates = hl.literal(covariate_matrix.tolist())
+    mt_with_covariates = mt.add_col_index("__ld_col_index")
+    mt_with_covariates = mt_with_covariates.annotate_cols(
+        __ld_covariates=covariates[hl.int32(mt_with_covariates.__ld_col_index)]
+    )
+
+    n_covariates = covariate_matrix.shape[1]
+    b_fields = {
+        f"b_{i:03d}": hl.format(
+            "%.17g",
+            hl.agg.sum(
+                mt_with_covariates.GT_dosage * mt_with_covariates.__ld_covariates[i]
+            ),
+        )
+        for i in range(n_covariates)
+    }
+    b_table = mt_with_covariates.annotate_rows(**b_fields).rows()
+    b_table = b_table.add_index("__b_row_idx")
+    export_columns = ["__b_row_idx", *b_fields.keys()]
+    b_table.key_by().select(*export_columns).export(
+        str(export_dir),
+        header=True,
+        parallel="separate_header",
+    )
+
+    part_files = [p for p in export_dir.glob("part-*") if p.is_file()]
+    if not part_files:
+        raise RuntimeError(
+            f"B-block export produced no part files under {export_dir}"
         )
 
-    x_h = BlockMatrix.from_entry_expr(mt.GT_dosage)
-    c_bm = BlockMatrix.from_numpy(np.ascontiguousarray(covariate_matrix))
-    return (x_h @ c_bm).to_numpy()
+    chunks: list[np.ndarray] = []
+    for part_file in part_files:
+        if part_file.stat().st_size == 0:
+            continue
+        with gzip.open(part_file, "rt", encoding="utf-8") as handle:
+            arr = np.loadtxt(
+                handle,
+                delimiter="\t",
+                dtype=np.float64,
+                ndmin=2,
+            )
+        if arr.size == 0:
+            continue
+        if arr.shape[1] != n_covariates + 1:
+            raise ValueError(
+                f"B partition {part_file.name} has {arr.shape[1]} columns; "
+                f"expected {n_covariates + 1} (row index + {n_covariates} covariates)"
+            )
+        chunks.append(arr)
+
+    if not chunks:
+        raise RuntimeError(
+            f"B-block export produced only empty partitions under {export_dir}"
+        )
+
+    combined = np.concatenate(chunks, axis=0)
+    order = np.argsort(combined[:, 0].astype(np.int64), kind="stable")
+    b_matrix = combined[order, 1:]
+    shutil.rmtree(temp_path)
+    return np.ascontiguousarray(b_matrix, dtype=np.float64)
 
 
 DEFAULT_LD_RADIUS_BP = 1_000_000
 DEFAULT_A_BLOCK_SIZE = 4096
 DEFAULT_A_CHUNK_ROWS = 50_000
+DEFAULT_A_MAX_DENSE_GB = 1.0
+
+
+def _dense_product_gb(n_rows: int, n_cols: int) -> float:
+    """Estimate a dense float64 product block size in GiB."""
+    return (n_rows * n_cols * 8) / (1024**3)
+
+
+def _bounded_row_stop(
+    row_start: int,
+    requested_row_stop: int,
+    stops: np.ndarray,
+    max_dense_gb: float,
+) -> int:
+    """Find the largest row stop that stays within the dense-product cap."""
+    best_stop: int | None = None
+    low = row_start + 1
+    high = requested_row_stop
+
+    while low <= high:
+        mid = (low + high) // 2
+        col_stop = int(stops[row_start:mid].max())
+        estimate_gb = _dense_product_gb(mid - row_start, col_stop - row_start)
+        if estimate_gb <= max_dense_gb:
+            best_stop = mid
+            low = mid + 1
+        else:
+            high = mid - 1
+
+    if best_stop is None:
+        col_stop = int(stops[row_start : row_start + 1].max())
+        estimate_gb = _dense_product_gb(1, col_stop - row_start)
+        raise MemoryError(
+            "A-block chunk would exceed the dense intermediate cap even for "
+            f"one row: row_start={row_start}, n_cols={col_stop - row_start}, "
+            f"estimated_dense_gb={estimate_gb:.3f}, "
+            f"max_dense_gb={max_dense_gb:.3f}"
+        )
+
+    return best_stop
 
 
 def compute_a_block_banded(
@@ -256,6 +371,7 @@ def compute_a_block_banded(
     radius_bp: int = DEFAULT_LD_RADIUS_BP,
     block_size: int = DEFAULT_A_BLOCK_SIZE,
     chunk_rows: int = DEFAULT_A_CHUNK_ROWS,
+    max_dense_gb: float = DEFAULT_A_MAX_DENSE_GB,
 ) -> dict:
     """Compute and write chunked upper-triangular windowed ``A_k = X X^T``.
 
@@ -272,6 +388,8 @@ def compute_a_block_banded(
     """
     if chunk_rows <= 0:
         raise ValueError(f"chunk_rows must be positive; got {chunk_rows}")
+    if max_dense_gb <= 0:
+        raise ValueError(f"max_dense_gb must be positive; got {max_dense_gb}")
 
     out_path = Path(out_dir)
     out_path.mkdir(parents=True, exist_ok=True)
@@ -303,11 +421,19 @@ def compute_a_block_banded(
         chr_dir.mkdir(parents=True, exist_ok=True)
 
         mt_chr = mt.filter_rows(mt.locus.contig == chrom)
-        x_h = BlockMatrix.from_entry_expr(mt_chr.GT_dosage, block_size=block_size)
+        x_h: BlockMatrix | None = None
 
         chunks = []
-        for chunk_index, row_start in enumerate(range(0, n_variants, chunk_rows)):
-            row_stop = min(row_start + chunk_rows, n_variants)
+        chunk_index = 0
+        row_start = 0
+        while row_start < n_variants:
+            requested_row_stop = min(row_start + chunk_rows, n_variants)
+            row_stop = _bounded_row_stop(
+                row_start,
+                requested_row_stop,
+                stops,
+                max_dense_gb,
+            )
             row_indices = list(range(row_start, row_stop))
             chunk_name = f"chunk_{chunk_index:06d}"
             chunk_dir = chr_dir / chunk_name
@@ -315,7 +441,24 @@ def compute_a_block_banded(
             col_start = row_start
             col_stop = int(stops[row_start:row_stop].max())
             col_indices = list(range(col_start, col_stop))
+            estimated_dense_gb = _dense_product_gb(
+                row_stop - row_start,
+                col_stop - col_start,
+            )
 
+            print(
+                "Writing A block "
+                f"chr{chrom} {chunk_name}: rows {row_start}-{row_stop}, "
+                f"cols {col_start}-{col_stop}, "
+                f"estimated dense intermediate {estimated_dense_gb:.3f} GiB",
+                flush=True,
+            )
+
+            if x_h is None:
+                x_h = BlockMatrix.from_entry_expr(
+                    mt_chr.GT_dosage,
+                    block_size=block_size,
+                )
             x_chunk = x_h.filter_rows(row_indices)
             x_window = x_h.filter_rows(col_indices)
             a_chunk = x_chunk @ x_window.T
@@ -336,10 +479,14 @@ def compute_a_block_banded(
                     "column_start": int(col_start),
                     "column_stop": int(col_stop),
                     "n_cols": int(col_stop - col_start),
+                    "estimated_dense_gb": estimated_dense_gb,
                     "row_index_base": "chromosome",
                     "column_index_base": "chromosome",
                 }
             )
+
+            row_start = row_stop
+            chunk_index += 1
 
         chr_manifest = {
             "chromosome": chrom,
@@ -347,6 +494,8 @@ def compute_a_block_banded(
             "radius_bp": radius_bp,
             "block_size": block_size,
             "chunk_rows": chunk_rows,
+            "max_dense_gb": max_dense_gb,
+            "chunking": "memory-capped up to chunk_rows",
             "n_variants": int(n_variants),
             "n_chunks": len(chunks),
             "sparsification": "row_intervals",
@@ -372,6 +521,8 @@ def compute_a_block_banded(
             "max_idx_distance_in_window": max_idx_distance,
             "block_size": block_size,
             "chunk_rows": chunk_rows,
+            "max_dense_gb": max_dense_gb,
+            "chunking": "memory-capped up to chunk_rows",
             "chunks": chunks,
         }
 
@@ -381,5 +532,7 @@ def compute_a_block_banded(
         "radius_bp": radius_bp,
         "block_size": block_size,
         "chunk_rows": chunk_rows,
+        "max_dense_gb": max_dense_gb,
+        "chunking": "memory-capped up to chunk_rows",
         "chromosomes": chromosomes_meta,
     }

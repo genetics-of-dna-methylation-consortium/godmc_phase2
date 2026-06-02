@@ -268,7 +268,22 @@ def build_variant_index(
             f"({bim_path})"
         )
 
-    kept.sort(key=lambda v: (int(v["chr"]), v["pos"], v["ref"], v["alt"]))
+    sorted_kept = sorted(
+        kept, key=lambda v: (int(v["chr"]), v["pos"], v["ref"], v["alt"])
+    )
+    if kept != sorted_kept:
+        first_diff = next(
+            i for i, (observed, expected) in enumerate(zip(kept, sorted_kept))
+            if observed != expected
+        )
+        raise ValueError(
+            "BIM variants must already be sorted by chr, position, ref, alt for "
+            "section 15 Hail row alignment; first mismatch at kept variant row "
+            f"{first_diff}: observed {kept[first_diff]['variant_id']}, "
+            f"expected {sorted_kept[first_diff]['variant_id']}"
+        )
+
+    kept = sorted_kept
     counts["kept_count"] = len(kept)
 
     if not kept:

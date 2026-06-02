@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import argparse
-import gzip
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -9,7 +8,10 @@ from pathlib import Path
 import numpy as np
 
 from ld_hail import (
-    VariantDiagnostics,
+    DEFAULT_A_BLOCK_SIZE,
+    DEFAULT_A_CHUNK_ROWS,
+    DEFAULT_A_MAX_DENSE_GB,
+    DEFAULT_N_PARTITIONS,
     compute_a_block_banded,
     compute_b_block,
     init_hail,
@@ -19,7 +21,6 @@ from ld_hail import (
 from ld_qc import (
     COVARIATE_MATRIX_COLUMNS,
     DEFAULT_SCHEMA_ID,
-    VariantRecord,
     build_covariate_matrix,
     build_sample_alignment,
     build_variant_index,
@@ -39,6 +40,50 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--log-file", required=True)
     parser.add_argument(
+        "--hail-partitions",
+        type=int,
+        default=DEFAULT_N_PARTITIONS,
+        help=f"Number of Hail import partitions (default: {DEFAULT_N_PARTITIONS}).",
+    )
+    parser.add_argument(
+        "--hail-local-cores",
+        type=int,
+        default=None,
+        help="Optional local Spark core count for Hail, e.g. SLURM_CPUS_ON_NODE.",
+    )
+    parser.add_argument(
+        "--hail-driver-memory-gb",
+        type=int,
+        default=None,
+        help="Optional Spark driver memory in GB for Hail.",
+    )
+    parser.add_argument(
+        "--hail-tmp-dir",
+        default=None,
+        help="Optional Hail temporary directory (default: output-dir/hail_tmp).",
+    )
+    parser.add_argument(
+        "--a-block-size",
+        type=int,
+        default=DEFAULT_A_BLOCK_SIZE,
+        help=f"Hail BlockMatrix block size for A chunks (default: {DEFAULT_A_BLOCK_SIZE}).",
+    )
+    parser.add_argument(
+        "--a-chunk-rows",
+        type=int,
+        default=DEFAULT_A_CHUNK_ROWS,
+        help=f"Number of variant rows per A chunk (default: {DEFAULT_A_CHUNK_ROWS}).",
+    )
+    parser.add_argument(
+        "--a-max-dense-gb",
+        type=float,
+        default=DEFAULT_A_MAX_DENSE_GB,
+        help=(
+            "Maximum estimated dense intermediate size per A chunk in GiB "
+            f"(default: {DEFAULT_A_MAX_DENSE_GB})."
+        ),
+    )
+    parser.add_argument(
         "--chromosome",
         default=CHROMOSOME_FILTER_ALL,
         help=(
@@ -56,35 +101,23 @@ def resolve_chromosome_filter(value: str) -> str | None:
     return value
 
 
-VARIANT_TSV_HEADER = (
-    "chr\tpos\tref\talt\tvariant_id\tn_nonmissing\tn_imputed\tgenotype_mean"
-)
+def _export_variants_tsv_gz(path: Path, diagnostics_table) -> None:
+    """Write canonical variant index rows + genotype diagnostics via Hail."""
+    diagnostics_table.key_by().select(
+        "chr",
+        "pos",
+        "ref",
+        "alt",
+        "variant_id",
+        "n_nonmissing",
+        "n_imputed",
+        "genotype_mean",
+    ).export(str(path), header=True)
 
 
-def _write_variants_tsv_gz(
-    path: Path,
-    variants: list[VariantRecord],
-    diagnostics: list[VariantDiagnostics],
-) -> None:
-    """Write canonical variant index rows + genotype diagnostics to gzipped TSV."""
-    if len(variants) != len(diagnostics):
-        raise ValueError(
-            f"variants/diagnostics length mismatch ({len(variants)} vs "
-            f"{len(diagnostics)})"
-        )
-    with gzip.open(path, "wt", encoding="utf-8") as handle:
-        handle.write(VARIANT_TSV_HEADER + "\n")
-        for v, d in zip(variants, diagnostics):
-            if v["variant_id"] != d["variant_id"]:
-                raise ValueError(
-                    f"variant_id mismatch at row {v['variant_id']} vs "
-                    f"{d['variant_id']}"
-                )
-            handle.write(
-                f"{v['chr']}\t{v['pos']}\t{v['ref']}\t{v['alt']}\t"
-                f"{v['variant_id']}\t{d['n_nonmissing']}\t{d['n_imputed']}\t"
-                f"{d['genotype_mean']:.10g}\n"
-            )
+def log_step(message: str) -> None:
+    """Emit a flushed progress marker into the section log."""
+    print(f"[section15a] {message}", flush=True)
 
 
 def main() -> None:
@@ -95,11 +128,16 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     blocks_dir = output_dir / "blocks"
     blocks_dir.mkdir(parents=True, exist_ok=True)
+    hail_tmp_dir = (
+        Path(args.hail_tmp_dir) if args.hail_tmp_dir else output_dir / "hail_tmp"
+    )
 
+    log_step("Checking section-02 genotype and covariate inputs")
     for suffix in (".bed", ".bim", ".fam"):
         require_file(f"{args.bfile}{suffix}", f"cleaned genotype input {suffix}")
 
     require_file(args.covariates, "covariates input")
+    log_step("Building sample alignment and canonical variant index")
     sample_alignment = build_sample_alignment(f"{args.bfile}.fam", args.covariates)
     sample_counts = sample_alignment["sample_counts"]
     covariate_columns = sample_alignment["covariate_header"]
@@ -119,23 +157,43 @@ def main() -> None:
     d_condition_number = float(np.linalg.cond(d_matrix))
 
     hail_log = Path(args.log_file).parent / "hail.log"
-    hail_meta = init_hail(hail_log)
+    log_step("Initialising Hail")
+    hail_meta = init_hail(
+        hail_log,
+        n_partitions=args.hail_partitions,
+        local_cores=args.hail_local_cores,
+        driver_memory_gb=args.hail_driver_memory_gb,
+        tmp_dir=hail_tmp_dir,
+    )
+    log_step("Loading cleaned genotype MatrixTable")
     mt = load_genotype_matrixtable(
         bfile=args.bfile,
         chromosome=chromosome_filter,
         final_samples=sample_alignment["final_samples"],
         variant_index=variant_index,
+        n_partitions=args.hail_partitions,
     )
-    mt_imputed, genotype_diagnostics = prepare_for_cross_products(mt)
+    log_step("Computing genotype diagnostics and mean-imputed dosage entries")
+    mt_imputed, genotype_diagnostics = prepare_for_cross_products(
+        mt,
+        n_samples=sample_counts["final_sample_count"],
+    )
 
-    b_matrix = compute_b_block(mt_imputed, covariate_matrix)
+    log_step("Computing B = X^T C using row aggregations")
+    b_matrix = compute_b_block(mt_imputed, covariate_matrix, temp_dir=hail_tmp_dir)
     np.save(output_dir / "B.npy", b_matrix, allow_pickle=False)
     b_frobenius = float(np.linalg.norm(b_matrix))
+    log_step("Exporting variant diagnostics before A-block computation")
+    _export_variants_tsv_gz(output_dir / "variants.tsv.gz", genotype_diagnostics)
 
+    log_step("Computing memory-capped A = X X^T row-interval chunks")
     a_blocks_meta = compute_a_block_banded(
         mt_imputed,
         variant_index,
         out_dir=output_dir / "A_blocks",
+        block_size=args.a_block_size,
+        chunk_rows=args.a_chunk_rows,
+        max_dense_gb=args.a_max_dense_gb,
     )
 
     manifest = {
@@ -205,7 +263,6 @@ def main() -> None:
         ],
     }
 
-    total_imputed = sum(d["n_imputed"] for d in genotype_diagnostics)
     qc_lines = [
         "Section 15 cohort scaffold created successfully.",
         f"Covariate columns detected: {', '.join(covariate_columns)}",
@@ -233,12 +290,13 @@ def main() -> None:
         f"D matrix rank: {d_rank} (expected {len(COVARIATE_MATRIX_COLUMNS)})",
         f"D matrix condition number: {d_condition_number:.6g}",
         f"Hail version: {hail_meta['hail_version']}",
-        f"Mean-imputed genotype calls (sum over kept variants): {total_imputed}",
+        "Mean-imputed genotype calls: see variants.tsv.gz n_imputed column",
         f"B matrix shape: {b_matrix.shape[0]} x {b_matrix.shape[1]}",
         f"B Frobenius norm: {b_frobenius:.6g}",
         f"A_blocks radius_bp: {a_blocks_meta['radius_bp']}",
         f"A_blocks block_size: {a_blocks_meta['block_size']}",
         f"A_blocks chunk_rows: {a_blocks_meta['chunk_rows']}",
+        f"A_blocks max_dense_gb: {a_blocks_meta['max_dense_gb']}",
         "A_blocks per-chromosome variant counts: "
         + ", ".join(
             f"chr{c}={meta['n_variants']}"
@@ -254,11 +312,6 @@ def main() -> None:
 
     (output_dir / "manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
-    _write_variants_tsv_gz(
-        output_dir / "variants.tsv.gz",
-        variant_index["variants"],
-        genotype_diagnostics,
     )
     (output_dir / "qc_report.txt").write_text(
         "\n".join(qc_lines) + "\n", encoding="utf-8"
