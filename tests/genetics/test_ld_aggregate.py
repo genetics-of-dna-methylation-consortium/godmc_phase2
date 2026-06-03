@@ -313,3 +313,28 @@ def test_apply_filters_drops_rare_and_unstable():
     assert "1:200:C:T" in dropped["variant_id"].tolist()
     assert dropped.set_index("variant_id").loc["1:200:C:T", "reason"] == "maf_below_threshold"
     assert "a_adj_diag" in surv.columns
+
+
+def test_compute_r_block_matches_direct_residualisation():
+    rng = np.random.default_rng(0)
+    n, p = 40, 5
+    X = rng.integers(0, 3, size=(n, p)).astype(float)
+    C = np.column_stack([np.ones(n), rng.normal(size=n), rng.integers(1, 3, n)])
+    A = X.T @ X
+    B = X.T @ C
+    D = C.T @ C
+    d_inv = np.linalg.inv(D)
+    A_adj = A - B @ d_inv @ B.T
+    diag = np.diag(A_adj)
+    R_ref = A_adj / np.sqrt(np.outer(diag, diag))
+
+    # full window: rows 0..p, cols 0..p, all pairs in-window
+    W = B @ d_inv
+    a_block = A.copy()                       # dense pooled A window (incl diagonal)
+    starts = np.arange(p, dtype=np.int64)    # upper-tri row intervals
+    stops = np.full(p, p, dtype=np.int64)
+    r_block, out_starts, out_stops = agg.compute_r_block(
+        a_block, B, W, diag, diag, row_start=0, col_start=0,
+        starts=starts, stops=stops)
+    np.testing.assert_allclose(np.triu(r_block), np.triu(R_ref), rtol=1e-10)
+    assert out_starts.tolist() == starts.tolist()

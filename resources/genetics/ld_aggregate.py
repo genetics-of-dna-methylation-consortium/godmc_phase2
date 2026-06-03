@@ -495,3 +495,28 @@ def apply_filters(kept: pd.DataFrame, d_matrix: np.ndarray,
     surv = surv.sort_values("pooled_index").reset_index(drop=True)
     surv["pooled_index"] = np.arange(len(surv), dtype=np.int64)
     return surv, dropped
+
+
+def compute_r_block(
+    a_block: np.ndarray,
+    b_rows: np.ndarray,
+    w_cols: np.ndarray,
+    adj_diag_rows: np.ndarray,
+    adj_diag_cols: np.ndarray,
+    row_start: int,
+    col_start: int,
+    starts: np.ndarray,
+    stops: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Convert a dense pooled A window block into an R block.
+
+    a_block[r, c] is pooled A for pooled row row_start+r, pooled col col_start+c.
+    b_rows: B for the block's rows (n_rows x 3). w_cols: W=(B D^-1) for the block's
+    columns (n_cols x 3). adj_diag_* are the A_adj diagonals for rows/cols.
+    starts/stops are chunk-local column intervals (upper triangle within window).
+    """
+    corr = b_rows @ w_cols.T                       # rank-3 covariate correction
+    a_adj = a_block - corr
+    denom = np.sqrt(np.outer(adj_diag_rows, adj_diag_cols))
+    r_block = a_adj / denom
+    return r_block, np.asarray(starts, np.int64), np.asarray(stops, np.int64)
