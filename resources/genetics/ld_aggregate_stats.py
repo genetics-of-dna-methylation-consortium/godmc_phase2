@@ -33,8 +33,17 @@ def main() -> None:
                        chunk_reader=read_a_block_chunk, force=args.force)
         print(f"[section15b] accumulated cohort into {args.precursor_dir}", flush=True)
     else:
-        # finalise branch added in Task 11
-        raise SystemExit("finalise mode not yet implemented")
+        if not args.panel_dir:
+            raise SystemExit("--panel-dir is required for finalise mode")
+        hail_log = Path(args.log_file).parent / "hail.log"
+        init_hail(hail_log)
+        from ld_hail import write_r_block_chunk, DEFAULT_A_BLOCK_SIZE
+        agg.finalise(
+            args.precursor_dir, args.panel_dir, r_writer=write_r_block_chunk,
+            maf_threshold=args.maf_threshold, min_adj_diag=args.min_adj_diag,
+            block_size=args.a_block_size or DEFAULT_A_BLOCK_SIZE,
+            max_dense_gb=args.a_max_dense_gb, min_cohorts=args.min_cohorts)
+        print(f"[section15b] finalised panel into {args.panel_dir}", flush=True)
 
 
 if __name__ == "__main__":

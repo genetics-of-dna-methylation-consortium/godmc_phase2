@@ -1,6 +1,8 @@
 # tests/genetics/test_ld_aggregate.py
 import gzip
 import json
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -338,3 +340,70 @@ def test_compute_r_block_matches_direct_residualisation():
         starts=starts, stops=stops)
     np.testing.assert_allclose(np.triu(r_block), np.triu(R_ref), rtol=1e-10)
     assert out_starts.tolist() == starts.tolist()
+
+
+def _build_two_cohort_precursor(tmp_path):
+    """Build a 2-cohort precursor by accumulating two synthetic cohorts (overlapping
+    3 variants on chr1) with a fake chunk_reader returning each cohort's X X^T.
+    Returns the precursor path. Also used to anchor finalise tests."""
+    variant_meta = [("1", 100, "G", "A", "1:100:G:A"),
+                    ("1", 200, "C", "T", "1:200:C:T"),
+                    ("1", 300, "A", "G", "1:300:A:G")]
+    precursor = tmp_path / "precursor"
+
+    def build_and_accumulate(name, n_samples, seed):
+        r = np.random.default_rng(seed)
+        X = r.integers(0, 3, size=(n_samples, 3)).astype(float)
+        C = np.column_stack([np.ones(n_samples), r.normal(size=n_samples),
+                             r.integers(1, 3, n_samples).astype(float)])
+        A = X.T @ X
+        B = X.T @ C
+        D = C.T @ C
+        cohort = tmp_path / name
+        cohort.mkdir()
+        with gzip.open(cohort / "variants.tsv.gz", "wt") as fh:
+            fh.write("chr\tpos\tref\talt\tvariant_id\tn_nonmissing\tn_imputed\tgenotype_mean\n")
+            for col, (c, p, ref, alt, vid) in enumerate(variant_meta):
+                fh.write(f"{c}\t{p}\t{ref}\t{alt}\t{vid}\t{n_samples}\t0\t{X[:, col].mean()}\n")
+        np.save(cohort / "B.npy", B)
+        np.save(cohort / "D.npy", D)
+        manifest = {
+            "study_name": name, "genome_build": "GRCh37",
+            "covariate_schema": {"schema_id": "intercept_age_sex",
+                "matrix_columns": ["intercept", "Age_numeric", "Sex_factor"],
+                "sex_factor_recode": {"M": 1.0, "F": 2.0}},
+            "variant_index": {"schema_version": "v0.3-with-genotype-stats"},
+            "A_blocks": {"radius_bp": 1_000_000, "block_size": 8,
+                "chromosomes": {"1": {"chunks": [
+                    {"row_start": 0, "row_stop": 3, "column_start": 0,
+                     "column_stop": 3, "directory": "A_blocks/chr1/chunk_000000"}]}}},
+        }
+        (cohort / "manifest.json").write_text(json.dumps(manifest))
+        agg.accumulate(cohort, precursor, chunk_reader=lambda cd: A, pair_batch_rows=64)
+
+    build_and_accumulate("cohort_a", 30, 1)
+    build_and_accumulate("cohort_b", 40, 2)
+    return precursor
+
+
+def test_finalise_writes_panel_and_calls_writer(tmp_path):
+    precursor = _build_two_cohort_precursor(tmp_path)
+    panel = tmp_path / "panel"
+    written = []
+    def capture_writer(dense, starts, stops, out_dir, block_size):
+        written.append((np.asarray(dense).copy(), Path(out_dir)))
+        Path(out_dir).mkdir(parents=True, exist_ok=True)
+        (Path(out_dir) / "MARKER").write_text("ok")
+
+    agg.finalise(precursor, panel, r_writer=capture_writer,
+                 maf_threshold=0.0, min_adj_diag=-1e9, block_size=8,
+                 max_dense_gb=1.0)
+
+    assert (panel / "pooled_manifest.json").is_file()
+    assert (panel / "variants.tsv.gz").is_file()
+    assert (panel / "dropped_variants.tsv").is_file()
+    assert written, "R writer was never called"
+    # diagonal of every emitted R block is 1 where present
+    for dense, _ in written:
+        d = np.diag(dense)
+        np.testing.assert_allclose(d[d != 0], 1.0, rtol=1e-9)

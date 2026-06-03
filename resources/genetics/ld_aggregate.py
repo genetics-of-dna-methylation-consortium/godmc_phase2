@@ -520,3 +520,158 @@ def compute_r_block(
     denom = np.sqrt(np.outer(adj_diag_rows, adj_diag_cols))
     r_block = a_adj / denom
     return r_block, np.asarray(starts, np.int64), np.asarray(stops, np.int64)
+
+
+import gzip as _gzip
+
+
+def _dense_product_gb(n_rows: int, n_cols: int) -> float:
+    return (n_rows * n_cols * 8) / (1024 ** 3)
+
+
+def _bounded_row_stop(row_start, requested_row_stop, stops, max_dense_gb):
+    best, low, high = None, row_start + 1, requested_row_stop
+    while low <= high:
+        mid = (low + high) // 2
+        col_stop = int(stops[row_start:mid].max())
+        if _dense_product_gb(mid - row_start, col_stop - row_start) <= max_dense_gb:
+            best, low = mid, mid + 1
+        else:
+            high = mid - 1
+    if best is None:
+        raise MemoryError(
+            f"finalise chunk exceeds max_dense_gb even for one row at {row_start}")
+    return best
+
+
+class _PairCursor:
+    """Sequential reader over a position-sorted A_pairs/chr*.parquet file.
+
+    fill_block scatters off-diagonal pooled entries whose row pooled-index is in
+    the current chunk into the dense block, mapping sid -> pooled index. Pairs
+    with an endpoint outside the intersection (sid not in the map) are skipped.
+    """
+    def __init__(self, path, sid_to_pooled, chrom_first_pooled):
+        self._sid_to_pooled = sid_to_pooled
+        self._rows = (pq.read_table(path).to_pandas()
+                      if Path(path).is_file() else None)
+        self._cursor = 0
+
+    def fill_block(self, block, row_start, row_stop, col_stop, idx):
+        if self._rows is None:
+            return
+        n = len(self._rows)
+        pos_i = self._rows["pos_i"].to_numpy()
+        sid_i = self._rows["sid_i"].to_numpy()
+        sid_j = self._rows["sid_j"].to_numpy()
+        val = self._rows["value"].to_numpy()
+        while self._cursor < n:
+            pi = self._sid_to_pooled.get(int(sid_i[self._cursor]))
+            pj = self._sid_to_pooled.get(int(sid_j[self._cursor]))
+            if pi is None or pj is None:
+                self._cursor += 1
+                continue
+            if pi >= row_stop:
+                break                                  # past this chunk's rows
+            if pi < row_start:
+                self._cursor += 1
+                continue
+            block[pi - row_start, pj - row_start] += val[self._cursor]
+            self._cursor += 1
+
+
+def finalise(precursor_dir, panel_dir, r_writer, maf_threshold, min_adj_diag,
+             block_size, max_dense_gb=1.0, min_cohorts=None):
+    """Resolve intersection, adjust, convert to R, write a versioned panel."""
+    precursor_dir, panel_dir = Path(precursor_dir), Path(panel_dir)
+    pm = read_precursor_manifest(precursor_dir)
+    if pm is None or pm["n_cohorts"] == 0:
+        raise ValueError("Cannot finalise an empty precursor")
+    d_matrix = np.load(precursor_paths(precursor_dir)["d"])
+    d_rank = int(np.linalg.matrix_rank(d_matrix))
+    if d_rank < d_matrix.shape[0]:
+        raise ValueError(f"Pooled D is rank-deficient (rank {d_rank}); cannot solve")
+
+    table = read_variant_table(precursor_dir)
+    kept = resolve_intersection(table, pm["n_cohorts"], min_cohorts)
+    if len(kept) == 0:
+        raise ValueError("Intersection is empty; no variant is present in all cohorts")
+    surv, dropped = apply_filters(kept, d_matrix, maf_threshold, min_adj_diag)
+    if len(surv) == 0:
+        raise ValueError("All variants dropped by pooled filters")
+
+    d_inv = np.linalg.inv(d_matrix)
+    b_all = surv[["b_intercept", "b_age", "b_sex"]].to_numpy()
+    w_all = b_all @ d_inv
+    adj_diag_all = surv["a_adj_diag"].to_numpy()
+    sid_to_pooled = dict(zip(surv["stable_id"].to_numpy(), surv["pooled_index"].to_numpy()))
+    pos_all = surv["pos"].to_numpy(np.int64)
+
+    panel_dir.mkdir(parents=True, exist_ok=True)
+    r_root = panel_dir / "R_blocks"
+
+    for chrom, sub in surv.groupby("chr", sort=False):
+        idx = sub["pooled_index"].to_numpy(np.int64)
+        local_pos = pos_all[idx]
+        n_chr = len(idx)
+        local_stops = np.searchsorted(local_pos, local_pos + pm["contract"]["radius_bp"],
+                                      side="right")
+        pair_path = precursor_paths(precursor_dir)["pairs_dir"] / f"chr{chrom}.parquet"
+        pair_iter = _PairCursor(pair_path, sid_to_pooled, idx[0])
+
+        row_start = 0
+        chunk_no = 0
+        while row_start < n_chr:
+            requested = min(row_start + 50_000, n_chr)
+            row_stop = _bounded_row_stop(row_start, requested, local_stops, max_dense_gb)
+            col_stop = int(local_stops[row_start:row_stop].max())
+            n_rows, n_cols = row_stop - row_start, col_stop - row_start
+            block = np.zeros((n_rows, n_cols), dtype=np.float64)
+            # diagonal
+            for r in range(n_rows):
+                block[r, (row_start + r) - row_start] = \
+                    surv["a_diag"].to_numpy()[idx[row_start + r]]
+            # off-diagonal from the sorted pair cursor, by chromosome-local pooled index
+            pair_iter.fill_block(block, row_start, row_stop, col_stop, idx)
+
+            g_rows = idx[row_start:row_stop]
+            g_cols = idx[row_start:col_stop]
+            starts = np.arange(n_rows, dtype=np.int64)               # local diag start
+            stops = (local_stops[row_start:row_stop] - row_start).astype(np.int64)
+            r_block, st, sp = compute_r_block(
+                block, b_all[g_rows], w_all[g_cols],
+                adj_diag_all[g_rows], adj_diag_all[g_cols],
+                row_start, row_start, starts, stops)
+            out_dir = r_root / f"chr{chrom}" / f"chunk_{chunk_no:06d}"
+            r_writer(r_block, st, sp, out_dir, block_size)
+            row_start, chunk_no = row_stop, chunk_no + 1
+
+    _write_panel_artefacts(panel_dir, pm, surv, dropped, d_matrix, d_rank,
+                           maf_threshold, min_adj_diag)
+
+
+def _write_panel_artefacts(panel_dir, pm, surv, dropped, d_matrix, d_rank,
+                           maf_threshold, min_adj_diag):
+    cols = ["chr", "pos", "ref", "alt", "variant_id", "pooled_index",
+            "b_intercept", "a_diag", "a_adj_diag"]
+    surv["maf"] = np.minimum(surv["b_intercept"] / (2 * d_matrix[0, 0]),
+                             1 - surv["b_intercept"] / (2 * d_matrix[0, 0]))
+    with _gzip.open(panel_dir / "variants.tsv.gz", "wt") as fh:
+        surv[cols + ["maf"]].to_csv(fh, sep="\t", index=False)
+    dropped.to_csv(panel_dir / "dropped_variants.tsv", sep="\t", index=False)
+    pd.DataFrame(pm["cohorts"]).to_csv(panel_dir / "cohort_inclusion.tsv",
+                                       sep="\t", index=False)
+    manifest = {
+        "module": "15b", "panel_specification_version": pm["panel_specification_version"],
+        "covariate_schema": pm["contract"]["schema_id"], "n_cohorts": pm["n_cohorts"],
+        "cohorts": [c["study_name"] for c in pm["cohorts"]],
+        "n_variants_panel": int(len(surv)), "n_variants_dropped": int(len(dropped)),
+        "d_rank": d_rank, "d_condition_number": float(np.linalg.cond(d_matrix)),
+        "maf_threshold": maf_threshold, "min_adj_diag": min_adj_diag,
+        "regularisation": "none", "r_dtype": "float64",
+    }
+    (panel_dir / "pooled_manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    (panel_dir / "qc_report.txt").write_text(
+        f"Section 15b panel built: {len(surv)} variants, {len(dropped)} dropped, "
+        f"{pm['n_cohorts']} cohorts, D rank {d_rank}.\n")
