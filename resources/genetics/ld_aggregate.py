@@ -207,3 +207,50 @@ def merge_variant_table(
         updated = pd.concat([updated, pd.DataFrame(new_rows)[VARIANT_COLUMNS]],
                             ignore_index=True)
     return updated.astype(_VARIANT_DTYPES), id_map, next_stable_id
+
+
+def window_stops(positions: np.ndarray, radius_bp: int) -> np.ndarray:
+    """Exclusive column stop per row: first index with pos > pos_i + radius."""
+    return np.searchsorted(positions, positions + radius_bp, side="right")
+
+
+def extract_chunk_entries(
+    dense: np.ndarray,
+    row_start: int,
+    col_start: int,
+    positions: np.ndarray,
+    sids: np.ndarray,
+    radius_bp: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Split a dense A chunk into diagonal updates and off-diagonal pair rows.
+
+    `positions`/`sids` are whole-chromosome arrays (canonical order). `dense`
+    covers chromosome rows [row_start, row_start+n_rows) and columns starting
+    at chromosome index `col_start`. Returns (diag_sids, diag_vals, offdiag)
+    where offdiag is a structured array of PAIR_DTYPE with pos_i <= pos_j.
+    """
+    stops = window_stops(positions, radius_bp)
+    n_rows = dense.shape[0]
+    diag_sids = np.empty(n_rows, dtype=np.int64)
+    diag_vals = np.empty(n_rows, dtype=np.float64)
+    off_chunks: list[np.ndarray] = []
+
+    for r in range(n_rows):
+        gi = row_start + r
+        diag_sids[r] = sids[gi]
+        diag_vals[r] = dense[r, gi - col_start]
+        j0, j1 = gi + 1, int(stops[gi])
+        if j1 <= j0:
+            continue
+        cols = np.arange(j0, j1)
+        rec = np.empty(j1 - j0, dtype=PAIR_DTYPE)
+        rec["pos_i"] = positions[gi]
+        rec["sid_i"] = sids[gi]
+        rec["pos_j"] = positions[cols]
+        rec["sid_j"] = sids[cols]
+        rec["value"] = dense[r, cols - col_start]
+        off_chunks.append(rec)
+
+    offdiag = (np.concatenate(off_chunks) if off_chunks
+               else np.empty(0, dtype=PAIR_DTYPE))
+    return diag_sids, diag_vals, offdiag

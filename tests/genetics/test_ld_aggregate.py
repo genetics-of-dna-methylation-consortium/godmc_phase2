@@ -155,3 +155,42 @@ def test_merge_variant_table_assigns_ids_and_sums():
     assert shared["b_intercept"] == 10.0       # 4 + 6
     assert shared["n_nonmissing"] == 9         # 4 + 5
     assert table.set_index("variant_id").loc["1:300:A:G"]["membership_count"] == 1
+
+
+def test_extract_chunk_entries_splits_diag_and_offdiag():
+    # 3 variants on one chrom, positions 100/200/2_000_000, radius 1Mb.
+    positions = np.array([100, 200, 2_000_000], dtype=np.int64)
+    sids = np.array([10, 11, 12], dtype=np.int64)
+    radius = 1_000_000
+    dense = np.array([
+        [5.0, 2.0, 0.0],   # row0: diag=5 (v0,v0), offdiag (v0,v1)=2
+        [0.0, 6.0, 0.0],   # row1: diag=6 (v1,v1); (v1,v2) out of window
+        [0.0, 0.0, 7.0],   # row2: diag=7 (v2,v2)
+    ])
+    diag_sid, diag_val, offdiag = agg.extract_chunk_entries(
+        dense, row_start=0, col_start=0, positions=positions, sids=sids,
+        radius_bp=radius,
+    )
+    assert diag_sid.tolist() == [10, 11, 12]
+    assert diag_val.tolist() == [5.0, 6.0, 7.0]
+    assert offdiag.shape[0] == 1
+    rec = offdiag[0]
+    assert (rec["pos_i"], rec["sid_i"], rec["pos_j"], rec["sid_j"], rec["value"]) == (
+        100, 10, 200, 11, 2.0)
+
+
+def test_extract_chunk_entries_offset_chunk():
+    # rows 1..3 only, col_start=1 (a later chunk)
+    positions = np.array([100, 200, 300], dtype=np.int64)
+    sids = np.array([10, 11, 12], dtype=np.int64)
+    dense = np.array([
+        [6.0, 3.0],   # row global1: diag(v1)=6, (v1,v2)=3
+        [0.0, 7.0],   # row global2: diag(v2)=7
+    ])
+    diag_sid, diag_val, offdiag = agg.extract_chunk_entries(
+        dense, row_start=1, col_start=1, positions=positions, sids=sids,
+        radius_bp=1_000_000,
+    )
+    assert diag_sid.tolist() == [11, 12]
+    assert offdiag[0]["sid_i"] == 11 and offdiag[0]["sid_j"] == 12
+    assert offdiag[0]["value"] == 3.0
