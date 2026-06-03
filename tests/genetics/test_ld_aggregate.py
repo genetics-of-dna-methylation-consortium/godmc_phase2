@@ -282,3 +282,34 @@ def test_accumulate_rejects_duplicate_study(tmp_path):
     agg.accumulate(cohort, precursor, chunk_reader=_fake_reader, pair_batch_rows=16)
     with pytest.raises(ValueError, match="already accumulated"):
         agg.accumulate(cohort, precursor, chunk_reader=_fake_reader)
+
+
+def test_resolve_intersection_keeps_full_membership():
+    table = pd.DataFrame({
+        "stable_id": [0, 1, 2], "variant_id": ["1:200:C:T", "1:100:G:A", "2:50:A:C"],
+        "chr": ["1", "1", "2"], "pos": [200, 100, 50], "ref": ["C", "G", "A"],
+        "alt": ["T", "A", "C"], "membership_count": [2, 1, 2],
+        "b_intercept": [0.0]*3, "b_age": [0.0]*3, "b_sex": [0.0]*3,
+        "a_diag": [0.0]*3, "n_nonmissing": [0]*3, "n_imputed": [0]*3,
+    })
+    kept = agg.resolve_intersection(table, n_cohorts=2, min_cohorts=2)
+    # variant 1 (membership 1) dropped; survivors sorted by chr,pos
+    assert kept["variant_id"].tolist() == ["1:200:C:T", "2:50:A:C"]
+    assert kept["pooled_index"].tolist() == [0, 1]
+
+
+def test_apply_filters_drops_rare_and_unstable():
+    # D[0,0] = N = 100. b_intercept 30 -> f=0.15 keep; b_intercept 1 -> f=0.005 drop
+    d = np.diag([100.0, 1.0, 1.0])
+    kept = pd.DataFrame({
+        "stable_id": [0, 1], "variant_id": ["1:100:G:A", "1:200:C:T"],
+        "chr": ["1", "1"], "pos": [100, 200], "ref": ["G", "C"], "alt": ["A", "T"],
+        "b_intercept": [30.0, 1.0], "b_age": [0.0, 0.0], "b_sex": [0.0, 0.0],
+        "a_diag": [50.0, 50.0], "pooled_index": [0, 1],
+    })
+    surv, dropped = agg.apply_filters(kept, d, maf_threshold=0.01, min_adj_diag=0.0)
+    assert surv["variant_id"].tolist() == ["1:100:G:A"]
+    assert surv["pooled_index"].tolist() == [0]                 # re-indexed
+    assert "1:200:C:T" in dropped["variant_id"].tolist()
+    assert dropped.set_index("variant_id").loc["1:200:C:T", "reason"] == "maf_below_threshold"
+    assert "a_adj_diag" in surv.columns

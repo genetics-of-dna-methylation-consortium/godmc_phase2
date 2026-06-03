@@ -453,3 +453,45 @@ def accumulate(
         write_precursor_manifest(precursor_dir, pm)  # commit point
     finally:
         lock.unlink(missing_ok=True)
+
+
+def resolve_intersection(table: pd.DataFrame, n_cohorts: int,
+                         min_cohorts: int | None = None) -> pd.DataFrame:
+    """Keep variants present in enough cohorts; assign contiguous pooled_index."""
+    threshold = n_cohorts if min_cohorts is None else min_cohorts
+    kept = table[table["membership_count"] >= threshold].copy()
+    kept = kept.sort_values(["chr", "pos", "ref", "alt"],
+                            key=lambda s: s.map(int) if s.name == "chr" else s)
+    kept = kept.reset_index(drop=True)
+    kept["pooled_index"] = np.arange(len(kept), dtype=np.int64)
+    return kept
+
+
+def apply_filters(kept: pd.DataFrame, d_matrix: np.ndarray,
+                  maf_threshold: float, min_adj_diag: float
+                  ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Drop rare variants and unstable adjusted diagonals; re-index survivors.
+
+    Returns (survivors with pooled_index reset + a_adj_diag column,
+    dropped frame with variant_id + reason).
+    """
+    n = d_matrix[0, 0]
+    d_inv = np.linalg.inv(d_matrix)
+    b = kept[["b_intercept", "b_age", "b_sex"]].to_numpy()
+    freq = b[:, 0] / (2.0 * n)
+    maf = np.minimum(freq, 1.0 - freq)
+    # adjusted diagonal a_diag - b D^-1 b^T per row
+    adj_diag = kept["a_diag"].to_numpy() - np.einsum("ij,jk,ik->i", b, d_inv, b)
+
+    reason = np.where(maf < maf_threshold, "maf_below_threshold",
+              np.where(adj_diag <= min_adj_diag, "unstable_adj_diagonal", ""))
+    drop_mask = reason != ""
+    dropped = pd.DataFrame({
+        "variant_id": kept.loc[drop_mask, "variant_id"].to_numpy(),
+        "reason": reason[drop_mask],
+    })
+    surv = kept.loc[~drop_mask].copy()
+    surv["a_adj_diag"] = adj_diag[~drop_mask]
+    surv = surv.sort_values("pooled_index").reset_index(drop=True)
+    surv["pooled_index"] = np.arange(len(surv), dtype=np.int64)
+    return surv, dropped
