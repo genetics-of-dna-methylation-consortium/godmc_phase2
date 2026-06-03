@@ -536,3 +536,32 @@ def compute_a_block_banded(
         "chunking": "memory-capped up to chunk_rows",
         "chromosomes": chromosomes_meta,
     }
+
+
+def read_a_block_chunk(chunk_dir: str | Path) -> np.ndarray:
+    """Read a written A_blocks chunk BlockMatrix back as a dense float64 array."""
+    return BlockMatrix.read(str(chunk_dir)).to_numpy().astype(np.float64, copy=False)
+
+
+def write_r_block_chunk(
+    dense: np.ndarray,
+    starts: np.ndarray,
+    stops: np.ndarray,
+    out_dir: str | Path,
+    block_size: int = DEFAULT_A_BLOCK_SIZE,
+) -> None:
+    """Write a dense R block as a row-interval BlockMatrix directory.
+
+    Hail BlockMatrix is float64-only (``from_numpy`` upcasts and the
+    write/read round-trip always yields float64), so float32 storage is not
+    achievable here; the block is persisted as float64.
+    `starts`/`stops` are per-row chunk-local column intervals (same convention
+    as compute_a_block_banded's sparsify_row_intervals call).
+    """
+    bm = BlockMatrix.from_numpy(dense.astype(np.float64), block_size=block_size)
+    bm = bm.sparsify_row_intervals(
+        starts=[int(s) for s in starts],
+        stops=[int(s) for s in stops],
+        blocks_only=False,
+    )
+    bm.write(str(out_dir), overwrite=True)
