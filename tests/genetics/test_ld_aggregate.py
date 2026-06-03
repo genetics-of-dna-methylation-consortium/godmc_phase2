@@ -226,3 +226,59 @@ def test_merge_pairs_into_file_round_trip(tmp_path):
     assert back["value"].tolist() == [5.0, 1.0]
     assert back["pos_i"].tolist() == [100, 300]
     assert not list(tmp_path.glob("*.tmp*"))
+
+
+def _build_synthetic_cohort(tmp_path, study_name="cohortA"):
+    """Build a tiny 2-variant chr1 cohort dir (variants/B/D/manifest) for accumulate tests."""
+    cohort = tmp_path / study_name
+    cohort.mkdir()
+    rows = [("1", 100, "G", "A", "1:100:G:A", 4, 0, 1.0),
+            ("1", 200, "C", "T", "1:200:C:T", 4, 0, 0.5)]
+    with gzip.open(cohort / "variants.tsv.gz", "wt") as fh:
+        fh.write("chr\tpos\tref\talt\tvariant_id\tn_nonmissing\tn_imputed\tgenotype_mean\n")
+        fh.writelines("\t".join(map(str, r)) + "\n" for r in rows)
+    np.save(cohort / "B.npy", np.array([[4.0, 90.0, 1.5], [2.0, 70.0, 1.0]]))
+    np.save(cohort / "D.npy", np.array([[4.0, 180, 6], [180, 8200, 270], [6, 270, 10]]))
+    manifest = {
+        "study_name": study_name, "genome_build": "GRCh37",
+        "covariate_schema": {"schema_id": "intercept_age_sex",
+            "matrix_columns": ["intercept", "Age_numeric", "Sex_factor"],
+            "sex_factor_recode": {"M": 1.0, "F": 2.0}},
+        "variant_index": {"schema_version": "v0.3-with-genotype-stats"},
+        "A_blocks": {"radius_bp": 1_000_000, "block_size": 8,
+            "chromosomes": {"1": {"chunks": [
+                {"row_start": 0, "row_stop": 2, "column_start": 0,
+                 "column_stop": 2, "directory": "A_blocks/chr1/chunk_000000"}]}}},
+    }
+    (cohort / "manifest.json").write_text(json.dumps(manifest))
+    return cohort
+
+
+# symmetric dense A for the single chunk: X X^T (diag 20,10; offdiag 8)
+def _fake_reader(chunk_dir):
+    return np.array([[20.0, 8.0], [8.0, 10.0]])
+
+
+def test_accumulate_one_cohort_builds_precursor(tmp_path):
+    cohort = _build_synthetic_cohort(tmp_path)
+    precursor = tmp_path / "precursor"
+    agg.accumulate(cohort, precursor, chunk_reader=_fake_reader, pair_batch_rows=16)
+
+    pm = agg.read_precursor_manifest(precursor)
+    assert pm["n_cohorts"] == 1
+    assert pm["cohorts"][0]["study_name"] == "cohortA"
+    table = agg.read_variant_table(precursor).set_index("variant_id")
+    assert table.loc["1:100:G:A", "a_diag"] == 20.0
+    assert table.loc["1:200:C:T", "a_diag"] == 10.0
+    pairs = pq.read_table(precursor / "A_pairs" / "chr1.parquet").to_pandas()
+    assert pairs["value"].tolist() == [8.0]
+    np.testing.assert_array_equal(np.load(precursor / "D.npy"),
+                                  np.load(cohort / "D.npy"))
+
+
+def test_accumulate_rejects_duplicate_study(tmp_path):
+    cohort = _build_synthetic_cohort(tmp_path)
+    precursor = tmp_path / "precursor"
+    agg.accumulate(cohort, precursor, chunk_reader=_fake_reader, pair_batch_rows=16)
+    with pytest.raises(ValueError, match="already accumulated"):
+        agg.accumulate(cohort, precursor, chunk_reader=_fake_reader)

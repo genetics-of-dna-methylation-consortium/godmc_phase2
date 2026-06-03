@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -340,3 +341,115 @@ def merge_pairs_into_file(path: str | Path, incoming: np.ndarray, batch_rows: in
     finally:
         writer.close()
     os.replace(tmp, path)
+
+
+def _atomic_np_save(path: str | Path, arr: np.ndarray) -> None:
+    """Atomically write a .npy file (temp-then-rename), like the other writers."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + f".tmp.{os.getpid()}.npy")
+    np.save(tmp, arr)
+    os.replace(tmp, path)
+
+
+def _acquire_lock(precursor_dir: Path) -> Path:
+    lock = precursor_paths(precursor_dir)["lock"]
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.write(fd, str(os.getpid()).encode())
+        os.close(fd)
+    except FileExistsError as exc:
+        raise RuntimeError(
+            f"Another accumulate is in progress (lock at {lock}). "
+            "Remove it only if no process is running."
+        ) from exc
+    return lock
+
+
+def accumulate(
+    cohort_dir: str | Path,
+    precursor_dir: str | Path,
+    chunk_reader,
+    pair_batch_rows: int = 1_000_000,
+    force: bool = False,
+) -> None:
+    """Add one cohort's A/B/D into the precursor (see spec accumulate phase)."""
+    cohort_dir = Path(cohort_dir)
+    precursor_dir = Path(precursor_dir)
+    cohort_manifest = json.loads((cohort_dir / "manifest.json").read_text())
+    study_name = cohort_manifest["study_name"]
+    contract = extract_contract(cohort_manifest)
+
+    pm = read_precursor_manifest(precursor_dir)
+    if pm is None:
+        pm = {
+            "schema_version": PRECURSOR_SCHEMA_VERSION,
+            "panel_specification_version": DEFAULT_PANEL_SPEC_VERSION,
+            "contract": contract, "n_cohorts": 0, "cohorts": [],
+            "next_stable_id": 0,
+        }
+        precursor_dir.mkdir(parents=True, exist_ok=True)
+        _atomic_np_save(precursor_paths(precursor_dir)["d"], np.zeros((3, 3)))
+    else:
+        validate_contract(pm["contract"], contract)
+        if any(c["study_name"] == study_name for c in pm["cohorts"]) and not force:
+            raise ValueError(
+                f"Study '{study_name}' already accumulated into this precursor; "
+                "rebuild or pass force=True to override."
+            )
+
+    lock = _acquire_lock(precursor_dir)
+    try:
+        variants, b_mat, d_mat = read_cohort_assets(cohort_dir)
+        table = read_variant_table(precursor_dir)
+        table, id_map, next_id = merge_variant_table(
+            table, variants, b_mat, pm["next_stable_id"])
+
+        # cohort per-chrom canonical arrays for index -> (pos, sid) mapping
+        cohort_chrom = {}
+        for chrom, sub in variants.groupby("chr", sort=False):
+            cohort_chrom[chrom] = {
+                "pos": sub["pos"].to_numpy(np.int64),
+                "sid": np.array([id_map[v] for v in sub["variant_id"]], dtype=np.int64),
+            }
+
+        diag_acc: dict[int, float] = {}
+        for chrom, cmeta in cohort_manifest["A_blocks"]["chromosomes"].items():
+            positions = cohort_chrom[chrom]["pos"]
+            sids = cohort_chrom[chrom]["sid"]
+            off_parts = []
+            for chunk in cmeta["chunks"]:
+                dense = chunk_reader(cohort_dir / chunk["directory"])
+                diag_sids, diag_vals, offdiag = extract_chunk_entries(
+                    dense, chunk["row_start"], chunk["column_start"],
+                    positions, sids, contract["radius_bp"])
+                for sid, val in zip(diag_sids.tolist(), diag_vals.tolist()):
+                    diag_acc[sid] = diag_acc.get(sid, 0.0) + val
+                if offdiag.size:
+                    off_parts.append(offdiag)
+            if off_parts:
+                incoming = np.concatenate(off_parts)
+                merge_pairs_into_file(
+                    precursor_paths(precursor_dir)["pairs_dir"] / f"chr{chrom}.parquet",
+                    incoming, batch_rows=pair_batch_rows)
+
+        # apply diagonal accumulation
+        if diag_acc:
+            add = table["stable_id"].map(lambda s: diag_acc.get(int(s), 0.0))
+            table["a_diag"] = table["a_diag"] + add
+        write_variant_table(precursor_dir, table)
+
+        d_path = precursor_paths(precursor_dir)["d"]
+        _atomic_np_save(d_path, np.load(d_path) + d_mat)
+
+        pm["next_stable_id"] = next_id
+        pm["n_cohorts"] += 1
+        pm["cohorts"].append({
+            "study_name": study_name,
+            "accumulated_at_utc": datetime.now(timezone.utc).isoformat(),
+            "n_variants": int(len(variants)),
+        })
+        write_precursor_manifest(precursor_dir, pm)  # commit point
+    finally:
+        lock.unlink(missing_ok=True)
