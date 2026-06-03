@@ -444,3 +444,81 @@ def test_paircursor_upper_triangle_and_no_drop_across_chunks(tmp_path):
     assert np.allclose(np.tril(full, -1), 0.0)
     # total mass conserved (no dropped pair across the chunk boundary)
     assert full.sum() == 21.0
+
+
+def test_finalise_multi_chromosome_keeps_offdiagonals(tmp_path):
+    # Two cohorts, 2 variants on chr1 + 2 on chr2 (full overlap). Catches the
+    # global-vs-chromosome-local pooled-index bug: chr2 off-diagonal pairs must
+    # NOT be dropped, and chr2 R must match the direct per-chromosome reference.
+    chroms = ["1", "2"]
+    variant_meta = [
+        ("1", 100, "G", "A", "1:100:G:A"),
+        ("1", 200, "C", "T", "1:200:C:T"),
+        ("2", 100, "A", "C", "2:100:A:C"),
+        ("2", 200, "T", "G", "2:200:T:G"),
+    ]
+    chrom_cols = {"1": [0, 1], "2": [2, 3]}
+    precursor = tmp_path / "precursor"
+    cohort_X, cohort_C = {}, {}
+
+    def build_and_accumulate(name, n_samples, seed):
+        r = np.random.default_rng(seed)
+        X = r.integers(0, 3, size=(n_samples, 4)).astype(float)
+        C = np.column_stack([np.ones(n_samples), r.normal(size=n_samples),
+                             r.integers(1, 3, n_samples).astype(float)])
+        cohort_X[name], cohort_C[name] = X, C
+        cohort = tmp_path / name
+        cohort.mkdir()
+        with gzip.open(cohort / "variants.tsv.gz", "wt") as fh:
+            fh.write("chr\tpos\tref\talt\tvariant_id\tn_nonmissing\tn_imputed\tgenotype_mean\n")
+            for col, (c, p, ref, alt, vid) in enumerate(variant_meta):
+                fh.write(f"{c}\t{p}\t{ref}\t{alt}\t{vid}\t{n_samples}\t0\t{X[:, col].mean()}\n")
+        np.save(cohort / "B.npy", X.T @ C)
+        np.save(cohort / "D.npy", C.T @ C)
+        manifest = {
+            "study_name": name, "genome_build": "GRCh37",
+            "covariate_schema": {"schema_id": "intercept_age_sex",
+                "matrix_columns": ["intercept", "Age_numeric", "Sex_factor"],
+                "sex_factor_recode": {"M": 1.0, "F": 2.0}},
+            "variant_index": {"schema_version": "v0.3-with-genotype-stats"},
+            "A_blocks": {"radius_bp": 1_000_000, "block_size": 8, "chromosomes": {
+                c: {"chunks": [{"row_start": 0, "row_stop": 2, "column_start": 0,
+                    "column_stop": 2, "directory": f"A_blocks/chr{c}/chunk_000000"}]}
+                for c in chroms}},
+        }
+        (cohort / "manifest.json").write_text(json.dumps(manifest))
+
+        def reader(chunk_dir, _X=X):
+            cols = chrom_cols["1"] if "chr1" in str(chunk_dir) else chrom_cols["2"]
+            sub = _X[:, cols]
+            return sub.T @ sub
+
+        agg.accumulate(cohort, precursor, chunk_reader=reader, pair_batch_rows=64)
+
+    build_and_accumulate("cohort_a", 30, 1)
+    build_and_accumulate("cohort_b", 40, 2)
+
+    panel = tmp_path / "panel"
+    captured = {}
+    def capture_writer(dense, starts, stops, out_dir, block_size):
+        chrom = "1" if "chr1" in str(out_dir) else "2"
+        captured.setdefault(chrom, []).append(np.asarray(dense).copy())
+        Path(out_dir).mkdir(parents=True, exist_ok=True)
+
+    agg.finalise(precursor, panel, r_writer=capture_writer,
+                 maf_threshold=0.0, min_adj_diag=-1e9, block_size=8, max_dense_gb=1.0)
+
+    Xf = np.vstack([cohort_X["cohort_a"], cohort_X["cohort_b"]])
+    Cf = np.vstack([cohort_C["cohort_a"], cohort_C["cohort_b"]])
+    B = Xf.T @ Cf
+    d_inv = np.linalg.inv(Cf.T @ Cf)
+    for chrom, cols in chrom_cols.items():
+        Xc = Xf[:, cols]
+        Bc = B[cols, :]
+        A_adj = Xc.T @ Xc - Bc @ d_inv @ Bc.T
+        diag = np.diag(A_adj)
+        R_ref = A_adj / np.sqrt(np.outer(diag, diag))
+        assert chrom in captured, f"no R block emitted for chr{chrom}"
+        R_got = captured[chrom][0]
+        np.testing.assert_allclose(np.triu(R_got), np.triu(R_ref), rtol=1e-9, atol=1e-12)
+        assert abs(np.triu(R_got, 1).sum()) > 0    # off-diagonal present (bug zeroed chr2's)

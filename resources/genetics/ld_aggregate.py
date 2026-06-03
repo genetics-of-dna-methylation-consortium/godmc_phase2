@@ -554,8 +554,12 @@ class _PairCursor:
     whose sid order disagrees with the pooled/canonical order still scatter into
     the correct upper-triangular cell. Pairs are sorted by the pooled row index
     `lo` so fill_block can stream them in chunk order with a safe early break.
+    Indices are made chromosome-local by subtracting `chrom_first_pooled` so they
+    match finalise's per-chromosome row_start/row_stop (which reset to 0).
     """
-    def __init__(self, path, sid_to_pooled, chrom_first_pooled=None):
+    def __init__(self, path, sid_to_pooled, chrom_first_pooled=0):
+        if chrom_first_pooled is None:
+            chrom_first_pooled = 0
         if Path(path).is_file():
             df = pq.read_table(path).to_pandas()
             pi = df["sid_i"].map(sid_to_pooled)
@@ -564,8 +568,10 @@ class _PairCursor:
             pi = pi.to_numpy()[keep].astype(np.int64)
             pj = pj.to_numpy()[keep].astype(np.int64)
             val = df["value"].to_numpy()[keep]
-            lo = np.minimum(pi, pj)
-            hi = np.maximum(pi, pj)
+            # chromosome-local pooled indices (finalise's row_start/row_stop reset
+            # to 0 per chromosome, but pooled_index is global)
+            lo = np.minimum(pi, pj) - chrom_first_pooled
+            hi = np.maximum(pi, pj) - chrom_first_pooled
             order = np.argsort(lo, kind="stable")   # monotonic row index for streaming
             self._lo = lo[order]
             self._hi = hi[order]
