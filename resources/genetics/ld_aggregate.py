@@ -95,3 +95,35 @@ def write_variant_table(precursor_dir: str | Path, df: pd.DataFrame) -> None:
     tmp = path.with_name(path.name + f".tmp.{os.getpid()}")
     df[VARIANT_COLUMNS].astype(_VARIANT_DTYPES).to_parquet(tmp, index=False)
     os.replace(tmp, path)
+
+
+CONTRACT_FIELDS = [
+    "genome_build", "schema_id", "matrix_columns", "sex_factor_recode",
+    "variants_schema_version", "radius_bp", "block_size",
+]
+
+
+def extract_contract(cohort_manifest: dict) -> dict:
+    """Pull the cross-cohort contract fields out of a 15a cohort manifest."""
+    cov = cohort_manifest["covariate_schema"]
+    a = cohort_manifest["A_blocks"]
+    return {
+        "genome_build": cohort_manifest["genome_build"],
+        "schema_id": cov["schema_id"],
+        "matrix_columns": list(cov["matrix_columns"]),
+        "sex_factor_recode": dict(cov["sex_factor_recode"]),
+        "variants_schema_version": cohort_manifest["variant_index"]["schema_version"],
+        "radius_bp": a["radius_bp"],
+        "block_size": a["block_size"],
+    }
+
+
+def validate_contract(expected: dict, candidate: dict) -> None:
+    """Hard-fail if a cohort's contract disagrees with the precursor's."""
+    for field in CONTRACT_FIELDS:
+        if expected[field] != candidate[field]:
+            raise ValueError(
+                f"Cohort contract mismatch on '{field}': precursor has "
+                f"{expected[field]!r}, cohort has {candidate[field]!r}. "
+                "All cohorts in a pooled panel must share this value."
+            )

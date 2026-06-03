@@ -41,3 +41,42 @@ def test_variant_table_round_trip(tmp_path):
     agg.write_variant_table(tmp_path, df)
     back = agg.read_variant_table(tmp_path)
     pd.testing.assert_frame_equal(back, df)
+
+
+def _cohort_manifest():
+    return {
+        "study_name": "cohortA",
+        "genome_build": "GRCh37",
+        "covariate_schema": {
+            "schema_id": "intercept_age_sex",
+            "matrix_columns": ["intercept", "Age_numeric", "Sex_factor"],
+            "sex_factor_recode": {"M": 1.0, "F": 2.0},
+        },
+        "variant_index": {"schema_version": "v0.3-with-genotype-stats"},
+        "A_blocks": {"radius_bp": 1_000_000, "block_size": 4096},
+    }
+
+
+def test_extract_contract_pulls_expected_fields():
+    c = agg.extract_contract(_cohort_manifest())
+    assert c == {
+        "genome_build": "GRCh37",
+        "schema_id": "intercept_age_sex",
+        "matrix_columns": ["intercept", "Age_numeric", "Sex_factor"],
+        "sex_factor_recode": {"M": 1.0, "F": 2.0},
+        "variants_schema_version": "v0.3-with-genotype-stats",
+        "radius_bp": 1_000_000,
+        "block_size": 4096,
+    }
+
+
+def test_validate_contract_matches():
+    c = agg.extract_contract(_cohort_manifest())
+    agg.validate_contract(c, c)  # no raise
+
+
+def test_validate_contract_mismatch_raises():
+    base = agg.extract_contract(_cohort_manifest())
+    other = dict(base, block_size=1024)
+    with pytest.raises(ValueError, match="block_size"):
+        agg.validate_contract(base, other)
