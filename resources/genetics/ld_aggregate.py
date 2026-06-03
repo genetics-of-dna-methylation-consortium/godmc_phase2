@@ -547,36 +547,47 @@ def _bounded_row_stop(row_start, requested_row_stop, stops, max_dense_gb):
 class _PairCursor:
     """Sequential reader over a position-sorted A_pairs/chr*.parquet file.
 
-    fill_block scatters off-diagonal pooled entries whose row pooled-index is in
-    the current chunk into the dense block, mapping sid -> pooled index. Pairs
-    with an endpoint outside the intersection (sid not in the map) are skipped.
+    On construction, each stored pair's endpoints are mapped sid -> pooled index;
+    pairs with an endpoint outside the intersection (sid not in the map) are
+    dropped. Each surviving pair is normalised to the upper triangle by pooled
+    index (lo <= hi), so co-located variants (same position, differing ref/alt)
+    whose sid order disagrees with the pooled/canonical order still scatter into
+    the correct upper-triangular cell. Pairs are sorted by the pooled row index
+    `lo` so fill_block can stream them in chunk order with a safe early break.
     """
-    def __init__(self, path, sid_to_pooled, chrom_first_pooled):
-        self._sid_to_pooled = sid_to_pooled
-        self._rows = (pq.read_table(path).to_pandas()
-                      if Path(path).is_file() else None)
+    def __init__(self, path, sid_to_pooled, chrom_first_pooled=None):
+        if Path(path).is_file():
+            df = pq.read_table(path).to_pandas()
+            pi = df["sid_i"].map(sid_to_pooled)
+            pj = df["sid_j"].map(sid_to_pooled)
+            keep = (pi.notna() & pj.notna()).to_numpy()
+            pi = pi.to_numpy()[keep].astype(np.int64)
+            pj = pj.to_numpy()[keep].astype(np.int64)
+            val = df["value"].to_numpy()[keep]
+            lo = np.minimum(pi, pj)
+            hi = np.maximum(pi, pj)
+            order = np.argsort(lo, kind="stable")   # monotonic row index for streaming
+            self._lo = lo[order]
+            self._hi = hi[order]
+            self._val = val[order]
+            self._n = int(self._lo.size)
+        else:
+            self._lo = self._hi = self._val = None
+            self._n = 0
         self._cursor = 0
 
     def fill_block(self, block, row_start, row_stop, col_stop, idx):
-        if self._rows is None:
-            return
-        n = len(self._rows)
-        pos_i = self._rows["pos_i"].to_numpy()
-        sid_i = self._rows["sid_i"].to_numpy()
-        sid_j = self._rows["sid_j"].to_numpy()
-        val = self._rows["value"].to_numpy()
-        while self._cursor < n:
-            pi = self._sid_to_pooled.get(int(sid_i[self._cursor]))
-            pj = self._sid_to_pooled.get(int(sid_j[self._cursor]))
-            if pi is None or pj is None:
+        # col_stop/idx kept for signature compatibility with the caller; the
+        # window bound is guaranteed by construction (hi < local_stops[lo]).
+        while self._cursor < self._n:
+            r = int(self._lo[self._cursor])
+            if r >= row_stop:
+                break
+            if r < row_start:
                 self._cursor += 1
                 continue
-            if pi >= row_stop:
-                break                                  # past this chunk's rows
-            if pi < row_start:
-                self._cursor += 1
-                continue
-            block[pi - row_start, pj - row_start] += val[self._cursor]
+            c = int(self._hi[self._cursor])
+            block[r - row_start, c - row_start] += self._val[self._cursor]
             self._cursor += 1
 
 

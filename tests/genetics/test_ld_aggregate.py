@@ -407,3 +407,40 @@ def test_finalise_writes_panel_and_calls_writer(tmp_path):
     for dense, _ in written:
         d = np.diag(dense)
         np.testing.assert_allclose(d[d != 0], 1.0, rtol=1e-9)
+
+
+def test_paircursor_upper_triangle_and_no_drop_across_chunks(tmp_path):
+    # sid -> pooled with co-located disorder: sid 0 is canonically LATER (pooled 1),
+    # sid 1 is canonically EARLIER (pooled 0); plus sid 2 -> pooled 2, sid 3 -> pooled 3.
+    sid_to_pooled = {0: 1, 1: 0, 2: 2, 3: 3}
+    # stored pairs (pos_i, sid_i, pos_j, sid_j, value), key-sorted by (pos_i, sid_i, ...):
+    #  (100, 0, 200, 2, 5.0) -> pooled (1,2) upper
+    #  (100, 1, 200, 3, 7.0) -> pooled (0,3) upper
+    #  (100, 0, 100, 1, 9.0) -> co-located, pooled (1,0) -> must normalise to (0,1)
+    rows = [(100, 0, 200, 2, 5.0), (100, 1, 200, 3, 7.0), (100, 0, 100, 1, 9.0)]
+    arr = np.empty(len(rows), dtype=agg.PAIR_DTYPE)
+    for i, r in enumerate(rows):
+        arr[i] = r
+    path = tmp_path / "chr1.parquet"
+    agg.merge_pairs_into_file(path, arr, batch_rows=8)
+
+    cur = agg._PairCursor(path, sid_to_pooled, chrom_first_pooled=0)
+    # 4 pooled rows (0..3); simulate TWO chunks split at row 2
+    n = 4
+    full = np.zeros((n, n))
+    # chunk 0: rows [0,2), cols up to 4
+    b0 = np.zeros((2, n)); cur.fill_block(b0, 0, 2, n, np.arange(n))
+    full[0:2, :] += b0
+    # chunk 1: rows [2,4)
+    b1 = np.zeros((2, n)); cur.fill_block(b1, 2, 4, n, np.arange(n))
+    full[2:4, :] += b1
+
+    # expected upper-triangle placements:
+    #  (1,2)=5.0, (0,3)=7.0, (0,1)=9.0  (the co-located pair normalised to upper)
+    assert full[1, 2] == 5.0
+    assert full[0, 3] == 7.0
+    assert full[0, 1] == 9.0            # was lower-triangle (1,0) before the fix
+    # nothing in the lower triangle
+    assert np.allclose(np.tril(full, -1), 0.0)
+    # total mass conserved (no dropped pair across the chunk boundary)
+    assert full.sum() == 21.0
