@@ -254,3 +254,89 @@ def extract_chunk_entries(
     offdiag = (np.concatenate(off_chunks) if off_chunks
                else np.empty(0, dtype=PAIR_DTYPE))
     return diag_sids, diag_vals, offdiag
+
+
+import pyarrow as pa
+import pyarrow.parquet as pq
+
+_PAIR_ARROW_SCHEMA = pa.schema([
+    ("pos_i", pa.int64()), ("sid_i", pa.int64()),
+    ("pos_j", pa.int64()), ("sid_j", pa.int64()), ("value", pa.float64()),
+])
+
+
+def _pair_key(arr: np.ndarray) -> np.ndarray:
+    """Structured view of the 4 key fields for lexicographic comparison."""
+    return arr[PAIR_KEY_FIELDS]
+
+
+def sorted_merge_add(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """Merge two key-sorted PAIR_DTYPE arrays, summing value on equal keys."""
+    merged = np.concatenate([a, b])
+    order = np.argsort(_pair_key(merged), kind="stable")
+    merged = merged[order]
+    if merged.size == 0:
+        return merged
+    keys = _pair_key(merged)
+    same = (keys[1:] == keys[:-1])
+    group = np.empty(merged.size, dtype=np.int64)
+    group[0] = 0
+    np.cumsum(~same, out=group[1:])
+    n_groups = int(group[-1]) + 1
+    out = merged[np.searchsorted(group, np.arange(n_groups))]
+    summed = np.zeros(n_groups, dtype=np.float64)
+    np.add.at(summed, group, merged["value"])
+    out["value"] = summed
+    return out
+
+
+def _arrow_from_pairs(arr: np.ndarray) -> "pa.Table":
+    return pa.table({f: arr[f] for f in _PAIR_ARROW_SCHEMA.names},
+                    schema=_PAIR_ARROW_SCHEMA)
+
+
+def _pairs_from_arrow(batch) -> np.ndarray:
+    cols = {name: batch.column(name).to_numpy(zero_copy_only=False)
+            for name in _PAIR_ARROW_SCHEMA.names}
+    arr = np.empty(batch.num_rows, dtype=PAIR_DTYPE)
+    for name in _PAIR_ARROW_SCHEMA.names:
+        arr[name] = cols[name]
+    return arr
+
+
+def merge_pairs_into_file(path: str | Path, incoming: np.ndarray, batch_rows: int) -> None:
+    """Sorted-merge-add an in-memory incoming pair array into a parquet file.
+
+    Streams the existing file in row batches (the side that grows with cohort
+    count); the incoming array is assumed key-sorted and held in memory.
+    Writes atomically (temp-then-rename).
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    incoming = incoming[np.argsort(_pair_key(incoming), kind="stable")]
+    tmp = path.with_name(path.name + f".tmp.{os.getpid()}")
+
+    writer = pq.ParquetWriter(tmp, _PAIR_ARROW_SCHEMA)
+    try:
+        if not path.is_file():
+            writer.write_table(_arrow_from_pairs(sorted_merge_add(
+                np.empty(0, dtype=PAIR_DTYPE), incoming)))
+        else:
+            pf = pq.ParquetFile(path)
+            in_pos = 0
+            for batch in pf.iter_batches(batch_size=batch_rows):
+                existing = _pairs_from_arrow(batch)
+                last_key = existing[-1:][PAIR_KEY_FIELDS]
+                take = in_pos
+                inc_keys = incoming[PAIR_KEY_FIELDS]
+                while take < incoming.size and tuple(inc_keys[take]) <= tuple(last_key[0]):
+                    take += 1
+                chunk_inc = incoming[in_pos:take]
+                in_pos = take
+                writer.write_table(_arrow_from_pairs(
+                    sorted_merge_add(existing, chunk_inc)))
+            if in_pos < incoming.size:
+                writer.write_table(_arrow_from_pairs(incoming[in_pos:]))
+    finally:
+        writer.close()
+    os.replace(tmp, path)

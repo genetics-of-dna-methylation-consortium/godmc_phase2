@@ -194,3 +194,35 @@ def test_extract_chunk_entries_offset_chunk():
     assert diag_sid.tolist() == [11, 12]
     assert offdiag[0]["sid_i"] == 11 and offdiag[0]["sid_j"] == 12
     assert offdiag[0]["value"] == 3.0
+
+
+import pyarrow.parquet as pq
+
+
+def _pairs(rows):
+    arr = np.empty(len(rows), dtype=agg.PAIR_DTYPE)
+    for i, r in enumerate(rows):
+        arr[i] = r
+    return arr
+
+
+def test_sorted_merge_add_sums_equal_keys():
+    a = _pairs([(100, 0, 200, 1, 2.0), (100, 0, 300, 2, 5.0)])
+    b = _pairs([(100, 0, 200, 1, 3.0), (150, 3, 400, 4, 1.0)])
+    out = agg.sorted_merge_add(a, b)
+    assert out["value"].tolist() == [5.0, 5.0, 1.0]      # (100,0,200,1) summed
+    assert out["pos_i"].tolist() == [100, 100, 150]
+    assert out["pos_j"].tolist() == [200, 300, 400]
+
+
+def test_merge_pairs_into_file_round_trip(tmp_path):
+    path = tmp_path / "chr1.parquet"
+    first = _pairs([(100, 0, 200, 1, 2.0)])
+    agg.merge_pairs_into_file(path, first, batch_rows=8)
+    second = _pairs([(100, 0, 200, 1, 3.0), (300, 2, 400, 3, 1.0)])
+    agg.merge_pairs_into_file(path, second, batch_rows=8)
+
+    back = pq.read_table(path).to_pandas()
+    assert back["value"].tolist() == [5.0, 1.0]
+    assert back["pos_i"].tolist() == [100, 300]
+    assert not list(tmp_path.glob("*.tmp*"))
