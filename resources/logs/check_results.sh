@@ -453,18 +453,22 @@ check_results_15 () {
 		exit 1
 	fi
 
-	if [ -f "${ld_aggregate_dir}/pooled_manifest.json" ]; then
-		echo "LD pooled scaffold manifest present"
-	else
-		echo "Problem: LD pooled scaffold manifest is absent"
-		exit 1
+	if [ -d "${ld_precursor_dir}" ]; then
+		if [ -f "${ld_precursor_dir}/precursor_manifest.json" ]; then
+			echo "LD precursor manifest present"
+		else
+			echo "Problem: LD precursor manifest is absent"
+			exit 1
+		fi
 	fi
 
-	if [ -f "${ld_aggregate_dir}/qc_report.txt" ]; then
-		echo "LD pooled scaffold QC report present"
-	else
-		echo "Problem: LD pooled scaffold QC report is absent"
-		exit 1
+	if [ -d "${ld_panel_dir}" ] && [ -n "$(ls -A ${ld_panel_dir} 2>/dev/null)" ]; then
+		if [ -f "${ld_panel_dir}/pooled_manifest.json" ]; then
+			echo "LD pooled panel manifest present"
+		else
+			echo "Problem: LD pooled panel manifest is absent"
+			exit 1
+		fi
 	fi
 
 }

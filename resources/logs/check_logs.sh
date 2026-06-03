@@ -309,7 +309,7 @@ check_logs_15 () {
 	fi
 
 	compare_version "15b"
-	if grep -i -q "Successfully prepared LD aggregation scaffold outputs" ${section_15b_logfile}; then
+	if grep -i -E -q "Successfully (accumulated cohort into the LD precursor|finalised the pooled LD panel)" ${section_15b_logfile}; then
 		echo "15b-ld_aggregate_stats.sh completed successfully."
 	else
 		echo "Problem: 15b-ld_aggregate_stats.sh did not complete successfully"

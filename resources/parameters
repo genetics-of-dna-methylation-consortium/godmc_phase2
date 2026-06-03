@@ -254,6 +254,12 @@ ld_hail_tmp_dir="${ld_hail_tmp_dir:-${ld_prepare_dir}/hail_tmp}"
 ld_a_block_size="${ld_a_block_size:-4096}"
 ld_a_chunk_rows="${ld_a_chunk_rows:-50000}"
 ld_a_max_dense_gb="${ld_a_max_dense_gb:-1.0}"
+ld_precursor_dir="${ld_dir}/precursor"
+ld_panel_dir="${ld_dir}/panels"
+ld_15b_mode="${ld_15b_mode:-accumulate}"
+ld_maf_threshold="${ld_maf_threshold:-0.01}"
+ld_min_adj_diag="${ld_min_adj_diag:-0.0}"
+ld_min_cohorts="${ld_min_cohorts:-}"
 
 resname="res"
 
