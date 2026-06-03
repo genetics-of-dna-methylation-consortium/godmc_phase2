@@ -118,3 +118,40 @@ def test_read_cohort_assets_rejects_b_row_mismatch(tmp_path):
                             np.eye(3))
     with pytest.raises(ValueError, match="rows"):
         agg.read_cohort_assets(out)
+
+
+def _variants_df(rows):
+    cols = ["chr", "pos", "ref", "alt", "variant_id", "n_nonmissing",
+            "n_imputed", "genotype_mean"]
+    return pd.DataFrame(rows, columns=cols)
+
+
+def test_merge_variant_table_assigns_ids_and_sums():
+    table = agg._empty_variant_table()
+    cohort = _variants_df([
+        ("1", 100, "G", "A", "1:100:G:A", 4, 0, 1.0),
+        ("1", 200, "C", "T", "1:200:C:T", 3, 1, 0.5),
+    ])
+    b = np.array([[4.0, 90.0, 1.5], [2.0, 70.0, 1.0]])
+
+    table, id_map, next_id = agg.merge_variant_table(table, cohort, b, next_stable_id=0)
+    assert next_id == 2
+    assert id_map == {"1:100:G:A": 0, "1:200:C:T": 1}
+    assert table.loc[table.variant_id == "1:100:G:A", "b_intercept"].item() == 4.0
+    assert table["membership_count"].tolist() == [1, 1]
+
+    # second cohort: one shared variant, one new
+    cohort2 = _variants_df([
+        ("1", 100, "G", "A", "1:100:G:A", 5, 0, 1.2),
+        ("1", 300, "A", "G", "1:300:A:G", 5, 0, 0.8),
+    ])
+    b2 = np.array([[6.0, 100.0, 2.0], [3.0, 80.0, 1.0]])
+    table, id_map2, next_id = agg.merge_variant_table(table, cohort2, b2, next_stable_id=next_id)
+
+    assert next_id == 3
+    assert id_map2 == {"1:100:G:A": 0, "1:300:A:G": 2}
+    shared = table.set_index("variant_id").loc["1:100:G:A"]
+    assert shared["membership_count"] == 2
+    assert shared["b_intercept"] == 10.0       # 4 + 6
+    assert shared["n_nonmissing"] == 9         # 4 + 5
+    assert table.set_index("variant_id").loc["1:300:A:G"]["membership_count"] == 1

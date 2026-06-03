@@ -158,3 +158,52 @@ def read_cohort_assets(cohort_dir: str | Path) -> tuple[pd.DataFrame, np.ndarray
             f"Expected B (n x 3) and D (3 x 3); got B{b_mat.shape}, D{d_mat.shape}"
         )
     return variants, b_mat, d_mat
+
+
+def merge_variant_table(
+    table: pd.DataFrame,
+    cohort_variants: pd.DataFrame,
+    b_matrix: np.ndarray,
+    next_stable_id: int,
+) -> tuple[pd.DataFrame, dict[str, int], int]:
+    """Add one cohort's per-variant data into the master table.
+
+    Assigns a fresh stable_id to each unseen variant_id, sums the three B
+    columns, n_nonmissing, n_imputed, and bumps membership_count. a_diag is
+    untouched here (filled by the A-merge). Returns (updated table,
+    {variant_id: stable_id} for this cohort, next free stable_id).
+    """
+    existing = table.set_index("variant_id")
+    known_ids = dict(zip(existing.index, existing["stable_id"]))
+
+    id_map: dict[str, int] = {}
+    new_rows: list[dict] = []
+    for pos_in_cohort, row in enumerate(cohort_variants.itertuples(index=False)):
+        vid = row.variant_id
+        b = b_matrix[pos_in_cohort]
+        if vid in known_ids:
+            sid = int(known_ids[vid])
+            existing.loc[vid, "b_intercept"] += b[0]
+            existing.loc[vid, "b_age"] += b[1]
+            existing.loc[vid, "b_sex"] += b[2]
+            existing.loc[vid, "n_nonmissing"] += int(row.n_nonmissing)
+            existing.loc[vid, "n_imputed"] += int(row.n_imputed)
+            existing.loc[vid, "membership_count"] += 1
+        else:
+            sid = next_stable_id
+            next_stable_id += 1
+            known_ids[vid] = sid
+            new_rows.append({
+                "stable_id": sid, "variant_id": vid, "chr": row.chr,
+                "pos": int(row.pos), "ref": row.ref, "alt": row.alt,
+                "membership_count": 1, "b_intercept": float(b[0]),
+                "b_age": float(b[1]), "b_sex": float(b[2]), "a_diag": 0.0,
+                "n_nonmissing": int(row.n_nonmissing), "n_imputed": int(row.n_imputed),
+            })
+        id_map[vid] = sid
+
+    updated = existing.reset_index()[VARIANT_COLUMNS]
+    if new_rows:
+        updated = pd.concat([updated, pd.DataFrame(new_rows)[VARIANT_COLUMNS]],
+                            ignore_index=True)
+    return updated.astype(_VARIANT_DTYPES), id_map, next_stable_id
