@@ -127,3 +127,34 @@ def validate_contract(expected: dict, candidate: dict) -> None:
                 f"{expected[field]!r}, cohort has {candidate[field]!r}. "
                 "All cohorts in a pooled panel must share this value."
             )
+
+
+_COHORT_VARIANT_DTYPES = {
+    "chr": "object", "pos": "int64", "ref": "object", "alt": "object",
+    "variant_id": "object", "n_nonmissing": "int64", "n_imputed": "int64",
+    "genotype_mean": "float64",
+}
+
+
+def read_cohort_assets(cohort_dir: str | Path) -> tuple[pd.DataFrame, np.ndarray, np.ndarray]:
+    """Read a 15a cohort's variants.tsv.gz, B.npy, and D.npy.
+
+    Returns (variants_df in file/row order, B (n_variants x 3), D (3 x 3)).
+    Hard-fails if B's row count does not match the variant count.
+    """
+    cohort_dir = Path(cohort_dir)
+    variants = pd.read_csv(
+        cohort_dir / "variants.tsv.gz", sep="\t", dtype=_COHORT_VARIANT_DTYPES,
+    )
+    b_mat = np.load(cohort_dir / "B.npy", allow_pickle=False).astype(np.float64)
+    d_mat = np.load(cohort_dir / "D.npy", allow_pickle=False).astype(np.float64)
+    if b_mat.shape[0] != len(variants):
+        raise ValueError(
+            f"B.npy has {b_mat.shape[0]} rows but variants.tsv.gz has "
+            f"{len(variants)} rows; they must align one-to-one"
+        )
+    if b_mat.shape[1] != 3 or d_mat.shape != (3, 3):
+        raise ValueError(
+            f"Expected B (n x 3) and D (3 x 3); got B{b_mat.shape}, D{d_mat.shape}"
+        )
+    return variants, b_mat, d_mat

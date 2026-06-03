@@ -1,4 +1,5 @@
 # tests/genetics/test_ld_aggregate.py
+import gzip
 import json
 import numpy as np
 import pandas as pd
@@ -80,3 +81,40 @@ def test_validate_contract_mismatch_raises():
     other = dict(base, block_size=1024)
     with pytest.raises(ValueError, match="block_size"):
         agg.validate_contract(base, other)
+
+
+def _write_cohort_dir(tmp_path, variant_rows, b, d):
+    out = tmp_path / "cohort"
+    out.mkdir()
+    header = "chr\tpos\tref\talt\tvariant_id\tn_nonmissing\tn_imputed\tgenotype_mean\n"
+    body = "".join("\t".join(map(str, r)) + "\n" for r in variant_rows)
+    with gzip.open(out / "variants.tsv.gz", "wt") as fh:
+        fh.write(header + body)
+    np.save(out / "B.npy", np.asarray(b, dtype=np.float64))
+    np.save(out / "D.npy", np.asarray(d, dtype=np.float64))
+    return out
+
+
+def test_read_cohort_assets(tmp_path):
+    rows = [
+        ("1", 100, "G", "A", "1:100:G:A", 4, 0, 1.0),
+        ("1", 200, "C", "T", "1:200:C:T", 3, 1, 0.5),
+    ]
+    b = [[4.0, 90.0, 1.5], [2.0, 70.0, 1.0]]
+    d = [[4, 180, 6], [180, 8200, 270], [6, 270, 10]]
+    out = _write_cohort_dir(tmp_path, rows, b, d)
+
+    variants, b_mat, d_mat = agg.read_cohort_assets(out)
+    assert list(variants["variant_id"]) == ["1:100:G:A", "1:200:C:T"]
+    assert variants["pos"].tolist() == [100, 200]
+    np.testing.assert_array_equal(b_mat, np.asarray(b))
+    np.testing.assert_array_equal(d_mat, np.asarray(d))
+    assert b_mat.shape == (2, 3)
+
+
+def test_read_cohort_assets_rejects_b_row_mismatch(tmp_path):
+    rows = [("1", 100, "G", "A", "1:100:G:A", 4, 0, 1.0)]
+    out = _write_cohort_dir(tmp_path, rows, [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+                            np.eye(3))
+    with pytest.raises(ValueError, match="rows"):
+        agg.read_cohort_assets(out)
