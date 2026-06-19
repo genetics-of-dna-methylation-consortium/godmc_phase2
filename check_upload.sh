@@ -258,6 +258,66 @@ then
 fi
 
 
+if [[ "$2" = "upload" && $1 = "15" ]]
+then
+
+	echo ""
+	echo "Preparing section 15 (LD) results for upload"
+
+	upload_dir="${section_15_dir}/upload"
+	mkdir -p "${upload_dir}"
+
+	# --- Config archive (same convention as other sections) ---
+	mkdir -p ${home_directory}/results/config/
+	if [[ "$config_file" = /* ]]; then
+		cp ${config_file} ${scripts_directory}/
+		config_basename=$(basename "$config_file")
+		tar czf ${home_directory}/results/config/${study_name}_config.tar -C ${scripts_directory}/ ./${config_basename} ./resources/parameters
+		rm ${scripts_directory}/${config_basename}
+	else
+		tar czf ${home_directory}/results/config/${study_name}_config.tar -C ${scripts_directory}/ ./${config_file} ./resources/parameters
+	fi
+	md5sum ${home_directory}/results/config/${study_name}_config.tar > ${home_directory}/results/config/${study_name}_config.md5sum
+	gpg --output ${home_directory}/results/config/${study_name}_config.tar.aes --symmetric --cipher-algo AES256 ${home_directory}/results/config/${study_name}_config.tar
+
+	# --- Encrypt cohort scaffold + per-chunk A_blocks (no network I/O) ---
+	echo "Encrypting section 15 cohort outputs (scaffold + per-chunk A_blocks)"
+	bash ${scripts_directory}/resources/genetics/ld_encrypt_cohort.sh \
+		"${ld_prepare_dir}" "${upload_dir}" "${study_name}"
+
+	# --- Upload ---
+	temp=`which sshpass 2>/dev/null | wc -l`
+	port="-P 2222"
+	if [[ ! "${temp}" = "0" ]]
+	then
+		echo "sshpass detected"
+		sftp $port -oIdentityFile=$key -oBatchMode=no -b - ${sftp_username}@${sftp_address}:${sftp_path} << !
+		cd ../upload
+		put ${upload_dir}/${study_name}_15_*.tgz.aes
+		put ${upload_dir}/${study_name}_15_*.md5sum
+		put ${home_directory}/results/config/${study_name}_config.tar.aes
+		put ${home_directory}/results/config/${study_name}_config.md5sum
+		bye
+!
+	else
+		read -s -p "Ready to upload? Press enter to continue: " anykey
+		echo ""
+		sftp $port -oIdentityFile=$key ${sftp_username}@${sftp_address}:${sftp_path} <<EOF
+		cd ../upload
+		put ${upload_dir}/${study_name}_15_*.tgz.aes
+		put ${upload_dir}/${study_name}_15_*.md5sum
+		put ${home_directory}/results/config/${study_name}_config.tar.aes
+		put ${home_directory}/results/config/${study_name}_config.md5sum
+EOF
+	fi
+
+	echo ""
+	echo "Section 15 upload complete"
+	echo ""
+
+fi
+
+
 if [[ "$2" = "upload" && $1 = "14" ]]
 then
 	sftp_username=${sftp_username_nc866}
