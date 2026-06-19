@@ -16,6 +16,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+import ld_checksums
+
 PRECURSOR_SCHEMA_VERSION = "15b-precursor-v1"
 DEFAULT_PANEL_SPEC_VERSION = "0.1.0"
 DEFAULT_MAF_THRESHOLD = 0.01
@@ -307,17 +309,18 @@ def _pairs_from_arrow(batch) -> np.ndarray:
     return arr
 
 
-def merge_pairs_into_file(path: str | Path, incoming: np.ndarray, batch_rows: int) -> None:
-    """Sorted-merge-add an in-memory incoming pair array into a parquet file.
+def stage_merged_pairs(path: str | Path, incoming: np.ndarray, batch_rows: int) -> Path:
+    """Sorted-merge-add ``incoming`` into a pair file, writing a staged temp.
 
     Streams the existing file in row batches (the side that grows with cohort
-    count); the incoming array is assumed key-sorted and held in memory.
-    Writes atomically (temp-then-rename).
+    count); the incoming array is assumed key-sorted and held in memory. The
+    current file is left untouched; the merged result is written to a sibling
+    ``.stage.<pid>`` file whose path is returned for a later atomic commit.
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     incoming = incoming[np.argsort(_pair_key(incoming), kind="stable")]
-    tmp = path.with_name(path.name + f".tmp.{os.getpid()}")
+    tmp = path.with_name(path.name + f".stage.{os.getpid()}")
 
     writer = pq.ParquetWriter(tmp, _PAIR_ARROW_SCHEMA)
     try:
@@ -342,16 +345,54 @@ def merge_pairs_into_file(path: str | Path, incoming: np.ndarray, batch_rows: in
                 writer.write_table(_arrow_from_pairs(incoming[in_pos:]))
     finally:
         writer.close()
+    return tmp
+
+
+def merge_pairs_into_file(path: str | Path, incoming: np.ndarray, batch_rows: int) -> None:
+    """Stage then atomically commit a sorted-merge-add into a pair file."""
+    path = Path(path)
+    tmp = stage_merged_pairs(path, incoming, batch_rows)
     os.replace(tmp, path)
 
 
-def _atomic_np_save(path: str | Path, arr: np.ndarray) -> None:
-    """Atomically write a .npy file (temp-then-rename), like the other writers."""
+def stage_np_save(path: str | Path, arr: np.ndarray) -> tuple[Path, Path]:
+    """Write ``arr`` to a staged ``.stage.<pid>`` temp; return (tmp, final)."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + f".tmp.{os.getpid()}.npy")
-    np.save(tmp, arr)
-    os.replace(tmp, path)
+    tmp = path.with_name(path.name + f".stage.{os.getpid()}.npy")
+    np.save(tmp, arr)  # name already ends in .npy, so np.save writes exactly here
+    return tmp, path
+
+
+def stage_variant_table(precursor_dir: str | Path, df: pd.DataFrame) -> tuple[Path, Path]:
+    """Write the variant table to a staged temp; return (tmp, final)."""
+    path = precursor_paths(precursor_dir)["variants"]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + f".stage.{os.getpid()}")
+    df[VARIANT_COLUMNS].astype(_VARIANT_DTYPES).to_parquet(tmp, index=False)
+    return tmp, path
+
+
+def _commit_staged(staged: list[tuple[Path, Path]]) -> None:
+    """Atomically rename each staged temp into its final path (commit burst)."""
+    for tmp, final in staged:
+        os.replace(tmp, final)
+
+
+def _clean_stale_temps(precursor_dir: Path) -> None:
+    """Remove orphaned staging temps left by a crashed prior run (lock-guarded)."""
+    paths = precursor_paths(precursor_dir)
+    for base in (paths["root"], paths["pairs_dir"]):
+        if base.is_dir():
+            for pattern in ("*.stage.*", "*.tmp.*"):
+                for stale in base.glob(pattern):
+                    stale.unlink(missing_ok=True)
+
+
+def _incomplete_cohorts(pm: dict) -> list[str]:
+    """Study names of any cohort entry not in the committed state."""
+    return [c["study_name"] for c in pm.get("cohorts", [])
+            if c.get("status") != "committed"]
 
 
 def _acquire_lock(precursor_dir: Path) -> Path:
@@ -375,10 +416,27 @@ def accumulate(
     chunk_reader,
     pair_batch_rows: int = 1_000_000,
     force: bool = False,
+    verify_checksums: bool = True,
 ) -> None:
-    """Add one cohort's A/B/D into the precursor (see spec accumulate phase)."""
+    """Add one cohort's A/B/D into the precursor (see spec accumulate phase).
+
+    Integrity gate: unless ``verify_checksums`` is disabled, the cohort's
+    ``checksums.json`` is re-verified first, so a corrupted/truncated upload
+    fails loudly before any precursor state is touched.
+
+    Crash safety: the per-cohort mutations are *staged* to sibling temp files
+    while the live precursor is untouched, then a write-ahead ``in_progress``
+    manifest entry is recorded, then all temps are renamed in (commit burst),
+    then the entry is flipped to ``committed``. A crash during the commit window
+    leaves the entry ``in_progress``; a later ``accumulate``/``finalise`` then
+    refuses to proceed (rather than silently double-counting) until the operator
+    restores or rebuilds. ``force=True`` overrides both the duplicate-study and
+    incomplete-entry guards.
+    """
     cohort_dir = Path(cohort_dir)
     precursor_dir = Path(precursor_dir)
+    if verify_checksums:
+        ld_checksums.verify_cohort_checksums(cohort_dir)
     cohort_manifest = json.loads((cohort_dir / "manifest.json").read_text())
     study_name = cohort_manifest["study_name"]
     contract = extract_contract(cohort_manifest)
@@ -392,9 +450,15 @@ def accumulate(
             "next_stable_id": 0,
         }
         precursor_dir.mkdir(parents=True, exist_ok=True)
-        _atomic_np_save(precursor_paths(precursor_dir)["d"], np.zeros((1, 1)))
     else:
         validate_contract(pm["contract"], contract)
+        incomplete = _incomplete_cohorts(pm)
+        if incomplete and not force:
+            raise RuntimeError(
+                f"Precursor has incomplete (in-progress) accumulate(s) for "
+                f"{incomplete}; it may be partially updated. Restore from backup "
+                "or rebuild, then retry (or pass force=True to override)."
+            )
         if any(c["study_name"] == study_name for c in pm["cohorts"]) and not force:
             raise ValueError(
                 f"Study '{study_name}' already accumulated into this precursor; "
@@ -403,6 +467,7 @@ def accumulate(
 
     lock = _acquire_lock(precursor_dir)
     try:
+        _clean_stale_temps(precursor_dir)
         variants, b_mat, d_mat = read_cohort_assets(cohort_dir)
         table = read_variant_table(precursor_dir)
         table, id_map, next_id = merge_variant_table(
@@ -416,6 +481,8 @@ def accumulate(
                 "sid": np.array([id_map[v] for v in sub["variant_id"]], dtype=np.int64),
             }
 
+        # --- compute + stage everything; live precursor stays untouched ---
+        staged: list[tuple[Path, Path]] = []
         diag_acc: dict[int, float] = {}
         for chrom, cmeta in cohort_manifest["A_blocks"]["chromosomes"].items():
             positions = cohort_chrom[chrom]["pos"]
@@ -432,27 +499,35 @@ def accumulate(
                     off_parts.append(offdiag)
             if off_parts:
                 incoming = np.concatenate(off_parts)
-                merge_pairs_into_file(
-                    precursor_paths(precursor_dir)["pairs_dir"] / f"chr{chrom}.parquet",
-                    incoming, batch_rows=pair_batch_rows)
+                pair_final = precursor_paths(precursor_dir)["pairs_dir"] / f"chr{chrom}.parquet"
+                pair_tmp = stage_merged_pairs(pair_final, incoming, batch_rows=pair_batch_rows)
+                staged.append((pair_tmp, pair_final))
 
-        # apply diagonal accumulation
+        # apply diagonal accumulation (in memory) and stage the variant table
         if diag_acc:
             add = table["stable_id"].map(lambda s: diag_acc.get(int(s), 0.0))
             table["a_diag"] = table["a_diag"] + add
-        write_variant_table(precursor_dir, table)
+        staged.append(stage_variant_table(precursor_dir, table))
 
         d_path = precursor_paths(precursor_dir)["d"]
-        _atomic_np_save(d_path, np.load(d_path) + d_mat)
+        existing_d = np.load(d_path) if d_path.is_file() else np.zeros((1, 1))
+        staged.append(stage_np_save(d_path, existing_d + d_mat))
 
+        # --- write-ahead intent, commit, then mark committed (tight window) ---
         pm["next_stable_id"] = next_id
         pm["n_cohorts"] += 1
         pm["cohorts"].append({
             "study_name": study_name,
             "accumulated_at_utc": datetime.now(timezone.utc).isoformat(),
             "n_variants": int(len(variants)),
+            "status": "in_progress",
         })
-        write_precursor_manifest(precursor_dir, pm)  # commit point
+        write_precursor_manifest(precursor_dir, pm)
+
+        _commit_staged(staged)
+
+        pm["cohorts"][-1]["status"] = "committed"
+        write_precursor_manifest(precursor_dir, pm)
     finally:
         lock.unlink(missing_ok=True)
 
@@ -606,6 +681,13 @@ def finalise(precursor_dir, panel_dir, r_writer, maf_threshold, min_adj_diag,
     pm = read_precursor_manifest(precursor_dir)
     if pm is None or pm["n_cohorts"] == 0:
         raise ValueError("Cannot finalise an empty precursor")
+    incomplete = _incomplete_cohorts(pm)
+    if incomplete:
+        raise RuntimeError(
+            f"Precursor has incomplete (in-progress) accumulate(s) for "
+            f"{incomplete}; refusing to finalise a possibly partial precursor. "
+            "Restore from backup or rebuild first."
+        )
     d_matrix = np.load(precursor_paths(precursor_dir)["d"])
     d_rank = int(np.linalg.matrix_rank(d_matrix))
     if d_rank < d_matrix.shape[0]:

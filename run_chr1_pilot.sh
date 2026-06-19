@@ -3,8 +3,22 @@ set -euo pipefail
 # Larger-chromosome scale pilot: chr1 at PRODUCTION A-block defaults
 # (block_size=4096, chunk_rows=50000, max_dense_gb=1.0). Cores/memory held at the
 # chr22 baseline (8 / 32 GB) so the size/runtime scaling is comparable on this host.
-source /home/tobyc/data/miniforge3/etc/profile.d/conda.sh
-conda activate hail_env
+# Activate the conda env in a host-portable way. Override either via env var:
+#   CONDA_BASE=/path/to/miniforge3 CONDA_ENV=hail_env ./run_chr1_pilot.sh
+# Otherwise the conda base is discovered from whichever `conda` is on PATH.
+CONDA_ENV="${CONDA_ENV:-hail_env}"
+if [ -z "${CONDA_BASE:-}" ]; then
+  if command -v conda >/dev/null 2>&1; then
+    CONDA_BASE="$(conda info --base)"
+  else
+    echo "ERROR: conda not found on PATH and CONDA_BASE not set." >&2
+    echo "       Install conda/miniforge or set CONDA_BASE to its install prefix." >&2
+    exit 1
+  fi
+fi
+# shellcheck source=/dev/null
+source "${CONDA_BASE}/etc/profile.d/conda.sh"
+conda activate "${CONDA_ENV}"
 
 CHR=1
 OUTDIR="pilot_data/1kg_chr${CHR}"
@@ -59,11 +73,13 @@ with fam_path.open() as fam, out_path.open("w") as out:
 PY
 
 echo "==================== [chr${CHR}] RUN 15a (production defaults) $(date '+%H:%M:%S') ===================="
+SECTION15_DIR="${OUTDIR}/section15_chr${CHR}"
+mkdir -p "${SECTION15_DIR}"
 /usr/bin/time -v python resources/genetics/ld_prepare_stats.py \
   --study-name 1kg_chr${CHR}_pilot \
   --bfile "${BFILE}" \
   --covariates "${COVARS}" \
-  --output-dir "${OUTDIR}/section15_chr${CHR}" \
+  --output-dir "${SECTION15_DIR}" \
   --log-file "${OUTDIR}/section15_chr${CHR}.log" \
   --hail-local-cores 8 \
   --hail-driver-memory-gb 32 \

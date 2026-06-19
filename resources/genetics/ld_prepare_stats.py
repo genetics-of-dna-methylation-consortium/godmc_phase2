@@ -26,6 +26,7 @@ from ld_qc import (
     build_variant_index,
     require_file,
 )
+import ld_checksums
 
 
 CHROMOSOME_FILTER_ALL = "all"
@@ -319,6 +320,12 @@ def main() -> None:
         "\n".join(qc_lines) + "\n", encoding="utf-8"
     )
     (blocks_dir / ".gitkeep").write_text("", encoding="utf-8")
+
+    # Final step: checksum the consumed artefacts (B/D/variants/manifest + all of
+    # A_blocks/) so 15b can verify a faithful upload before folding the cohort in
+    # and the raw data is deleted. Must run after manifest.json is written.
+    log_step("Writing artefact checksums (checksums.json)")
+    ld_checksums.write_cohort_checksums(output_dir)
 
 
 if __name__ == "__main__":

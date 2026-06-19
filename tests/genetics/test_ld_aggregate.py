@@ -8,6 +8,7 @@ import pandas as pd
 import pytest
 
 import ld_aggregate as agg
+import ld_checksums as ck
 
 
 def test_precursor_paths_are_under_dir(tmp_path):
@@ -266,6 +267,7 @@ def _build_synthetic_cohort(tmp_path, study_name="cohortA"):
                  "column_stop": 2, "directory": "A_blocks/chr1/chunk_000000"}]}}},
     }
     (cohort / "manifest.json").write_text(json.dumps(manifest))
+    ck.write_cohort_checksums(cohort)
     return cohort
 
 
@@ -297,6 +299,87 @@ def test_accumulate_rejects_duplicate_study(tmp_path):
     agg.accumulate(cohort, precursor, chunk_reader=_fake_reader, pair_batch_rows=16)
     with pytest.raises(ValueError, match="already accumulated"):
         agg.accumulate(cohort, precursor, chunk_reader=_fake_reader)
+
+
+def test_accumulate_verifies_checksums_and_rejects_tampered_cohort(tmp_path):
+    cohort = _build_synthetic_cohort(tmp_path)
+    # tamper with B.npy AFTER checksums were written by the builder
+    np.save(cohort / "B.npy", np.array([[99.0], [99.0]]))
+    precursor = tmp_path / "precursor"
+    with pytest.raises(ck.ChecksumError, match="B.npy"):
+        agg.accumulate(cohort, precursor, chunk_reader=_fake_reader, pair_batch_rows=16)
+    # nothing was committed
+    assert agg.read_precursor_manifest(precursor) is None
+
+
+def test_accumulate_rejects_cohort_without_checksums(tmp_path):
+    cohort = _build_synthetic_cohort(tmp_path)
+    (cohort / ck.CHECKSUM_FILENAME).unlink()
+    precursor = tmp_path / "precursor"
+    with pytest.raises(ck.ChecksumError, match=ck.CHECKSUM_FILENAME):
+        agg.accumulate(cohort, precursor, chunk_reader=_fake_reader, pair_batch_rows=16)
+
+
+def test_accumulate_marks_cohort_committed(tmp_path):
+    cohort = _build_synthetic_cohort(tmp_path)
+    precursor = tmp_path / "precursor"
+    agg.accumulate(cohort, precursor, chunk_reader=_fake_reader, pair_batch_rows=16)
+    pm = agg.read_precursor_manifest(precursor)
+    assert pm["cohorts"][0]["status"] == "committed"
+
+
+def test_accumulate_refuses_when_in_progress_entry_present(tmp_path):
+    cohort_a = _build_synthetic_cohort(tmp_path, study_name="cohortA")
+    precursor = tmp_path / "precursor"
+    agg.accumulate(cohort_a, precursor, chunk_reader=_fake_reader, pair_batch_rows=16)
+    # simulate a prior crashed accumulate: an entry stuck in_progress
+    pm = agg.read_precursor_manifest(precursor)
+    pm["cohorts"][0]["status"] = "in_progress"
+    agg.write_precursor_manifest(precursor, pm)
+
+    cohort_b = _build_synthetic_cohort(tmp_path, study_name="cohortB")
+    with pytest.raises(RuntimeError, match="incomplete"):
+        agg.accumulate(cohort_b, precursor, chunk_reader=_fake_reader, pair_batch_rows=16)
+
+
+def test_accumulate_crash_at_commit_leaves_in_progress_and_no_partial_data(tmp_path, monkeypatch):
+    cohort_a = _build_synthetic_cohort(tmp_path, study_name="cohortA")
+    precursor = tmp_path / "precursor"
+    agg.accumulate(cohort_a, precursor, chunk_reader=_fake_reader, pair_batch_rows=16)
+    before = agg.read_variant_table(precursor).set_index("variant_id")["b_intercept"].to_dict()
+    d_before = np.load(precursor / "D.npy").copy()
+
+    cohort_b = _build_synthetic_cohort(tmp_path, study_name="cohortB")
+
+    def boom(staged):
+        raise RuntimeError("disk died mid-commit")
+    monkeypatch.setattr(agg, "_commit_staged", boom)
+    with pytest.raises(RuntimeError, match="mid-commit"):
+        agg.accumulate(cohort_b, precursor, chunk_reader=_fake_reader, pair_batch_rows=16)
+
+    # write-ahead intent recorded but data NOT applied (no double-count)
+    pm = agg.read_precursor_manifest(precursor)
+    assert pm["cohorts"][-1]["study_name"] == "cohortB"
+    assert pm["cohorts"][-1]["status"] == "in_progress"
+    after = agg.read_variant_table(precursor).set_index("variant_id")["b_intercept"].to_dict()
+    assert after == before                                    # data untouched
+    np.testing.assert_array_equal(np.load(precursor / "D.npy"), d_before)
+
+    # and a subsequent normal accumulate refuses until the operator intervenes
+    monkeypatch.undo()
+    cohort_c = _build_synthetic_cohort(tmp_path, study_name="cohortC")
+    with pytest.raises(RuntimeError, match="incomplete"):
+        agg.accumulate(cohort_c, precursor, chunk_reader=_fake_reader, pair_batch_rows=16)
+
+
+def test_finalise_refuses_in_progress_precursor(tmp_path):
+    precursor = _build_two_cohort_precursor(tmp_path)
+    pm = agg.read_precursor_manifest(precursor)
+    pm["cohorts"][0]["status"] = "in_progress"
+    agg.write_precursor_manifest(precursor, pm)
+    with pytest.raises(RuntimeError, match="incomplete"):
+        agg.finalise(precursor, tmp_path / "panel", r_writer=lambda *a, **k: None,
+                     maf_threshold=0.0, min_adj_diag=-1e9, block_size=8)
 
 
 def test_resolve_intersection_keeps_full_membership():
@@ -390,6 +473,7 @@ def _build_two_cohort_precursor(tmp_path):
                      "column_stop": 3, "directory": "A_blocks/chr1/chunk_000000"}]}}},
         }
         (cohort / "manifest.json").write_text(json.dumps(manifest))
+        ck.write_cohort_checksums(cohort)
         agg.accumulate(cohort, precursor, chunk_reader=lambda cd: A, pair_batch_rows=64)
 
     build_and_accumulate("cohort_a", 30, 1)
@@ -496,6 +580,7 @@ def test_finalise_multi_chromosome_keeps_offdiagonals(tmp_path):
                 for c in chroms}},
         }
         (cohort / "manifest.json").write_text(json.dumps(manifest))
+        ck.write_cohort_checksums(cohort)
 
         def reader(chunk_dir, _X=X):
             cols = chrom_cols["1"] if "chr1" in str(chunk_dir) else chrom_cols["2"]
