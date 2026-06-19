@@ -1,13 +1,21 @@
 import gzip
 import hashlib
+import json
 import os
 import subprocess
+import sys
 from pathlib import Path
+
+import numpy as np
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ENCRYPT = REPO_ROOT / "resources" / "genetics" / "ld_encrypt_cohort.sh"
 DECRYPT = REPO_ROOT / "resources" / "genetics" / "ld_decrypt_cohort.sh"
 PASSPHRASE = "testpass"
+
+sys.path.insert(0, str(REPO_ROOT / "resources" / "genetics"))
+import ld_aggregate as agg          # noqa: E402
+import ld_checksums as ck           # noqa: E402
 
 
 def _make_gpg_wrapper(tmp_path):
@@ -164,3 +172,53 @@ def test_manifest_study_name_mismatch_fails(tmp_path):
     assert "manifest study_name" in r.stderr
     assert "wrongstudy" in r.stderr
     assert "cohortA" in r.stderr
+
+
+def _build_real_cohort(tmp_path, study="cohortA"):
+    """A tiny 2-variant chr1 cohort with a real checksums.json + an A_blocks chunk."""
+    cs = tmp_path / "cohort_stats"
+    chunk = cs / "A_blocks" / "chr1" / "chunk_000000"
+    chunk.mkdir(parents=True)
+    (chunk / "part-00000").write_bytes(b"blockmatrix-bytes")
+    rows = [("1", 100, "G", "A", "1:100:G:A", 4, 0, 1.0),
+            ("1", 200, "C", "T", "1:200:C:T", 4, 0, 0.5)]
+    with gzip.open(cs / "variants.tsv.gz", "wt") as fh:
+        fh.write("chr\tpos\tref\talt\tvariant_id\tn_nonmissing\tn_imputed\tgenotype_mean\n")
+        fh.writelines("\t".join(map(str, r)) + "\n" for r in rows)
+    np.save(cs / "B.npy", np.array([[4.0], [2.0]]))
+    np.save(cs / "D.npy", np.array([[4.0]]))
+    manifest = {
+        "study_name": study, "genome_build": "GRCh37",
+        "covariate_schema": {"schema_id": "intercept_only",
+            "matrix_columns": ["intercept"], "sex_factor_recode": {}},
+        "variant_index": {"schema_version": "v0.3-with-genotype-stats"},
+        "A_blocks": {"radius_bp": 1_000_000, "block_size": 8,
+            "chromosomes": {"1": {"chunks": [
+                {"row_start": 0, "row_stop": 2, "column_start": 0,
+                 "column_stop": 2, "directory": "A_blocks/chr1/chunk_000000"}]}}},
+    }
+    (cs / "manifest.json").write_text(json.dumps(manifest))
+    ck.write_cohort_checksums(cs)   # real blake2b over the artefacts above
+    return cs
+
+
+def _fake_reader(chunk_dir):
+    return np.array([[20.0, 8.0], [8.0, 10.0]])
+
+
+def test_decrypted_cohort_accumulates_with_checksum_verification(tmp_path):
+    wrapper = _make_gpg_wrapper(tmp_path)
+    env = _env(wrapper)
+    cohort = _build_real_cohort(tmp_path, study="cohortA")
+    upload = tmp_path / "upload"
+    rebuilt = tmp_path / "rebuilt"
+    assert _encrypt(env, cohort, upload, study="cohortA").returncode == 0
+    assert _decrypt(env, upload, rebuilt, study="cohortA").returncode == 0
+
+    # checksums.json round-tripped, so accumulate verifies it against the rebuilt tree
+    precursor = tmp_path / "precursor"
+    agg.accumulate(rebuilt, precursor, chunk_reader=_fake_reader,
+                   pair_batch_rows=16, verify_checksums=True)
+    pm = agg.read_precursor_manifest(precursor)
+    assert pm["n_cohorts"] == 1
+    assert pm["cohorts"][0]["study_name"] == "cohortA"
