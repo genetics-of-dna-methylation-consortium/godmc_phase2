@@ -33,12 +33,21 @@ stage_archive () {
 
 mkdir -p "${output_dir}"
 
+# $1 = archive basename; returns 0 (already done) if .tgz.aes and .md5sum exist.
+already_done () {
+  [ -f "${output_dir}/$1.tgz.aes" ] && [ -f "${output_dir}/$1.md5sum" ]
+}
+
 # --- 1. Scaffold bundle (small files) ---
 scaffold="${study_name}_15_scaffold"
-tar czf "${output_dir}/${scaffold}.tgz" -C "${cohort_stats_dir}" \
-  manifest.json variants.tsv.gz D.npy B.npy
-stage_archive "${scaffold}"
-echo "[ld_encrypt] encrypted ${scaffold}"
+if already_done "${scaffold}"; then
+  echo "[ld_encrypt] skip ${scaffold} (already encrypted)"
+else
+  tar czf "${output_dir}/${scaffold}.tgz" -C "${cohort_stats_dir}" \
+    manifest.json variants.tsv.gz D.npy B.npy
+  stage_archive "${scaffold}"
+  echo "[ld_encrypt] encrypted ${scaffold}"
+fi
 
 # --- 2. Per-chunk A_blocks archives ---
 ablocks_dir="${cohort_stats_dir}/A_blocks"
@@ -50,6 +59,10 @@ for chunk_dir in "${ablocks_dir}"/chr*/chunk_*; do
   chr_name="$(basename "$(dirname "${chunk_dir}")")"   # e.g. chr1
   chunk_name="$(basename "${chunk_dir}")"              # e.g. chunk_0
   base="${study_name}_15_${chr_name}_${chunk_name}"    # e.g. study_15_chr1_chunk_0
+  if already_done "${base}"; then
+    echo "[ld_encrypt] skip ${base} (already encrypted)"
+    continue
+  fi
   tar czf "${output_dir}/${base}.tgz" -C "${ablocks_dir}" "${chr_name}/${chunk_name}"
   stage_archive "${base}"
   echo "[ld_encrypt] encrypted ${base}"

@@ -86,3 +86,16 @@ def test_chunk_roundtrip_reproduces_tree(tmp_path):
     with tarfile.open(dec) as tf:
         tf.extractall(extract)
     assert (extract / "chr1" / "chunk_0" / "part-00000").read_bytes() == b"chr1/chunk_0/data"
+
+
+def test_resume_skips_already_encrypted(tmp_path):
+    cohort = _make_cohort(tmp_path)
+    out = tmp_path / "upload"
+    env, _ = _gpg_env(tmp_path)
+    assert _run(env, cohort, out).returncode == 0
+    aes = out / "testcohort_15_chr1_chunk_0.tgz.aes"
+    mtime_before = aes.stat().st_mtime_ns
+    r2 = _run(env, cohort, out)
+    assert r2.returncode == 0, r2.stderr
+    assert "skip testcohort_15_chr1_chunk_0" in r2.stdout
+    assert aes.stat().st_mtime_ns == mtime_before  # not regenerated
