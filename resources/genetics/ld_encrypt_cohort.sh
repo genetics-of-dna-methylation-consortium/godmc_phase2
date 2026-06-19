@@ -44,7 +44,7 @@ if already_done "${scaffold}"; then
   echo "[ld_encrypt] skip ${scaffold} (already encrypted)"
 else
   tar czf "${output_dir}/${scaffold}.tgz" -C "${cohort_stats_dir}" \
-    manifest.json variants.tsv.gz D.npy B.npy
+    manifest.json variants.tsv.gz D.npy B.npy checksums.json
   stage_archive "${scaffold}"
   echo "[ld_encrypt] encrypted ${scaffold}"
 fi

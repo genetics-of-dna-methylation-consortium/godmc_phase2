@@ -33,6 +33,7 @@ def _make_cohort(tmp_path, chunks=(("chr1", "chunk_0"), ("chr1", "chunk_1"), ("c
         fh.write("chr\tpos\n1\t1000\n")
     (cs / "D.npy").write_bytes(b"D-matrix-bytes")
     (cs / "B.npy").write_bytes(b"B-matrix-bytes")
+    (cs / "checksums.json").write_text('{"algorithm": "blake2b", "files": {}}')
     for chrom, chunk in chunks:
         d = cs / "A_blocks" / chrom / chunk
         d.mkdir(parents=True)
@@ -122,3 +123,19 @@ def test_manifest_mismatch_warns_but_succeeds(tmp_path):
     r = _run(env, cohort, out)
     assert r.returncode == 0, r.stderr
     assert "WARNING" in r.stderr and "5" in r.stderr and "3" in r.stderr
+
+
+def test_scaffold_archive_includes_checksums_json(tmp_path):
+    cohort = _make_cohort(tmp_path)
+    out = tmp_path / "upload"
+    wrapper, _ = _make_gpg_wrapper(tmp_path)
+    env = dict(os.environ); env["GPG"] = str(wrapper)
+    assert _run(env, cohort, out).returncode == 0
+    dec = out / "scaffold.tgz"
+    subprocess.run(
+        [str(wrapper), "--output", str(dec), "-d",
+         str(out / "testcohort_15_scaffold.tgz.aes")], check=True)
+    with tarfile.open(dec) as tf:
+        names = tf.getnames()
+    assert "checksums.json" in names, names
+    assert "manifest.json" in names
