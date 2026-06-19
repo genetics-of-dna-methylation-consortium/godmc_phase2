@@ -99,3 +99,26 @@ def test_resume_skips_already_encrypted(tmp_path):
     assert r2.returncode == 0, r2.stderr
     assert "skip testcohort_15_chr1_chunk_0" in r2.stdout
     assert aes.stat().st_mtime_ns == mtime_before  # not regenerated
+
+
+def test_zero_chunks_fails(tmp_path):
+    cohort = _make_cohort(tmp_path, chunks=())  # scaffold present, no A_blocks chunks
+    out = tmp_path / "upload"
+    env, _ = _gpg_env(tmp_path)
+    r = _run(env, cohort, out)
+    assert r.returncode == 1
+    assert "no A_blocks chunks" in r.stderr
+
+
+def test_manifest_mismatch_warns_but_succeeds(tmp_path):
+    cohort = _make_cohort(tmp_path)  # 3 chunks on disk
+    # manifest claims 5 chunks total
+    (cohort / "manifest.json").write_text(
+        '{"A_blocks": {"chromosomes": '
+        '{"1": {"n_chunks": 3}, "2": {"n_chunks": 2}}}}'
+    )
+    out = tmp_path / "upload"
+    env, _ = _gpg_env(tmp_path)
+    r = _run(env, cohort, out)
+    assert r.returncode == 0, r.stderr
+    assert "WARNING" in r.stderr and "5" in r.stderr and "3" in r.stderr

@@ -69,4 +69,18 @@ for chunk_dir in "${ablocks_dir}"/chr*/chunk_*; do
 done
 shopt -u nullglob
 
+if [ "${n_chunks}" -eq 0 ]; then
+  echo "[ld_encrypt] ERROR: no A_blocks chunks found under ${ablocks_dir}" >&2
+  exit 1
+fi
+
+# Best-effort integrity guard: compare against the manifest's declared chunk count.
+manifest="${cohort_stats_dir}/manifest.json"
+if command -v jq >/dev/null 2>&1 && [ -f "${manifest}" ]; then
+  expected="$(jq '[.A_blocks.chromosomes[].n_chunks] | add // 0' "${manifest}" 2>/dev/null || true)"
+  if [ -n "${expected}" ] && [ "${expected}" -gt 0 ] && [ "${expected}" != "${n_chunks}" ]; then
+    echo "[ld_encrypt] WARNING: manifest expects ${expected} chunks but found ${n_chunks}" >&2
+  fi
+fi
+
 echo "[ld_encrypt] done: ${n_chunks} chunk archive(s) + scaffold in ${output_dir}"
