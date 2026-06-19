@@ -19,7 +19,8 @@ fi
 
 if [ ! -f "${covariates_intersect}" ]
 then
-	echo "Problem: intersected covariates file is required at ${covariates_intersect}"
+	echo "Problem: section-03a mQTL-aligned covariates file is required at ${covariates_intersect}"
+	echo "Please run 03a-methylation_variables.sh before 15a-ld_prepare_stats.sh"
 	exit 1
 fi
 
