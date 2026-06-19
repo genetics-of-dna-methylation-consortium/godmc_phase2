@@ -236,9 +236,9 @@ def main() -> None:
         },
         "covariate_schema": {
             "schema_id": DEFAULT_SCHEMA_ID,
-            "required_columns": ["Age_numeric", "Sex_factor"],
+            "required_columns": [],
             "matrix_columns": COVARIATE_MATRIX_COLUMNS,
-            "sex_factor_recode": {"M": 1.0, "F": 2.0},
+            "sex_factor_recode": {},
             "covariates_file": args.covariates,
         },
         "hail": hail_meta,
@@ -257,7 +257,9 @@ def main() -> None:
             "A_blocks/chr<C>/chunk_<N>/ contains per-chromosome chunked "
             "upper-triangular row-interval X X^T as Hail BlockMatrix directories "
             "within radius_bp physical distance.",
-            "The default first-release covariate schema excludes cohort-specific genotype PCs.",
+            "The covariate schema is intercept-only (grand-mean centring): it "
+            "matches the GoDMC mQTL estimand, where every covariate is regressed "
+            "out of methylation in section 03, never out of the genotypes.",
             "Per-variant genotype diagnostics are computed via Hail and written to "
             "variants.tsv.gz; missing calls are mean-imputed before downstream cross-products.",
         ],

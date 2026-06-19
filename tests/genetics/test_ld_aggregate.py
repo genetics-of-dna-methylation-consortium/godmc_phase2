@@ -38,7 +38,7 @@ def test_empty_variant_table_has_schema(tmp_path):
 
 def test_variant_table_round_trip(tmp_path):
     df = pd.DataFrame(
-        [[0, "1:100:G:A", "1", 100, "G", "A", 1, 3.0, 90.0, 1.5, 5.0, 4, 0]],
+        [[0, "1:100:G:A", "1", 100, "G", "A", 1, 3.0, 5.0, 4, 0]],
         columns=agg.VARIANT_COLUMNS,
     )
     agg.write_variant_table(tmp_path, df)
@@ -51,9 +51,9 @@ def _cohort_manifest():
         "study_name": "cohortA",
         "genome_build": "GRCh37",
         "covariate_schema": {
-            "schema_id": "intercept_age_sex",
-            "matrix_columns": ["intercept", "Age_numeric", "Sex_factor"],
-            "sex_factor_recode": {"M": 1.0, "F": 2.0},
+            "schema_id": "intercept_only",
+            "matrix_columns": ["intercept"],
+            "sex_factor_recode": {},
         },
         "variant_index": {"schema_version": "v0.3-with-genotype-stats"},
         "A_blocks": {"radius_bp": 1_000_000, "block_size": 4096},
@@ -64,9 +64,9 @@ def test_extract_contract_pulls_expected_fields():
     c = agg.extract_contract(_cohort_manifest())
     assert c == {
         "genome_build": "GRCh37",
-        "schema_id": "intercept_age_sex",
-        "matrix_columns": ["intercept", "Age_numeric", "Sex_factor"],
-        "sex_factor_recode": {"M": 1.0, "F": 2.0},
+        "schema_id": "intercept_only",
+        "matrix_columns": ["intercept"],
+        "sex_factor_recode": {},
         "variants_schema_version": "v0.3-with-genotype-stats",
         "radius_bp": 1_000_000,
         "block_size": 4096,
@@ -102,8 +102,8 @@ def test_read_cohort_assets(tmp_path):
         ("1", 100, "G", "A", "1:100:G:A", 4, 0, 1.0),
         ("1", 200, "C", "T", "1:200:C:T", 3, 1, 0.5),
     ]
-    b = [[4.0, 90.0, 1.5], [2.0, 70.0, 1.0]]
-    d = [[4, 180, 6], [180, 8200, 270], [6, 270, 10]]
+    b = [[4.0], [2.0]]
+    d = [[7.0]]
     out = _write_cohort_dir(tmp_path, rows, b, d)
 
     variants, b_mat, d_mat = agg.read_cohort_assets(out)
@@ -111,15 +111,29 @@ def test_read_cohort_assets(tmp_path):
     assert variants["pos"].tolist() == [100, 200]
     np.testing.assert_array_equal(b_mat, np.asarray(b))
     np.testing.assert_array_equal(d_mat, np.asarray(d))
-    assert b_mat.shape == (2, 3)
+    assert b_mat.shape == (2, 1)
 
 
 def test_read_cohort_assets_rejects_b_row_mismatch(tmp_path):
     rows = [("1", 100, "G", "A", "1:100:G:A", 4, 0, 1.0)]
-    out = _write_cohort_dir(tmp_path, rows, [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
-                            np.eye(3))
+    out = _write_cohort_dir(tmp_path, rows, [[1.0], [4.0]], [[1.0]])
     with pytest.raises(ValueError, match="rows"):
         agg.read_cohort_assets(out)
+
+
+def test_read_cohort_assets_rejects_non_intercept_only_shapes(tmp_path):
+    # The intercept-only schema requires B (n x 1) and D (1 x 1); a legacy
+    # 3-column export (intercept+age+sex) must hard-fail rather than be adjusted.
+    rows = [("1", 100, "G", "A", "1:100:G:A", 4, 0, 1.0)]
+    out = _write_cohort_dir(tmp_path, rows, [[4.0, 90.0, 1.5]], np.eye(3))
+    with pytest.raises(ValueError, match="1"):
+        agg.read_cohort_assets(out)
+
+
+def test_variant_columns_have_no_age_sex():
+    assert "b_age" not in agg.VARIANT_COLUMNS
+    assert "b_sex" not in agg.VARIANT_COLUMNS
+    assert "b_intercept" in agg.VARIANT_COLUMNS
 
 
 def _variants_df(rows):
@@ -134,7 +148,7 @@ def test_merge_variant_table_assigns_ids_and_sums():
         ("1", 100, "G", "A", "1:100:G:A", 4, 0, 1.0),
         ("1", 200, "C", "T", "1:200:C:T", 3, 1, 0.5),
     ])
-    b = np.array([[4.0, 90.0, 1.5], [2.0, 70.0, 1.0]])
+    b = np.array([[4.0], [2.0]])
 
     table, id_map, next_id = agg.merge_variant_table(table, cohort, b, next_stable_id=0)
     assert next_id == 2
@@ -147,7 +161,7 @@ def test_merge_variant_table_assigns_ids_and_sums():
         ("1", 100, "G", "A", "1:100:G:A", 5, 0, 1.2),
         ("1", 300, "A", "G", "1:300:A:G", 5, 0, 0.8),
     ])
-    b2 = np.array([[6.0, 100.0, 2.0], [3.0, 80.0, 1.0]])
+    b2 = np.array([[6.0], [3.0]])
     table, id_map2, next_id = agg.merge_variant_table(table, cohort2, b2, next_stable_id=next_id)
 
     assert next_id == 3
@@ -239,13 +253,12 @@ def _build_synthetic_cohort(tmp_path, study_name="cohortA"):
     with gzip.open(cohort / "variants.tsv.gz", "wt") as fh:
         fh.write("chr\tpos\tref\talt\tvariant_id\tn_nonmissing\tn_imputed\tgenotype_mean\n")
         fh.writelines("\t".join(map(str, r)) + "\n" for r in rows)
-    np.save(cohort / "B.npy", np.array([[4.0, 90.0, 1.5], [2.0, 70.0, 1.0]]))
-    np.save(cohort / "D.npy", np.array([[4.0, 180, 6], [180, 8200, 270], [6, 270, 10]]))
+    np.save(cohort / "B.npy", np.array([[4.0], [2.0]]))
+    np.save(cohort / "D.npy", np.array([[4.0]]))
     manifest = {
         "study_name": study_name, "genome_build": "GRCh37",
-        "covariate_schema": {"schema_id": "intercept_age_sex",
-            "matrix_columns": ["intercept", "Age_numeric", "Sex_factor"],
-            "sex_factor_recode": {"M": 1.0, "F": 2.0}},
+        "covariate_schema": {"schema_id": "intercept_only",
+            "matrix_columns": ["intercept"], "sex_factor_recode": {}},
         "variant_index": {"schema_version": "v0.3-with-genotype-stats"},
         "A_blocks": {"radius_bp": 1_000_000, "block_size": 8,
             "chromosomes": {"1": {"chunks": [
@@ -291,7 +304,7 @@ def test_resolve_intersection_keeps_full_membership():
         "stable_id": [0, 1, 2], "variant_id": ["1:200:C:T", "1:100:G:A", "2:50:A:C"],
         "chr": ["1", "1", "2"], "pos": [200, 100, 50], "ref": ["C", "G", "A"],
         "alt": ["T", "A", "C"], "membership_count": [2, 1, 2],
-        "b_intercept": [0.0]*3, "b_age": [0.0]*3, "b_sex": [0.0]*3,
+        "b_intercept": [0.0]*3,
         "a_diag": [0.0]*3, "n_nonmissing": [0]*3, "n_imputed": [0]*3,
     })
     kept = agg.resolve_intersection(table, n_cohorts=2, min_cohorts=2)
@@ -302,11 +315,11 @@ def test_resolve_intersection_keeps_full_membership():
 
 def test_apply_filters_drops_rare_and_unstable():
     # D[0,0] = N = 100. b_intercept 30 -> f=0.15 keep; b_intercept 1 -> f=0.005 drop
-    d = np.diag([100.0, 1.0, 1.0])
+    d = np.array([[100.0]])
     kept = pd.DataFrame({
         "stable_id": [0, 1], "variant_id": ["1:100:G:A", "1:200:C:T"],
         "chr": ["1", "1"], "pos": [100, 200], "ref": ["G", "C"], "alt": ["A", "T"],
-        "b_intercept": [30.0, 1.0], "b_age": [0.0, 0.0], "b_sex": [0.0, 0.0],
+        "b_intercept": [30.0, 1.0],
         "a_diag": [50.0, 50.0], "pooled_index": [0, 1],
     })
     surv, dropped = agg.apply_filters(kept, d, maf_threshold=0.01, min_adj_diag=0.0)
@@ -354,8 +367,7 @@ def _build_two_cohort_precursor(tmp_path):
     def build_and_accumulate(name, n_samples, seed):
         r = np.random.default_rng(seed)
         X = r.integers(0, 3, size=(n_samples, 3)).astype(float)
-        C = np.column_stack([np.ones(n_samples), r.normal(size=n_samples),
-                             r.integers(1, 3, n_samples).astype(float)])
+        C = np.ones((n_samples, 1))
         A = X.T @ X
         B = X.T @ C
         D = C.T @ C
@@ -369,9 +381,8 @@ def _build_two_cohort_precursor(tmp_path):
         np.save(cohort / "D.npy", D)
         manifest = {
             "study_name": name, "genome_build": "GRCh37",
-            "covariate_schema": {"schema_id": "intercept_age_sex",
-                "matrix_columns": ["intercept", "Age_numeric", "Sex_factor"],
-                "sex_factor_recode": {"M": 1.0, "F": 2.0}},
+            "covariate_schema": {"schema_id": "intercept_only",
+                "matrix_columns": ["intercept"], "sex_factor_recode": {}},
             "variant_index": {"schema_version": "v0.3-with-genotype-stats"},
             "A_blocks": {"radius_bp": 1_000_000, "block_size": 8,
                 "chromosomes": {"1": {"chunks": [
@@ -464,8 +475,7 @@ def test_finalise_multi_chromosome_keeps_offdiagonals(tmp_path):
     def build_and_accumulate(name, n_samples, seed):
         r = np.random.default_rng(seed)
         X = r.integers(0, 3, size=(n_samples, 4)).astype(float)
-        C = np.column_stack([np.ones(n_samples), r.normal(size=n_samples),
-                             r.integers(1, 3, n_samples).astype(float)])
+        C = np.ones((n_samples, 1))
         cohort_X[name], cohort_C[name] = X, C
         cohort = tmp_path / name
         cohort.mkdir()
@@ -477,9 +487,8 @@ def test_finalise_multi_chromosome_keeps_offdiagonals(tmp_path):
         np.save(cohort / "D.npy", C.T @ C)
         manifest = {
             "study_name": name, "genome_build": "GRCh37",
-            "covariate_schema": {"schema_id": "intercept_age_sex",
-                "matrix_columns": ["intercept", "Age_numeric", "Sex_factor"],
-                "sex_factor_recode": {"M": 1.0, "F": 2.0}},
+            "covariate_schema": {"schema_id": "intercept_only",
+                "matrix_columns": ["intercept"], "sex_factor_recode": {}},
             "variant_index": {"schema_version": "v0.3-with-genotype-stats"},
             "A_blocks": {"radius_bp": 1_000_000, "block_size": 8, "chromosomes": {
                 c: {"chunks": [{"row_start": 0, "row_stop": 2, "column_start": 0,

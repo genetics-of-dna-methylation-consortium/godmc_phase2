@@ -23,7 +23,7 @@ DEFAULT_MIN_ADJ_DIAG = 0.0
 
 VARIANT_COLUMNS = [
     "stable_id", "variant_id", "chr", "pos", "ref", "alt",
-    "membership_count", "b_intercept", "b_age", "b_sex",
+    "membership_count", "b_intercept",
     "a_diag", "n_nonmissing", "n_imputed",
 ]
 
@@ -31,7 +31,7 @@ _VARIANT_DTYPES = {
     "stable_id": "int64", "variant_id": "object", "chr": "object",
     "pos": "int64", "ref": "object", "alt": "object",
     "membership_count": "int64", "b_intercept": "float64",
-    "b_age": "float64", "b_sex": "float64", "a_diag": "float64",
+    "a_diag": "float64",
     "n_nonmissing": "int64", "n_imputed": "int64",
 }
 
@@ -140,8 +140,11 @@ _COHORT_VARIANT_DTYPES = {
 def read_cohort_assets(cohort_dir: str | Path) -> tuple[pd.DataFrame, np.ndarray, np.ndarray]:
     """Read a 15a cohort's variants.tsv.gz, B.npy, and D.npy.
 
-    Returns (variants_df in file/row order, B (n_variants x 3), D (3 x 3)).
-    Hard-fails if B's row count does not match the variant count.
+    Returns (variants_df in file/row order, B (n_variants x 1), D (1 x 1)).
+    Hard-fails if B's row count does not match the variant count. The
+    intercept-only schema means B is a single column (per-variant dosage sum)
+    and D is the 1x1 sample-count scalar; a legacy multi-column export is
+    rejected rather than silently adjusted.
     """
     cohort_dir = Path(cohort_dir)
     variants = pd.read_csv(
@@ -154,9 +157,10 @@ def read_cohort_assets(cohort_dir: str | Path) -> tuple[pd.DataFrame, np.ndarray
             f"B.npy has {b_mat.shape[0]} rows but variants.tsv.gz has "
             f"{len(variants)} rows; they must align one-to-one"
         )
-    if b_mat.shape[1] != 3 or d_mat.shape != (3, 3):
+    if b_mat.shape[1] != 1 or d_mat.shape != (1, 1):
         raise ValueError(
-            f"Expected B (n x 3) and D (3 x 3); got B{b_mat.shape}, D{d_mat.shape}"
+            f"Expected B (n x 1) and D (1 x 1) for the intercept-only schema; "
+            f"got B{b_mat.shape}, D{d_mat.shape}"
         )
     return variants, b_mat, d_mat
 
@@ -169,8 +173,9 @@ def merge_variant_table(
 ) -> tuple[pd.DataFrame, dict[str, int], int]:
     """Add one cohort's per-variant data into the master table.
 
-    Assigns a fresh stable_id to each unseen variant_id, sums the three B
-    columns, n_nonmissing, n_imputed, and bumps membership_count. a_diag is
+    Assigns a fresh stable_id to each unseen variant_id, sums the single B
+    column (b_intercept = per-variant dosage sum), n_nonmissing, n_imputed,
+    and bumps membership_count. a_diag is
     untouched here (filled by the A-merge). Returns (updated table,
     {variant_id: stable_id} for this cohort, next free stable_id).
     """
@@ -185,8 +190,6 @@ def merge_variant_table(
         if vid in known_ids:
             sid = int(known_ids[vid])
             existing.loc[vid, "b_intercept"] += b[0]
-            existing.loc[vid, "b_age"] += b[1]
-            existing.loc[vid, "b_sex"] += b[2]
             existing.loc[vid, "n_nonmissing"] += int(row.n_nonmissing)
             existing.loc[vid, "n_imputed"] += int(row.n_imputed)
             existing.loc[vid, "membership_count"] += 1
@@ -197,8 +200,7 @@ def merge_variant_table(
             new_rows.append({
                 "stable_id": sid, "variant_id": vid, "chr": row.chr,
                 "pos": int(row.pos), "ref": row.ref, "alt": row.alt,
-                "membership_count": 1, "b_intercept": float(b[0]),
-                "b_age": float(b[1]), "b_sex": float(b[2]), "a_diag": 0.0,
+                "membership_count": 1, "b_intercept": float(b[0]), "a_diag": 0.0,
                 "n_nonmissing": int(row.n_nonmissing), "n_imputed": int(row.n_imputed),
             })
         id_map[vid] = sid
@@ -390,7 +392,7 @@ def accumulate(
             "next_stable_id": 0,
         }
         precursor_dir.mkdir(parents=True, exist_ok=True)
-        _atomic_np_save(precursor_paths(precursor_dir)["d"], np.zeros((3, 3)))
+        _atomic_np_save(precursor_paths(precursor_dir)["d"], np.zeros((1, 1)))
     else:
         validate_contract(pm["contract"], contract)
         if any(c["study_name"] == study_name for c in pm["cohorts"]) and not force:
@@ -477,7 +479,7 @@ def apply_filters(kept: pd.DataFrame, d_matrix: np.ndarray,
     """
     n = d_matrix[0, 0]
     d_inv = np.linalg.inv(d_matrix)
-    b = kept[["b_intercept", "b_age", "b_sex"]].to_numpy()
+    b = kept[["b_intercept"]].to_numpy()
     freq = b[:, 0] / (2.0 * n)
     maf = np.minimum(freq, 1.0 - freq)
     # adjusted diagonal a_diag - b D^-1 b^T per row
@@ -618,7 +620,7 @@ def finalise(precursor_dir, panel_dir, r_writer, maf_threshold, min_adj_diag,
         raise ValueError("All variants dropped by pooled filters")
 
     d_inv = np.linalg.inv(d_matrix)
-    b_all = surv[["b_intercept", "b_age", "b_sex"]].to_numpy()
+    b_all = surv[["b_intercept"]].to_numpy()
     w_all = b_all @ d_inv
     adj_diag_all = surv["a_adj_diag"].to_numpy()
     sid_to_pooled = dict(zip(surv["stable_id"].to_numpy(), surv["pooled_index"].to_numpy()))

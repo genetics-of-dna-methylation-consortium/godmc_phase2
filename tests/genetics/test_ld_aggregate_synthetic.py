@@ -92,11 +92,11 @@ COHORT_B_COVARIATES = [
 
 
 def _covariate_matrix(rows: list[tuple[str, int, str]]) -> np.ndarray:
-    sex_map = {"M": 1.0, "F": 2.0}
-    return np.array(
-        [[1.0, float(age), sex_map[sex]] for _, age, sex in rows],
-        dtype=np.float64,
-    )
+    # Section 15 is intercept-only (grand-mean centring): Age/Sex in the cohort
+    # covariate file are deliberately ignored, so the reference C is a column of
+    # ones. With this C, A_adj is the mean-centred cross-product and R reduces to
+    # the plain Pearson correlation of stacked dosages -> the GoDMC mQTL estimand.
+    return np.ones((len(rows), 1), dtype=np.float64)
 
 
 def _write_covariates_file(path: Path, rows: list[tuple[str, int, str]]) -> None:
@@ -210,6 +210,11 @@ def test_two_cohort_a_adj_matches_stacked_residualisation(tmp_path):
     A_adj = A - B @ np.linalg.inv(D) @ B.T
     diag = np.diag(A_adj)
     R_ref = A_adj / np.sqrt(np.outer(diag, diag))
+
+    # Intercept-only adjustment must reduce exactly to the Pearson correlation of
+    # the stacked dosage matrix (the GoDMC mQTL estimand). Confirm the reference
+    # equals np.corrcoef before masking to the LD window.
+    np.testing.assert_allclose(R_ref, np.corrcoef(x_full, rowvar=False), rtol=1e-12)
 
     # The panel only stores pairs within the LD radius (DEFAULT_LD_RADIUS_BP =
     # 1,000,000 bp): pos_j <= pos_i + radius_bp. Variants here are at 1/2/3 Mbp,

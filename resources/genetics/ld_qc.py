@@ -28,13 +28,16 @@ class VariantIndex(TypedDict):
     counts: dict[str, int]
 
 
-DEFAULT_SCHEMA_ID = "intercept_age_sex"
-DEFAULT_SCHEMA_COLUMNS = [
-    "Age_numeric",
-    "Sex_factor",
-]
-COVARIATE_MATRIX_COLUMNS = ["intercept", "Age_numeric", "Sex_factor"]
-SEX_FACTOR_RECODE = {"M": 1.0, "F": 2.0}
+# Section 15 matches the GoDMC mQTL estimand. In sections 03b/03e every covariate
+# (genetic PCs, cell counts, age, sex, batch, smoking, methylation PCs) is regressed
+# out of the methylation phenotype, never out of the genotypes; the HASE SNP-side
+# design is intercept-only (a column of ones). Correlation among SNPs is invariant
+# to anything done to the phenotype, so the LD that reproduces the mQTL z-scores is
+# the grand-mean-centred genotype correlation -> the section-15 covariate matrix is
+# intercept-only. See LD_ESTIMAND_VS_MQTL_CONSTRUCTION.md.
+DEFAULT_SCHEMA_ID = "intercept_only"
+DEFAULT_SCHEMA_COLUMNS: list[str] = []
+COVARIATE_MATRIX_COLUMNS = ["intercept"]
 AUTOSOMES = {str(c) for c in range(1, 23)}
 VALID_BASES = {"A", "C", "G", "T"}
 MHC_CHROMOSOME = "6"
@@ -153,31 +156,14 @@ def build_sample_alignment(
 def build_covariate_matrix(
     final_samples: list[str], covariates: CovariateTable
 ) -> np.ndarray:
-    """Build the frozen section-15 covariate matrix for aligned samples."""
+    """Build the frozen section-15 covariate matrix for aligned samples.
+
+    The schema is intercept-only (a single column of ones); covariate values
+    are intentionally not consumed (see COVARIATE_MATRIX_COLUMNS rationale).
+    """
     if not final_samples:
         raise ValueError("Cannot build covariate matrix from empty sample list")
-    matrix = np.empty((len(final_samples), len(COVARIATE_MATRIX_COLUMNS)), dtype=np.float64)
-    for i, iid in enumerate(final_samples):
-        if iid not in covariates:
-            raise KeyError(f"Sample {iid} missing from covariate table")
-        row = covariates[iid]
-        try:
-            age = float(row["Age_numeric"])
-        except (KeyError, ValueError) as exc:
-            raise ValueError(
-                f"Sample {iid} has invalid Age_numeric "
-                f"'{row.get('Age_numeric')}'"
-            ) from exc
-        sex_raw = row.get("Sex_factor", "")
-        if sex_raw not in SEX_FACTOR_RECODE:
-            raise ValueError(
-                f"Sample {iid} has unrecognised Sex_factor '{sex_raw}'; "
-                f"expected one of {sorted(SEX_FACTOR_RECODE)}"
-            )
-        matrix[i, 0] = 1.0
-        matrix[i, 1] = age
-        matrix[i, 2] = SEX_FACTOR_RECODE[sex_raw]
-    return matrix
+    return np.ones((len(final_samples), 1), dtype=np.float64)
 
 
 def build_variant_index(
