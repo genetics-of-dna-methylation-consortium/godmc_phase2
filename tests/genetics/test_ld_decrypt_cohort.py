@@ -4,8 +4,6 @@ import os
 import subprocess
 from pathlib import Path
 
-import pytest
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ENCRYPT = REPO_ROOT / "resources" / "genetics" / "ld_encrypt_cohort.sh"
 DECRYPT = REPO_ROOT / "resources" / "genetics" / "ld_decrypt_cohort.sh"
@@ -147,3 +145,22 @@ def test_zero_chunks_fails(tmp_path):
     r = _decrypt(env, upload, rebuilt)
     assert r.returncode == 1
     assert "no A_blocks chunk archives" in r.stderr
+
+
+def test_manifest_study_name_mismatch_fails(tmp_path):
+    """Scaffold archive exists (pre-flight passes) but manifest embeds a different
+    study_name — the manifest cross-check must fire and reject the decrypt."""
+    wrapper = _make_gpg_wrapper(tmp_path)
+    env = _env(wrapper)
+    # manifest.json embeds "wrongstudy" but archives are named "cohortA_*"
+    cohort = _make_cohort(tmp_path, study="wrongstudy")
+    upload = tmp_path / "upload"
+    rebuilt = tmp_path / "rebuilt"
+    assert _encrypt(env, cohort, upload, study="cohortA").returncode == 0
+    # cohortA_15_scaffold.tgz.aes exists → pre-flight passes; manifest cross-check fires
+    r = _decrypt(env, upload, rebuilt, study="cohortA")
+    assert r.returncode == 1
+    # Error must come from the manifest cross-check (section 2), not the pre-flight
+    assert "manifest study_name" in r.stderr
+    assert "wrongstudy" in r.stderr
+    assert "cohortA" in r.stderr

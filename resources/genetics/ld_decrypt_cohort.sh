@@ -28,9 +28,9 @@ GPG="${GPG:-gpg}"
 staging="${output_dir}/.staging"
 mkdir -p "${staging}"
 
-# Decrypt ${input_dir}/$1.tgz.aes -> ${staging}/$1.tgz and verify its .md5sum.
+# Decrypt ${input_dir}/${base}.tgz.aes -> ${staging}/${base}.tgz and verify its .md5sum.
 # The input .aes is never modified or removed. The caller derives the tar path as
-# "${staging}/$1.tgz" itself (do NOT capture this function's stdout — md5sum -c
+# "${staging}/${base}.tgz" itself (do NOT capture this function's stdout — md5sum -c
 # prints an "OK" line there).
 decrypt_and_verify () {
   local base="$1"
