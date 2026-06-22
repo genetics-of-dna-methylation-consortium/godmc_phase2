@@ -260,6 +260,7 @@ ld_15b_mode="${ld_15b_mode:-accumulate}"
 ld_maf_threshold="${ld_maf_threshold:-0.01}"
 ld_min_adj_diag="${ld_min_adj_diag:-0.0}"
 ld_min_cohorts="${ld_min_cohorts:-}"
+ld_chromosomes="${ld_chromosomes:-1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22}"
 
 resname="res"
 
@@ -307,6 +308,11 @@ sftp_path_inversions="/usr/local/etc2/ftp/godmc/pub/bristol"
 
 sftp_address_nc866="https://86.50.168.229"
 sftp_path_nc866="/remote.php/webdav/GoDMC"
+
+# Imperial section-15 (LD) rsync endpoint. Placeholder until the endpoint is
+# finalised; the wrapper's transport step is isolated so this can change in one place.
+imperial_host="${imperial_host:-TODO.imperial.ac.uk}"
+imperial_path="${imperial_path:-/godmc/ld_upload}"
 
 # scripts and binaries
 plink="${scripts_directory}/resources/bin/plink1.90"

@@ -17,6 +17,11 @@ sftp_username_nc866=""
 # This should be "~/.ssh/id_rsa" or "~/.ssh/id_dsa" on your HPC system/server. See instructions on the wiki on how to set up your key.
 key=""
 
+# Imperial LD-upload (section 15) account, provided by the GoDMC developers.
+imperial_user=""
+# Path to the SSH private key for the Imperial LD-upload account (often the same as `key`).
+imperial_key=""
+
 # Full path to where the input_data folder is which contains your data formatted as described in the github repo
 home_directory=""
 
