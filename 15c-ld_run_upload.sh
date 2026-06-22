@@ -65,10 +65,132 @@ process_chunk () {
 	return 1
 }
 
+# prepare_chromosome <C> <outdir> — run 15a compute for chromosome C into outdir.
+prepare_chromosome () {
+	local chr="$1" outdir="$2"
+	mkdir -p "${outdir}"
+	if [ -n "${LD_PREPARE_CMD:-}" ]; then
+		"${LD_PREPARE_CMD}" "${chr}" "${outdir}"
+		return $?
+	fi
+	local hail_runtime_args=""
+	if [ -n "${ld_hail_local_cores:-}" ]; then
+		hail_runtime_args="${hail_runtime_args} --hail-local-cores ${ld_hail_local_cores}"
+	fi
+	if [ -n "${ld_hail_driver_memory_gb:-}" ]; then
+		hail_runtime_args="${hail_runtime_args} --hail-driver-memory-gb ${ld_hail_driver_memory_gb}"
+	fi
+	python "${scripts_directory}/resources/genetics/ld_prepare_stats.py" \
+		--study-name "${study_name}" \
+		--bfile "${bfile}" \
+		--covariates "${covariates_intersect}" \
+		--output-dir "${outdir}" \
+		--log-file "${section_15a_logfile}" \
+		--chromosome "${chr}" \
+		--hail-partitions "${ld_hail_partitions}" \
+		--hail-tmp-dir "${ld_hail_tmp_dir}" \
+		--a-block-size "${ld_a_block_size}" \
+		--a-chunk-rows "${ld_a_chunk_rows}" \
+		--a-max-dense-gb "${ld_a_max_dense_gb}" \
+		${hail_runtime_args}
+}
+
+# check_chromosome <outdir> — required scaffold + A_blocks present.
+check_chromosome () {
+	local outdir="$1" f
+	for f in manifest.json variants.tsv.gz D.npy B.npy; do
+		if [ ! -f "${outdir}/${f}" ]; then
+			echo "[15c] check failed: missing ${f} in ${outdir}" >&2
+			return 1
+		fi
+	done
+	if [ ! -d "${outdir}/A_blocks" ]; then
+		echo "[15c] check failed: missing A_blocks in ${outdir}" >&2
+		return 1
+	fi
+}
+
+# ship_scaffold <outdir> <out_dir> <study_tag>
+ship_scaffold () {
+	local outdir="$1" out_dir="$2" study_tag="$3"
+	local base="${study_tag}_15_scaffold"
+	mkdir -p "${out_dir}"
+	tar czf "${out_dir}/${base}.tgz" -C "${outdir}" \
+		manifest.json variants.tsv.gz D.npy B.npy checksums.json qc_report.txt
+	( cd "${out_dir}" && md5sum "${base}.tgz" > "${base}.md5sum" )
+	"${GPG}" --output "${out_dir}/${base}.tgz.aes" \
+		--symmetric --cipher-algo AES256 "${out_dir}/${base}.tgz"
+	rm -f "${out_dir}/${base}.tgz"
+	if ship_file "${out_dir}/${base}.tgz.aes" && ship_file "${out_dir}/${base}.md5sum"; then
+		rm -f "${out_dir}/${base}.tgz.aes" "${out_dir}/${base}.md5sum"
+		echo "[15c] shipped ${base}"
+		return 0
+	fi
+	echo "[15c] ship FAILED for ${base}; leaving source in place" >&2
+	return 1
+}
+
+# process_chromosome <C> <study> <cohort_root> <out_dir>
+process_chromosome () {
+	local chr="$1" study="$2" cohort_root="$3" out_dir="$4"
+	local outdir="${cohort_root}/chr${chr}"
+	if chr_done "${outdir}"; then
+		echo "[15c] chr${chr} already uploaded; skip"
+		return 0
+	fi
+	prepare_chromosome "${chr}" "${outdir}"
+	check_chromosome "${outdir}" || return 1
+	local ablocks="${outdir}/A_blocks" tag="${study}_chr${chr}"
+	local chunk_dir
+	shopt -s nullglob
+	for chunk_dir in "${ablocks}"/chr*/chunk_*; do
+		[ -d "${chunk_dir}" ] || continue
+		if ! process_chunk "${chunk_dir}" "${ablocks}" "${out_dir}" "${tag}"; then
+			shopt -u nullglob
+			return 1
+		fi
+	done
+	shopt -u nullglob
+	ship_scaffold "${outdir}" "${out_dir}" "${tag}" || return 1
+	touch "${outdir}/.uploaded"
+	rm -rf "${ablocks}"
+	echo "[15c] chr${chr} complete"
+}
+
 main () {
 	source resources/setup.sh "$@"
 	set -- $concatenated
-	echo "[15c] main is implemented in a later task"
+
+	exec &> >(tee "${section_15a_logfile}")
+	print_version
+
+	local cohort_root="${ld_prepare_dir}"
+	local upload_dir="${section_15_dir}/upload"
+	mkdir -p "${cohort_root}" "${upload_dir}" "${ld_hail_tmp_dir}"
+
+	if [ ! -f "${bfile}.bed" ]; then
+		echo "Problem: cleaned section-02 genotype files are required at ${bfile}"
+		exit 1
+	fi
+	if [ ! -f "${covariates_intersect}" ]; then
+		echo "Problem: section-03a mQTL-aligned covariates are required at ${covariates_intersect}"
+		exit 1
+	fi
+
+	local failed=0 chr
+	for chr in ${ld_chromosomes}; do
+		echo "[15c] ===== chromosome ${chr} ====="
+		if ! process_chromosome "${chr}" "${study_name}" "${cohort_root}" "${upload_dir}"; then
+			echo "[15c] chromosome ${chr} did NOT complete; re-run to resume" >&2
+			failed=1
+		fi
+	done
+
+	if [ "${failed}" -ne 0 ]; then
+		echo "[15c] one or more chromosomes failed; re-run ./15c-ld_run_upload.sh to resume"
+		exit 1
+	fi
+	echo "Successfully ran and uploaded all section-15 LD cohort chromosomes"
 }
 
 if [ "${BASH_SOURCE[0]}" = "${0}" ]; then

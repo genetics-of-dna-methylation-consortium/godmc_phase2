@@ -122,3 +122,74 @@ def test_process_chunk_failed_ship_keeps_everything(tmp_path):
     base = "study_chr22_15_chr22_chunk_0"
     assert (out / f"{base}.tgz.aes").is_file()
     assert (out / f"{base}.md5sum").is_file()
+
+
+def _prepare_stub(tmp_path):
+    """A fake 15a: creates scaffold files + two A_blocks chunks for <chr> in <outdir>."""
+    s = tmp_path / "prepare_stub.sh"
+    s.write_text(
+        "#!/usr/bin/env bash\n"
+        'set -euo pipefail\n'
+        'C="$1"; OUT="$2"\n'
+        'mkdir -p "$OUT/A_blocks/chr${C}/chunk_0" "$OUT/A_blocks/chr${C}/chunk_1"\n'
+        'echo data0 > "$OUT/A_blocks/chr${C}/chunk_0/part-00000"\n'
+        'echo data1 > "$OUT/A_blocks/chr${C}/chunk_1/part-00000"\n'
+        'echo "{}" > "$OUT/manifest.json"\n'
+        'printf "" | gzip > "$OUT/variants.tsv.gz"\n'
+        'echo D > "$OUT/D.npy"; echo B > "$OUT/B.npy"\n'
+        'echo "{}" > "$OUT/checksums.json"; echo qc > "$OUT/qc_report.txt"\n'
+    )
+    s.chmod(0o755)
+    return s
+
+
+def _process_chr_env(tmp_path):
+    gpg = _gpg_wrapper(tmp_path)
+    ship, dest = _ship_ok(tmp_path)
+    prep = _prepare_stub(tmp_path)
+    return {
+        "GPG": str(gpg), "LD_SHIP_CMD": str(ship), "LD_PREPARE_CMD": str(prep),
+    }, dest
+
+
+def test_process_chromosome_success_deletes_ablocks_and_marks(tmp_path):
+    root = tmp_path / "cohort_stats"; root.mkdir()
+    out = tmp_path / "upload"; out.mkdir()
+    env, dest = _process_chr_env(tmp_path)
+    r = _call(f'process_chromosome 22 "study" "{root}" "{out}"', env=env)
+    assert r.returncode == 0, r.stderr
+    chrdir = root / "chr22"
+    assert (chrdir / ".uploaded").is_file()          # marked
+    assert not (chrdir / "A_blocks").exists()         # big data reclaimed
+    assert (chrdir / "D.npy").is_file()               # scaffold kept locally
+    # scaffold + 2 chunks shipped (each: .tgz.aes + .md5sum)
+    assert (dest / "study_chr22_15_scaffold.tgz.aes").is_file()
+    assert (dest / "study_chr22_15_chr22_chunk_0.tgz.aes").is_file()
+    assert (dest / "study_chr22_15_chr22_chunk_1.tgz.aes").is_file()
+
+
+def test_process_chromosome_skips_when_already_done(tmp_path):
+    root = tmp_path / "cohort_stats"; (root / "chr22").mkdir(parents=True)
+    (root / "chr22" / ".uploaded").touch()
+    out = tmp_path / "upload"; out.mkdir()
+    env, dest = _process_chr_env(tmp_path)
+    r = _call(f'process_chromosome 22 "study" "{root}" "{out}"', env=env)
+    assert r.returncode == 0, r.stderr
+    assert "skip" in r.stdout.lower()
+    assert list(dest.glob("*")) == []   # nothing shipped
+
+
+def test_process_chromosome_failed_upload_keeps_ablocks_no_sentinel(tmp_path):
+    root = tmp_path / "cohort_stats"; root.mkdir()
+    out = tmp_path / "upload"; out.mkdir()
+    gpg = _gpg_wrapper(tmp_path)
+    prep = _prepare_stub(tmp_path)
+    fail = tmp_path / "ship_fail.sh"
+    fail.write_text("#!/usr/bin/env bash\nexit 1\n")
+    fail.chmod(0o755)
+    env = {"GPG": str(gpg), "LD_SHIP_CMD": str(fail), "LD_PREPARE_CMD": str(prep)}
+    r = _call(f'process_chromosome 22 "study" "{root}" "{out}"', env=env)
+    assert r.returncode != 0
+    chrdir = root / "chr22"
+    assert not (chrdir / ".uploaded").exists()        # not marked
+    assert (chrdir / "A_blocks").exists()             # data preserved
