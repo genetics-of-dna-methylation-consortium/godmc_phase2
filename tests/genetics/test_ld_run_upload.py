@@ -118,3 +118,7 @@ def test_process_chunk_failed_ship_keeps_everything(tmp_path):
     # source chunk NOT deleted on a failed upload
     assert chunk.exists()
     assert (chunk / "part-00000").is_file()
+    # staged encrypted artifacts also preserved on ship failure
+    base = "study_chr22_15_chr22_chunk_0"
+    assert (out / f"{base}.tgz.aes").is_file()
+    assert (out / f"{base}.md5sum").is_file()
