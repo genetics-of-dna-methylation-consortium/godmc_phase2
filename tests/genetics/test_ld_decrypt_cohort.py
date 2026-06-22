@@ -222,3 +222,48 @@ def test_decrypted_cohort_accumulates_with_checksum_verification(tmp_path):
     pm = agg.read_precursor_manifest(precursor)
     assert pm["n_cohorts"] == 1
     assert pm["cohorts"][0]["study_name"] == "cohortA"
+
+
+def test_two_cohorts_roundtrip_accumulate_and_finalise(tmp_path):
+    """Smoke test of the full central path for TWO cohorts:
+    encrypt -> decrypt -> accumulate (x2) -> finalise. Both cohorts carry a real
+    checksums.json verified on every accumulate; the two fully overlap, so the
+    pooled panel is non-empty. No hail dependency (fake chunk_reader)."""
+    wrapper = _make_gpg_wrapper(tmp_path)
+    env = _env(wrapper)
+    precursor = tmp_path / "precursor"
+
+    for study in ("cohortA", "cohortB"):
+        base = tmp_path / study                       # distinct cohort_stats per study
+        cohort = _build_real_cohort(base, study=study)
+        upload = tmp_path / f"{study}_upload"
+        rebuilt = tmp_path / f"{study}_rebuilt"
+        assert _encrypt(env, cohort, upload, study=study).returncode == 0, study
+        assert _decrypt(env, upload, rebuilt, study=study).returncode == 0, study
+        # verify_checksums=True (default) re-checks the round-tripped checksums.json
+        agg.accumulate(rebuilt, precursor, chunk_reader=_fake_reader,
+                       pair_batch_rows=16, verify_checksums=True)
+
+    pm = agg.read_precursor_manifest(precursor)
+    assert pm["n_cohorts"] == 2
+    assert {c["study_name"] for c in pm["cohorts"]} == {"cohortA", "cohortB"}
+
+    panel = tmp_path / "panel"
+    written = []
+
+    def capture_writer(dense, starts, stops, out_dir, block_size):
+        written.append(np.asarray(dense).copy())
+        Path(out_dir).mkdir(parents=True, exist_ok=True)
+        (Path(out_dir) / "MARKER").write_text("ok")
+
+    agg.finalise(precursor, panel, r_writer=capture_writer,
+                 maf_threshold=0.0, min_adj_diag=-1e9, block_size=8,
+                 max_dense_gb=1.0)
+
+    assert (panel / "pooled_manifest.json").is_file()
+    assert (panel / "variants.tsv.gz").is_file()
+    assert written, "R writer was never called — finalise produced no panel blocks"
+    # diagonal of every emitted R block is 1 where present (pooled LD self-correlation)
+    for dense in written:
+        d = np.diag(dense)
+        np.testing.assert_allclose(d[d != 0], 1.0, rtol=1e-9)
