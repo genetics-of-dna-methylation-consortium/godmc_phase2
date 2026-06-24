@@ -259,9 +259,13 @@ light_hase_cov="${home_directory}/processed_data/light_hase/light_hase_cov"
 
 hase_cov_females="${home_directory}/processed_data/hase/hase_cov_females"
 hase_cov_males="${home_directory}/processed_data/hase/hase_cov_males"
+
 hase_encoding="${home_directory}/processed_data/hase/encoding"
+light_hase_encoding="${home_directory}/processed_data/light_hase/encoding"
 hase_mapping="${home_directory}/processed_data/hase/mapped"
+light_hase_mapping="${home_directory}/processed_data/light_hase/mapped"
 hase_single_site="${home_directory}/processed_data/hase/single_site"
+light_hase_single_site="${home_directory}/processed_data/light_hase/single_site"
 
 #vmeQTL
 meth_vmeQTL_directory="${home_directory}/processed_data/methylation_data/vmeQTL"
