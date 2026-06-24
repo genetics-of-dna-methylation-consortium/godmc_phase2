@@ -530,7 +530,7 @@ class Mapper(object):
         if self.reference_name is None:
             raise ValueError('Reference name for mapper is not defined!')
 
-        if len(glob.glob(folder + 'flip_*')) == 0:
+        if len(glob.glob(os.path.join(folder, 'flip_*'))) == 0:
             raise ValueError('There is no flip mapper data in folder {}'.format(folder))
 
         for j, i in enumerate(self.genotype_names):
@@ -554,17 +554,17 @@ class Mapper(object):
         if self.reference_name is None:
             raise ValueError('Reference name for mapper is not defined!')
 
-        if len(glob.glob(folder + 'keys_*')) == 0:
+        if len(glob.glob(os.path.join(folder, 'keys_*'))) == 0:
             raise ValueError('There is no mapper data in folder {}'.format(folder))
 
-        keys = glob.glob(folder + 'keys_*')
+        keys = glob.glob(os.path.join(folder, 'keys_*'))
         if len(keys) > 1:
             raise ValueError('There are more than one reference keys in folder {}'.format(folder))
 
         self.keys = np.load(os.path.join(keys[0]))  # TODO (middle) not safety to load only one file
         self.n_keys = self.keys.shape[0]
 
-        values = glob.glob(folder + 'values_*')
+        values = glob.glob(os.path.join(folder, 'values_*'))
         if len(values) == 0:
             raise ValueError('There is no mapper data in folder {}'.format(folder))
 
