@@ -14,6 +14,7 @@ from hdgwas.tools import Mapper, timing, Timer
 import glob
 import shutil
 from collections import OrderedDict
+from hdgwas.updates.includes import process_meth
 
 
 class MINIMACPool(object):
@@ -1087,13 +1088,7 @@ class CSVFolder(Folder):
 
         else:
             print 'reading file {}'.format(file)
-            for i in ['\t', ' ']:
-                df = pd.read_csv(os.path.join(self.path, file), sep=i, index_col=None)
-                if df.shape[1] > 1:
-                    break
-            else:
-                raise ValueError(
-                    'Cant read {} file; default settings: index=None, header=True; sep=tab or space '.format(file))
+            df = process_meth(os.path.join(self.path, file)).read_meth()
 
             self._data = Data()
             self._data.chunk_size = 1000
