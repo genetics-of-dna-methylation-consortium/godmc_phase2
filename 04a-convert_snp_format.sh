@@ -30,16 +30,26 @@ zcat ${light_hase}/data/ref-hrc.ref.gz | wc -l
 echo "${hrc_ref_allele} lines without header:"
 wc -l ${hrc_ref_allele}
 
+haseinput_pgen="${bfile}_haseinput_pgen"
+
 ${plink2} \
     --bfile "${bfile}" \
-    --new-id-max-allele-len 100 \
     --sort-vars \
     --set-all-var-ids @:#_\$1_\$2 \
     --ref-allele force ${hrc_ref_allele} 2 1 \
+    --make-pgen \
+    --output-chr 26 \
+    --out "${haseinput_pgen}" \
+	--threads "${nthreads}"
+
+${plink2} \
+    --pfile "${haseinput_pgen}" \
     --make-bed \
     --output-chr 26 \
     --out "${bfile}_haseinput" \
 	--threads "${nthreads}"
+
+rm -f "${haseinput_pgen}.pgen" "${haseinput_pgen}.pvar" "${haseinput_pgen}.psam" "${haseinput_pgen}.log"
 
 nX=`grep ^X ${bfile}_haseinput.bim | wc -l`
 
