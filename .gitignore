@@ -15,3 +15,6 @@ resources/genetics/HRC.r1-1.GRCh37.wgs.mac5.sites.tab.cptid.maf001_recoded.gz
 resources/genetics/HRC.r1-1.GRCh37.wgs.mac5.sites.tab.cptid.maf001_recoded.gz.md5sum
 resources/genetics/easyQC_hrc_edit.ecf
 resources/genetics/easyQC_hrc_edit.ecf.out
+resources/bin/light_hase/data/hrc_ref_allele.txt
+resources/bin/light_hase/data/ref-hrc.ref.gz
+resources/bin/light_hase/data/ref-hrc.ref_info.h5
