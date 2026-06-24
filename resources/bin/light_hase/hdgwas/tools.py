@@ -561,7 +561,7 @@ class Mapper(object):
         if len(keys) > 1:
             raise ValueError('There are more than one reference keys in folder {}'.format(folder))
 
-        self.keys = np.load(os.path.join(keys[0]))  # TODO (middle) not safety to load only one file
+        self.keys = np.load(os.path.join(keys[0]), allow_pickle=True)  # TODO (middle) not safety to load only one file
         self.n_keys = self.keys.shape[0]
 
         values = glob.glob(os.path.join(folder, 'values_*'))
