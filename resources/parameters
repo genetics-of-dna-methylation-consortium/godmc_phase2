@@ -244,10 +244,19 @@ resname="res"
 
 #HASE
 hase_dir_plink="${home_directory}/processed_data/hase/hase_plink"
+light_hase_dir_plink="${home_directory}/processed_data/light_hase/light_hase_plink"
+
 hase_dir_in="${home_directory}/processed_data/hase/hase_in"
+light_hase_dir_in="${home_directory}/processed_data/light_hase/light_hase_in"
+
 hase_converting="${home_directory}/processed_data/hase/hase_converting"
+light_hase_converting="${home_directory}/processed_data/light_hase/light_hase_converting"
+
 hase_pheno="${home_directory}/processed_data/hase/hase_pheno"
+light_hase_pheno="${home_directory}/processed_data/light_hase/light_hase_pheno"
 hase_cov="${home_directory}/processed_data/hase/hase_cov"
+light_hase_cov="${home_directory}/processed_data/light_hase/light_hase_cov"
+
 hase_cov_females="${home_directory}/processed_data/hase/hase_cov_females"
 hase_cov_males="${home_directory}/processed_data/hase/hase_cov_males"
 hase_encoding="${home_directory}/processed_data/hase/encoding"
