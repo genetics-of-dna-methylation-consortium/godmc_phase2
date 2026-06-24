@@ -13,13 +13,44 @@ if(!require(glmnet)){
         library(glmnet)
 }
 
+
+if(!require(ROCR)){
+  install.packages("ROCR")
+  library(ROCR)
+}
+
 ##### command arguments  #####
 arguments <- commandArgs(T)
 methylation=arguments[1]
 fam_file <- arguments[2]
 pheno_file = arguments[3]
 out_file = arguments[4]
+covariates_dir =arguments[5]
+pc_file =arguments[6]
 
+#############################################################################################################################################################################################################################
+# Prepare covariates files for GWAS 
+#############################################################################################################################################################################################################################
+covariates <- read.table(paste0(covariates_dir,"/covariates_intersectids.txt"),header=T)
+cols <- grep("numeric", names(covariates), value = TRUE)
+sel <- c("IID",cols)
+sel
+covariates_numeric <- covariates[,sel]
+
+pc <- read.table(pc_file)
+colnames(pc) <- c("FID","IID","pc1","pc2","pc3","pc4","pc5","pc6","pc7","pc8","pc9","pc10")
+numcov <- merge(pc,covariates_numeric,by.x="IID",by.y="IID",all.x=T)
+numcov <- numcov[,c("FID","IID","pc1","pc2","pc3","pc4","pc5","pc6","pc7","pc8","pc9","pc10",cols)]
+write.table(numcov, paste0(covariates_dir,"covariates_intersectids.numeric"),col.names=F, row.names=F,quote=F)
+
+colsf <- grep("factor", names(covariates), value = TRUE)
+sel2 <- c("IID",colsf)
+sel2
+covariates_fac <- covariates[,sel2]
+faccov <- merge(pc,covariates_fac,by.x="IID",by.y="IID",all.x=T)
+faccov <- faccov[,c("FID","IID",colsf)]
+
+write.table(faccov, paste0(covariates_dir,"covariates_intersectids.factor"),col.names=F, row.names=F,quote=F)
 
 
 #############################################################################################################################################################################################################################
@@ -34,7 +65,7 @@ colnames(fam) <- c("FID", "IID")
 # Twin Cohorts should supply a pheno_file that contains information on zygosity of the twins.
 # The script below creates a phenotype file for cohorts that do not include twins, and simply assigns a "non-twin" label to all samples. 
 if(pheno_file=="NULL") {
-message("Creating phenotype file (note: twin cohorts only should supply a phenotype file with zygosity information)")
+message("Creating phenotype file (note: only twin cohorts should supply a phenotype file with zygosity information)")
 pheno=data.frame(fam[,"IID"],rep("non-twin",nrow(fam)))
 colnames(pheno) <- c("IID", "Twinzygosity")
 } else {pheno <- read.table(pheno_file, header=T, stringsAsFactors=FALSE)}
@@ -47,6 +78,7 @@ load(methylation)
 print(dim(norm.beta))
 m <- match(fam[,"IID"], colnames(norm.beta))
 beta <- norm.beta[,m]
+message("Checking if IIDs match")
 print(table(fam[,"IID"]==colnames(beta)))
 rm(norm.beta)
 gc()
@@ -64,9 +96,9 @@ message("Predicting MZ-EpiScore")
 #load("/data/jvandongen/2024_GoDMC/godmc_phase2/resources/MZtwin/MZEpiScore.RData") #CHECK
 load("resources/MZtwin/MZEpiScore.RData")
 CpGlist <- rownames(as.matrix(coef(cv.glmmod,s="lambda.min")))[-1]
-message("N CpGs elasticnet")
+message("N CpGs elasticnet:")
 length(CpGlist)
-message("Number of CpGs present in this dataset")
+message("Number of CpGs present in this dataset:")
 length(intersect(CpGlist,rownames(beta))) # 756
 missingCpGs <- CpGlist[which(!CpGlist %in% rownames(beta))]
 # Add missing CpGs to the input dataset
@@ -77,6 +109,7 @@ colnames(zeros) <- colnames(beta) # sample names
 beta_imp <- rbind(beta,zeros)
 beta_imp <- as.matrix(beta_imp[CpGlist,])
 beta_imp <- t(beta_imp)
+message("Checking if cpgids match")
 table(colnames(beta_imp)==CpGlist)
 rm(beta)
 gc()
@@ -87,10 +120,10 @@ coeffs <- data.frame(CpGlist,coef(cv.glmmod,s="lambda.min")[-1,1]) # [-1] # - in
 non0CpGs <- CpGlist[which(coeffs[,2]!=0)]
 message("Number of CpGs utilized by MZ-EpiScore predictor")
 print(length(non0CpGs)) 
-message ("Number of CpGs used by MZ-EpiScore predictor missing in this dataset")
+message ("Number of CpGs used by MZ-EpiScore predictor missing in this dataset:")
 print(length(intersect(non0CpGs,missingCpGs))) 
 percentagemissingCpGs <- 100*(length(intersect(non0CpGs,missingCpGs)) /length(non0CpGs))
-message("Percentage of missing CpGs used by MZ-Epi predictor")
+message("Percentage of missing CpGs used by MZ-Epi predictor:")
 print(percentagemissingCpGs) 
 
 
@@ -105,6 +138,21 @@ predicted <- as.matrix(predict(cv.glmmod, newx =beta_imp, s = "lambda.min", type
 predicted[which(predicted==1)] <- 'Predicted MZ'
 predicted[which(predicted==0)] <- 'Predicted non-MZ'
 
+#AUC
+obs_zyg <- rep(0,nrow(pheno))
+obs_zyg[which(pheno$Twinzygosity=="MZ")] <- 1
+if (length(unique(obs_zyg)) < 2) {
+    auc <- NA
+} else {
+    prob <-  predict(cv.glmmod,type="response", newx =beta_imp, s = "lambda.min")
+    obs_zyg <- obs_zyg[which(!pheno$Twinzygosity=="UZ")]
+    prob    <- prob[which(!pheno$Twinzygosity=="UZ")]
+    pred <- prediction(prob,obs_zyg)
+    auc <- performance(pred, "auc")@y.values[[1]]
+}
+message("auc (only computed in twin cohorts)")
+print(auc)
+
 # Obtain continuous MZ-EpiScores
 continousscore <- as.matrix(predict(cv.glmmod, newx =beta_imp, s = "lambda.min", type = "link"))
 
@@ -114,11 +162,13 @@ colnames(EpiMZ) <- c("IID","EpiMZClassifier","MZEpiscore")
 EpiMZ <- merge(EpiMZ, fam, by.x="IID", by.y="IID")
 m <- match(fam[,"IID"], EpiMZ[,"IID"])
 EpiMZ <- EpiMZ[m,]
+message("Checking if IIDs match")
 print(table(fam[,"IID"]==EpiMZ[,"IID"]))
 
 
 m <- match(fam[,"IID"], pheno[,"IID"])
 pheno <- pheno[m,]
+message("Checking if IIDs match")
 print(table(pheno[,"IID"]==EpiMZ[,"IID"]))
 
 
@@ -146,7 +196,21 @@ stripchart(MZEpiscore~Zygosity, vertical = TRUE,  method = "jitter", add = TRUE,
 dev.off()
 
 # 2 Cohort descriptives
-save(observed_frequency, predicted_frequency, observedvspredicted_frequency,missingCpGs,percentagemissingCpGs, file=paste0(out_file,"MZEpiscore_Frequencies.RData"))
+save(observed_frequency, predicted_frequency, observedvspredicted_frequency,missingCpGs,percentagemissingCpGs,auc, file=paste0(out_file,"MZEpiscore_Frequencies.RData"))
 
-#3 GWAS pheno file
-write.table(EpiMZ[,c("FID","IID","MZEpiscore")], file=paste0(out_file, "MZEpi.pheno"), row=F, col=T, qu=F)
+#3 GWAS pheno files
+write.table(EpiMZ[,c("FID","IID","MZEpiscore")], file=paste0(out_file, "MZEpi_all.pheno"), row=F, col=T, qu=F)
+
+if("MZ" %in% names(observed_frequency) & observed_frequency["MZ"] > 100)
+{write.table(EpiMZ[which(pheno$Twinzygosity=="MZ"),c("FID","IID","MZEpiscore")], file=paste0(out_file, "MZEpi_MZtwins.pheno"), row=F, col=T, qu=F) 
+message("MZEpi_MZtwins.pheno has been created") 
+} else { message("There are not enough MZ twins --> GWAS will not be run separately for MZ twin pairs") }
+
+if ("non-twin" %in% names(observed_frequency) & observed_frequency["non-twin"] > 100) 
+{write.table(EpiMZ[which(pheno$Twinzygosity=="non-twin"),c("FID","IID","MZEpiscore")], file=paste0(out_file, "MZEpi_nontwins.pheno"), row=F, col=T, qu=F) 
+message("MZEpi_nontwins.pheno has been created") 
+} else { message("There are not enough non-twins --> GWAS will not be run separately for non-twins") }
+
+
+rm(list = ls(all = TRUE))
+
