@@ -1,0 +1,17 @@
+# Ignore user-specific files and folders
+config
+input_data/
+results/
+job_reports/
+processed_data/
+
+# Ignore intermediate files
+temp_hm3snps.txt
+
+# Ignore resource files downloaded from server and website
+EasyQC_9.2.tar.gz
+resources/bin/hase/data/
+resources/genetics/HRC.r1-1.GRCh37.wgs.mac5.sites.tab.cptid.maf001_recoded.gz
+resources/genetics/HRC.r1-1.GRCh37.wgs.mac5.sites.tab.cptid.maf001_recoded.gz.md5sum
+resources/genetics/easyQC_hrc_edit.ecf
+resources/genetics/easyQC_hrc_edit.ecf.out
