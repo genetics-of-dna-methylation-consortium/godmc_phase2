@@ -67,13 +67,16 @@ class ClassicMetaAnalyser:
             # study only.
             study_row_indices = select_identifiers(
                 study_index, sample_indices, sample_intersection)
-
+            
             # Get if covariate indices for this study
-            covariates_this_study = None
+            # If the selected covariates file is non, we will set covariates_this_study to false,
+            # This will make the covariate selector (CohortAnalyser.get_covariate_indices()) default to using
+            # all covariates for which PDs were calculated
+            covariates_this_study = False
             if selected_covariates is not None:
                 # If covariate indices are not goven for this study
                 # we can skip these. We make sure a keyerror is not thrown
-                # by using None as a default.
+                # by using None as a default. This will throw an error later on
                 covariates_this_study = selected_covariates.get(
                     study_name, None)
 
@@ -971,6 +974,8 @@ class CohortAnalyser:
                     self.study_name
                 ))
             #return np.arange(self._a_cov.shape[0])
+        elif self._selected_covariates is False:
+            self._selected_covariates = self._encoded_covariates
 
         covariate_indices = np.where(np.in1d(self._encoded_covariates, self._selected_covariates))[0]
 

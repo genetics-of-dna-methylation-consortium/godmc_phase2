@@ -80,7 +80,7 @@ def main(argv=None):
     parser.add_argument("-g", "--genotype", nargs='+', type=str, help="path/paths to genotype data folder")
     parser.add_argument("-ph", "--phenotype", nargs='+', type=str, help="path to phenotype data folder")
     parser.add_argument("-cov", "--covariates", type=str, help="path to covariates data folder")
-    parser.add_argument("-ci", "--selected-covariates", type=str,
+    parser.add_argument("-ci", "--selected-covariates", type=str, required=False, default=None,
                         help="path to tab-delimited file with each row representing "
                              "the indices of covariates to include in the classical meta-analysis")
 
