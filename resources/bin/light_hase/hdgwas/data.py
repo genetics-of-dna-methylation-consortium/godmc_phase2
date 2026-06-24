@@ -1283,7 +1283,7 @@ class PLINKFolder(Folder):
         individuals = None
 
         for i in self.names:
-            ind = genfromtxt(open(os.path.join(self.path, i + '.fam'), 'r'), delimiter=' ',
+            ind = genfromtxt(open(os.path.join(self.path, i + '.fam'), 'r'), delimiter='\t',
                              dtype={'names': ['family', 'individual', 'paternal', 'maternal', 'sex', 'label'],
                                     'formats': ['S10', 'S16', int, int, int, int]})
 
