@@ -297,9 +297,9 @@ sftp_address_nc866="https://86.50.168.229"
 sftp_path_nc866="/remote.php/webdav/GoDMC"
 
 # scripts and binaries
-plink="${scripts_directory}/resources/bin/plink1.90"
-plink2="${scripts_directory}/resources/bin/plink2"
-gcta="${scripts_directory}/resources/bin/gcta-1.94.1"
+plink="/lfs1i3/home/b35cx/haotian.b35cx/miniforge3/envs/deep_env/bin/plink"
+plink2="${scripts_directory}/resources/bin/plink2_aarch64"
+gcta="${scripts_directory}/resources/bin/gcta64_1.95.2_aarch64"
 gemma="${scripts_directory}/resources/bin/gemma"
 hase="${scripts_directory}/resources/bin/hase"
 osca="${scripts_directory}/resources/bin/osca"
