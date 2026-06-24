@@ -194,7 +194,7 @@ check_logs_04 () {
 	fi
 
 	compare_version "04b"
-	if grep -i -q "Allele positions inverted" ${section_04b_logfile}; then
+	if grep -i -q "Allele positions inverted" ${section_04b_logfile} || grep -i -q "No probe inversion performed" ${section_04b_logfile}; then
 		echo "04b-mapper-preparation.sh completed successfully."
 	else
 		echo "Problem: 04b-mapper-preparation.sh did not complete successfully"
@@ -331,5 +331,4 @@ check_logs_09 () {
 
 
 }
-
 
