@@ -1,3 +1,4 @@
+from collections import Counter
 from pathlib import Path
 from typing import TypedDict
 
@@ -186,6 +187,7 @@ def build_variant_index(
         "excluded_other_chromosome": 0,
         "excluded_non_biallelic_snp": 0,
         "excluded_mhc_region": 0,
+        "excluded_multiallelic_position": 0,
     }
 
     with bim_path.open("r", encoding="utf-8") as handle:
@@ -253,6 +255,16 @@ def build_variant_index(
             f"Duplicate canonical variant keys in BIM file: {len(duplicates)} "
             f"({bim_path})"
         )
+
+    # Exclude multi-allelic positions: same (chr, pos) with >1 distinct allele pair.
+    # These survive section-02 --rm-dup (which deduplicates by variant ID, not position)
+    # and must be excluded here so LD is only computed over truly biallelic sites.
+    pos_freq = Counter((v["chr"], v["pos"]) for v in kept)
+    multiallelic = {k for k, n in pos_freq.items() if n > 1}
+    if multiallelic:
+        n_before = len(kept)
+        kept = [v for v in kept if (v["chr"], v["pos"]) not in multiallelic]
+        counts["excluded_multiallelic_position"] = n_before - len(kept)
 
     sorted_kept = sorted(
         kept, key=lambda v: (int(v["chr"]), v["pos"], v["ref"], v["alt"])

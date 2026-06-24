@@ -289,6 +289,8 @@ def main() -> None:
         f"{variant_counts['excluded_non_biallelic_snp']}",
         "Variants excluded in MHC region chr6:28477797-33448354: "
         f"{variant_counts['excluded_mhc_region']}",
+        "Variants excluded at multi-allelic positions: "
+        f"{variant_counts['excluded_multiallelic_position']}",
         f"D matrix shape: {d_matrix.shape[0]} x {d_matrix.shape[1]}",
         f"D matrix rank: {d_rank} (expected {len(COVARIATE_MATRIX_COLUMNS)})",
         f"D matrix condition number: {d_condition_number:.6g}",
