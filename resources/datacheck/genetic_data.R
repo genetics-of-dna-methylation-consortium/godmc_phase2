@@ -207,6 +207,18 @@ message("Checking fam file: ", fam_file)
 
 fam <- read.table(fam_file,header=F,stringsAsFactors=F)
 
+if(any(nchar(fam[,1], type="bytes") > 10)) {
+  msg <- "Family IDs longer than 10 bytes may be truncated by light_hase PLINK conversion. Please shorten FID before proceeding."
+  errorlist <- c(errorlist, msg)
+  warning("ERROR: ", msg)
+}
+
+if(any(nchar(fam[,2], type="bytes") > 16)) {
+  msg <- "Individual IDs longer than 16 bytes may be truncated by light_hase PLINK conversion. Please shorten IID before proceeding."
+  errorlist <- c(errorlist, msg)
+  warning("ERROR: ", msg)
+}
+
 if(any(duplicated(fam[,2])))
 {
 	msg <- paste0("Individual identifier is not unique. Please fix this before going on.")
