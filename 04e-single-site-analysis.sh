@@ -18,6 +18,7 @@ python ${light_hase}/hase.py \
    -study_name ${study_name} \
    -g ${light_hase_converting} \
    -ph ${light_hase_pheno} \
+   -cov ${hase_cov}  \
    -mapper ${light_hase_mapping} \
    -o ${light_hase_single_site} \
    -ref_name ref-hrc
