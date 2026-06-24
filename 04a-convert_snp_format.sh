@@ -73,7 +73,7 @@ echo "ERROR: wrong chrX coding"
 fi
 
 
-python ${light_hase}/light_hase.py \
+python ${light_hase}/hase.py \
     -mode converting \
     -g ${light_hase_dir_in} \
     -o ${light_hase_converting} \
