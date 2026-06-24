@@ -53,18 +53,9 @@ rm -f "${haseinput_pgen}.pgen" "${haseinput_pgen}.pvar" "${haseinput_pgen}.psam"
 
 nX=`grep ^X ${bfile}_haseinput.bim | wc -l`
 
-if [ "$nX" -gt "0" ]
-then
-
-#perl -pe 's/^X\tX/23\t23/g' < ${bfile}.bim >${hase_dir_in}/data.bim
-${plink2} --bfile ${bfile}_haseinput --make-bed --output-chr 26 --out ${hase_dir_in}/data
-rm ${light_hase_dir_in}/data.log
-echo "This condition should not occur anymore; but if it does, the code above will fix the chrX coding in the bim file."
-else
 cp ${bfile}_haseinput.bim ${light_hase_dir_in}/data.bim
 cp ${bfile}_haseinput.fam ${light_hase_dir_in}/data.fam
 cp ${bfile}_haseinput.bed ${light_hase_dir_in}/data.bed
-fi
 
 nX=`grep ^X ${light_hase_dir_in}/data.bim | wc -l`
 if [ "$nX" -gt "0" ]
