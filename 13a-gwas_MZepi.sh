@@ -18,9 +18,11 @@ ${R_directory}Rscript resources/MZtwin/MZEpiScore.R \
     ${betas} \
     ${bfile}.fam \
     ${phenotypes_MZT}	\
-    ${section_13_dir}/
+    ${section_13_dir}/ \
+    ${home_directory}/processed_data/covariate_data/ \
+    ${pca}_10.eigenvec \
 
-echo "Computing Epi-MZ scores"
+echo "Finished computing Epi-MZ scores"
 
 cut -d' ' -f1-12 "${pca}.eigenvec" > ${pca}_10.eigenvec
 
@@ -28,6 +30,8 @@ cut -d' ' -f1-12 "${pca}.eigenvec" > ${pca}_10.eigenvec
 # For family data, use all samples, correcting for the full (sparse) GRM.
 if [ "${related}" = "yes" ]
 then
+
+echo "GWAS in related individuals is performed"
 
 ${gcta} \
 	--grm ${grmfile_all} \
@@ -40,28 +44,73 @@ ${gcta} \
 
 echo 'Done on making bK sparse'
 
+
 # Step 3: fastGWA ###################################
 ${gcta} \
           --bfile ${bfile} \
-	  --out ${section_13_dir}/GWASepiMZ \
+	  --out ${section_13_dir}/GWASepiMZ_allRelated \
           --grm-sparse ${grmfile_fast}_gwas13 \
           --fastGWA-mlm \
-          --pheno ${section_13_dir}/MZEpi.pheno \
-	  --qcovar ${pca}_10.eigenvec	\
+          --pheno ${section_13_dir}/MZEpi_all.pheno \
+	  --qcovar ${home_directory}/processed_data/covariate_data/covariates_intersectids.numeric	\
+	  --covar ${home_directory}/processed_data/covariate_data/covariates_intersectids.factor	\
 	  --thread-num ${nthreads}
+
+
+
+if [ -f ${section_13_dir}/MZEpi_MZtwins.pheno ]
+then
+
+echo "MZEpi_MZtwins.pheno is present, performing GWAS in MZ twins"
+
+${gcta} \
+          --bfile ${bfile} \
+	  --out ${section_13_dir}/GWASepiMZ_MZtwins \
+          --grm-sparse ${grmfile_fast}_gwas13 \
+          --fastGWA-mlm \
+          --pheno ${section_13_dir}/MZEpi_MZtwins.pheno \
+	  --qcovar ${home_directory}/processed_data/covariate_data/covariates_intersectids.numeric	\
+	  --covar ${home_directory}/processed_data/covariate_data/covariates_intersectids.factor	\
+	  --thread-num ${nthreads}
+
+
+
+if [ -f ${section_13_dir}/MZEpi_nontwins.pheno ]
+then
+
+echo "MZEpi_nontwins.pheno is present, performing GWAS in non-twins"
+
+
+${gcta} \
+ --bfile ${bfile} \
+	  --out ${section_13_dir}/GWASepiMZ_nontwinsrelated \
+          --grm-sparse ${grmfile_fast}_gwas13 \
+          --fastGWA-mlm \
+          --pheno ${section_13_dir}/MZEpi_nontwins.pheno \
+	  --qcovar ${home_directory}/processed_data/covariate_data/covariates_intersectids.numeric	\
+	  --covar ${home_directory}/processed_data/covariate_data/covariates_intersectids.factor	\
+	  --thread-num ${nthreads}
+
+
+fi
+fi
+
 
 #For non-family data, use sparse GRM generated earlier (10a) with --grm-cutoff of 0.05
 elif [ "${related}" = "no" ]
 then
 
+echo "GWAS in unrelated non-twins is performed"
+
 # Step 3: fastGWA ###################################
 ${gcta} \
           --bfile ${bfile} \
-	  --out ${section_13_dir}/GWASepiMZ \
+	  --out ${section_13_dir}/GWASepiMZ_nontwinsunrelated \
           --grm-sparse ${grmfile_fast}  \
           --fastGWA-mlm \
-          --pheno ${section_13_dir}/MZEpi.pheno \
-	  --qcovar ${pca}_10.eigenvec	\
+          --pheno ${section_13_dir}/MZEpi_nontwins.pheno \
+	  --qcovar ${home_directory}/processed_data/covariate_data/covariates_intersectids.numeric	\
+	  --covar ${home_directory}/processed_data/covariate_data/covariates_intersectids.factor	\
 	  --thread-num ${nthreads}
 
 fi
@@ -80,7 +129,7 @@ ${R_directory}Rscript resources/genetics/plot_gwas.R \
 		0 \
 		0 \
 		0 \
-		0 
+		0 \
 
 rm -f ${section_13_dir}/GWAlist.txt
 
