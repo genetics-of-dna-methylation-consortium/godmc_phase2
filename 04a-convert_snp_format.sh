@@ -21,7 +21,7 @@ echo "Flipping alleles into hrc reference allele order"
 hrc_ref_allele="${light_hase}/data/hrc_ref_allele.txt"
 
 zcat ${light_hase}/data/ref-hrc.ref.gz \
-    | awk 'NR>1 {print $1 "\t" $3}' \
+    | awk 'NR>1 {print $1 "\t" $4}' \
     > ${hrc_ref_allele}
 
 echo "ref-hrc.ref.gz lines including header:"
