@@ -19,8 +19,14 @@ zcat ${hase}/data/ref-hrc.ref.gz \
     | awk 'NR>1 {print $1 "\t" $3}' \
     > ${hrc_ref_allele}
 
+echo "ref-hrc.ref.gz lines including header:"
+zcat ${hase}/data/ref-hrc.ref.gz | wc -l
+
+echo "${hrc_ref_allele} lines without header:"
+wc -l ${hrc_ref_allele}
+
 ${plink2} \
-    --bfile "${bfile}_clean" \
+    --bfile "${bfile}" \
     --new-id-max-allele-len 100 \
     --sort-vars \
     --set-all-var-ids @:#_\$1_\$2 \
