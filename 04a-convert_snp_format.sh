@@ -53,6 +53,8 @@ rm -f "${haseinput_pgen}.pgen" "${haseinput_pgen}.pvar" "${haseinput_pgen}.psam"
 
 nX=`grep ^X ${bfile}_haseinput.bim | wc -l`
 
+echo "Cleaning up the input files"
+
 rm -f ${light_hase_dir_in}/*.bed ${light_hase_dir_in}/*.bim ${light_hase_dir_in}/*.fam ${light_hase_dir_in}/*.log ${light_hase_dir_in}/*.nosex ${light_hase_dir_in}/*.pgen ${light_hase_dir_in}/*.pvar ${light_hase_dir_in}/*.psam
 
 cp ${bfile}_haseinput.bim ${light_hase_dir_in}/data.bim
