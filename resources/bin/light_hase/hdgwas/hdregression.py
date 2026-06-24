@@ -2,7 +2,7 @@ from __future__ import print_function
 import numpy as np
 import os
 import sys
-from tools import Timer, timer, timing, save_parameters
+from hdgwas.tools import Timer, timer, timing, save_parameters
 import scipy.linalg.blas as FB
 import h5py
 import gc

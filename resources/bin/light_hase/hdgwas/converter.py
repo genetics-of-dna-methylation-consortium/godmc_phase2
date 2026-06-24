@@ -6,7 +6,7 @@ import bitarray as ba
 import numpy as np
 import gc
 import subprocess
-from tools import Timer
+from hdgwas.tools import Timer
 import pandas as pd
 from data import MINIMACHDF5Folder
 import shutil

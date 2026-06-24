@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import os
 import sys
-from tools import study_indexes
+from hdgwas.tools import study_indexes
 import gc
 from hdgwas.hdregression import A_inverse
 from numpy import genfromtxt
