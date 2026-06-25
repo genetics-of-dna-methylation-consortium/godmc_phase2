@@ -9,7 +9,6 @@ meta_inputs="${section_04_dir}/meta_inputs"
 run_out="${validation_out}/run"
 selected_covariates="${validation_out}/selected_covariates.tsv"
 ph_id_inc="${validation_out}/positive_control_cpg.txt"
-fake_ph_id_inc="${validation_out}/fake_cpg_inc.txt"
 
 mkdir -p "${validation_out}" "${run_out}"
 exec &> >(tee "${validation_out}/log.txt")
@@ -56,7 +55,6 @@ if ! find "${meta_inputs}/mapping" -maxdepth 1 -type f -name "*.npy" | grep -q .
 fi
 
 printf "ID\n%s\n" "${validation_cpg}" > "${ph_id_inc}"
-printf "ID\n%s\n" "__GODMC_VALIDATION_FAKE_CPG_DO_NOT_USE__" > "${fake_ph_id_inc}"
 
 if [ -n "${APPTAINER_BIN:-}" ] && [ -n "${HASE_SIF:-}" ]; then
     apptainer_bind="${APPTAINER_BIND:-${home_directory},${scripts_directory}}"
@@ -84,7 +82,7 @@ echo "Running light_hase meta-classic"
     -ph "${meta_inputs}/use_data/phenotypes" \
     -derivatives "${meta_inputs}/part_dev" \
     -mapper "${meta_inputs}/mapping" \
-    -ph_id_inc "${ph_id_inc}" "${fake_ph_id_inc}" \
+    -ph_id_inc "${ph_id_inc}" \
     -encoded 1 \
     --selected-covariates "${selected_covariates}" \
     -ref_name ref-hrc \

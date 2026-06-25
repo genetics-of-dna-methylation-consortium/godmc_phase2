@@ -438,9 +438,15 @@ class MetaPhenotype(object):
                     phenotype_presence = (self.include["ID"] == phenotype)
                     new_values = np.array([-1] * len(phen))
                     if phenotype_presence.sum() > 0:
-                        cohort_indices = (
-                            self.include.loc[phenotype_presence]
-                                .index.get_level_values(level="cohort"))
+                        if "cohort" in self.include.index.names:
+                            cohort_indices = (
+                                self.include.loc[phenotype_presence]
+                                    .index.get_level_values(level="cohort"))
+                        elif len(phen) == 1:
+                            cohort_indices = np.array([0])
+                        else:
+                            raise ValueError(
+                                "Phenotype include without cohort index is only supported for single-cohort analysis")
 
                         new_values[cohort_indices] = np.array(values)[cohort_indices].tolist()
                     self.mapper.dic[phenotype] = new_values.tolist()
