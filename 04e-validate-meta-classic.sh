@@ -9,6 +9,11 @@ meta_inputs="${section_04_dir}/meta_inputs"
 run_out="${validation_out}/run"
 selected_covariates="${validation_out}/selected_covariates.tsv"
 ph_id_inc="${validation_out}/positive_control_cpg.txt"
+reference_file="${HASE_REF_FILE:-${light_hase}/data/ref-hrc.ref.gz}"
+
+if [ ! -f "${reference_file}" ] && [ -f "${hase}/data/ref-hrc.ref.gz" ]; then
+    reference_file="${hase}/data/ref-hrc.ref.gz"
+fi
 
 mkdir -p "${validation_out}" "${run_out}"
 exec &> >(tee "${validation_out}/log.txt")
@@ -18,6 +23,7 @@ echo "Validating 04e meta inputs with light_hase meta-classic"
 echo "Study: ${study_name}"
 echo "Positive control CpG: ${validation_cpg}"
 echo "Meta inputs: ${meta_inputs}"
+echo "Reference file: ${reference_file}"
 echo "Output: ${validation_out}"
 
 fail() {
@@ -53,6 +59,8 @@ check_dir "${meta_inputs}/mapping"
 if ! find "${meta_inputs}/mapping" -maxdepth 1 -type f -name "*.npy" | grep -q .; then
     fail "Missing mapper npy files in: ${meta_inputs}/mapping"
 fi
+
+check_file "${reference_file}"
 
 printf "ID\n%s\n" "${validation_cpg}" > "${ph_id_inc}"
 
@@ -98,14 +106,15 @@ echo "Combining feather outputs and writing gzip-compressed CSV files"
     "${run_out}" \
     "${validation_out}" \
     "${study_name}" \
-    "${validation_cpg}" <<'PY'
+    "${validation_cpg}" \
+    "${reference_file}" <<'PY'
 import glob
 import os
 import sys
 
 import pandas as pd
 
-run_out, validation_out, study_name, cpg = sys.argv[1:5]
+run_out, validation_out, study_name, cpg, reference_file = sys.argv[1:6]
 
 
 def read_feathers(pattern, label):
@@ -121,6 +130,61 @@ def read_feathers(pattern, label):
     return result, files
 
 
+def pick_column(columns, candidates, required=True):
+    for candidate in candidates:
+        if candidate in columns:
+            return candidate
+    if required:
+        raise SystemExit(
+            "Reference file {} is missing one of these columns: {}".format(
+                reference_file, ", ".join(candidates)))
+    return None
+
+
+def load_reference(reference_file):
+    compression = "gzip" if reference_file.endswith(".gz") else None
+    ref = pd.read_csv(reference_file, delim_whitespace=True, compression=compression)
+    ref = ref.reset_index(drop=True)
+
+    id_col = pick_column(ref.columns, ["ID", "id", "variant", "SNP"])
+    allele1_col = pick_column(ref.columns, ["str_allele1", "allele1", "A1", "effect_allele"])
+    allele2_col = pick_column(ref.columns, ["str_allele2", "allele2", "A2", "non_effect_allele"])
+    chr_col = pick_column(ref.columns, ["CHR", "#CHROM", "chromosome", "chr"], required=False)
+    bp_col = pick_column(ref.columns, ["bp", "BP", "pos", "position"], required=False)
+
+    return ref, id_col, allele1_col, allele2_col, chr_col, bp_col
+
+
+def annotate_variants(df, ref, id_col, allele1_col, allele2_col, chr_col, bp_col, label):
+    if "variant_index" not in df.columns:
+        raise SystemExit("{} results do not contain a variant_index column".format(label))
+
+    variant_index = df["variant_index"].astype("int64")
+    if variant_index.min() < 0 or variant_index.max() >= ref.shape[0]:
+        raise SystemExit(
+            "{} variant_index values are outside reference row range 0-{}".format(
+                label, ref.shape[0] - 1))
+
+    annotated = df.copy()
+    annotated["ID"] = variant_index.map(ref[id_col])
+    annotated["effect_allele"] = variant_index.map(ref[allele1_col])
+    annotated["non_effect_allele"] = variant_index.map(ref[allele2_col])
+    if chr_col is not None:
+        annotated["CHR"] = variant_index.map(ref[chr_col])
+    if bp_col is not None:
+        annotated["bp"] = variant_index.map(ref[bp_col])
+
+    if annotated["ID"].isnull().any():
+        raise SystemExit("{} results contain unmapped variant_index values".format(label))
+
+    preferred_columns = [
+        "variant_index", "ID", "CHR", "bp", "effect_allele", "non_effect_allele"
+    ]
+    ordered_columns = [col for col in preferred_columns if col in annotated.columns]
+    ordered_columns.extend([col for col in annotated.columns if col not in ordered_columns])
+    return annotated[ordered_columns]
+
+
 cohort_pattern = os.path.join(
     run_out, "cohort", "cohort={}".format(study_name), "phenotype={}".format(cpg), "file_*.feather"
 )
@@ -130,6 +194,10 @@ meta_pattern = os.path.join(
 
 cohort_df, cohort_files = read_feathers(cohort_pattern, "cohort")
 meta_df, meta_files = read_feathers(meta_pattern, "meta")
+ref, id_col, allele1_col, allele2_col, chr_col, bp_col = load_reference(reference_file)
+
+cohort_df = annotate_variants(cohort_df, ref, id_col, allele1_col, allele2_col, chr_col, bp_col, "cohort")
+meta_df = annotate_variants(meta_df, ref, id_col, allele1_col, allele2_col, chr_col, bp_col, "meta")
 
 cohort_csv = os.path.join(validation_out, "cohort_{}_{}.csv.gz".format(study_name, cpg))
 meta_csv = os.path.join(validation_out, "meta_{}.csv.gz".format(cpg))
@@ -140,6 +208,7 @@ print("Combined cohort feather files: {}".format(len(cohort_files)))
 print("Combined meta feather files: {}".format(len(meta_files)))
 print("Cohort rows: {}".format(cohort_df.shape[0]))
 print("Meta rows: {}".format(meta_df.shape[0]))
+print("Mapped variant_index using reference: {}".format(reference_file))
 print("Wrote cohort CSV: {}".format(cohort_csv))
 print("Wrote meta CSV: {}".format(meta_csv))
 PY
