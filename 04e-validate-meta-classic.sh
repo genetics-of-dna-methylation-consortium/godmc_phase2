@@ -10,6 +10,7 @@ run_out="${validation_out}/run"
 selected_covariates="${validation_out}/selected_covariates.tsv"
 ph_id_inc="${validation_out}/positive_control_cpg.txt"
 reference_file="${HASE_REF_FILE:-${light_hase}/data/ref-hrc.ref.gz}"
+plink_positive_control="${section_03_dir}/positive_control_transformed_${validation_cpg}.PHENO1.glm.linear.gz"
 
 if [ ! -f "${reference_file}" ] && [ -f "${hase}/data/ref-hrc.ref.gz" ]; then
     reference_file="${hase}/data/ref-hrc.ref.gz"
@@ -24,6 +25,7 @@ echo "Study: ${study_name}"
 echo "Positive control CpG: ${validation_cpg}"
 echo "Meta inputs: ${meta_inputs}"
 echo "Reference file: ${reference_file}"
+echo "PLINK positive-control file: ${plink_positive_control}"
 echo "Output: ${validation_out}"
 
 fail() {
@@ -61,6 +63,7 @@ if ! find "${meta_inputs}/mapping" -maxdepth 1 -type f -name "*.npy" | grep -q .
 fi
 
 check_file "${reference_file}"
+check_file "${plink_positive_control}"
 
 printf "ID\n%s\n" "${validation_cpg}" > "${ph_id_inc}"
 
@@ -214,3 +217,18 @@ print("Wrote meta CSV: {}".format(meta_csv))
 PY
 
 echo "04e meta-classic validation successfully completed"
+
+echo "Comparing HASE validation output against PLINK positive-control GWAS"
+
+hase_validation_csv="${validation_out}/cohort_${study_name}_${validation_cpg}.csv.gz"
+hase_plink_prefix="${study_name}_${validation_cpg}"
+
+check_file "${hase_validation_csv}"
+
+${R_directory}Rscript resources/genetics/plot_hase_vs_plink_validation.R \
+    "${hase_validation_csv}" \
+    "${plink_positive_control}" \
+    "${validation_out}" \
+    "${hase_plink_prefix}"
+
+echo "HASE vs PLINK validation plots successfully completed"

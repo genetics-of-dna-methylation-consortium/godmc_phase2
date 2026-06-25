@@ -202,13 +202,13 @@ build_scatter_plot <- function(dt, x_col, y_col, x_label, y_label, title, subtit
   }
   axis_range <- axis_range + c(-padding, padding)
 
-  point_alpha <- if (nrow(plot_dt) > 100000) 0.25 else 0.4
-  point_size <- if (nrow(plot_dt) > 100000) 0.35 else 0.65
+  point_alpha <- 0.4
+  point_size <- 1.2
 
   abline_layer <- if (packageVersion("ggplot2") >= "3.4.0") {
-    geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed", linewidth = 0.45)
+    geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed", linewidth = 0.65)
   } else {
-    geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed", size = 0.45)
+    geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed", size = 0.65)
   }
 
   p <- ggplot(plot_dt, aes(x = .data[[x_col]], y = .data[[y_col]]))
@@ -225,7 +225,7 @@ build_scatter_plot <- function(dt, x_col, y_col, x_label, y_label, title, subtit
         name = "PLINK sample size"
       )
   } else {
-    p <- p + geom_point(alpha = 0.4, size = point_size, stroke = 0, color = "steelblue")
+    p <- p + geom_point(alpha = point_alpha, size = point_size, stroke = 0, color = "steelblue")
   }
 
   p <- p +
@@ -237,7 +237,7 @@ build_scatter_plot <- function(dt, x_col, y_col, x_label, y_label, title, subtit
       x = x_label,
       y = y_label
     ) +
-    theme_minimal(base_size = 11) +
+    theme_minimal(base_size = 14) +
     theme(
       plot.title = element_text(face = "bold"),
       panel.grid.minor = element_blank(),
@@ -311,7 +311,7 @@ save_comparison_panel <- function(merged_group, label, output_file, max_points) 
     max_points
   )
 
-  png(output_file, width = 12, height = 6, units = "in", res = 180)
+  png(output_file, width = 16, height = 7, units = "in", res = 300)
   device_open <- TRUE
   on.exit({
     if (device_open) {
