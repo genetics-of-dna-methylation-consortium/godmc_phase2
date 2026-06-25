@@ -1195,7 +1195,11 @@ class PDFolder(Folder):
         pass
 
     def load_metadata(self):
-        self._data.metadata = np.load(os.path.join(self.path, self.name + '_metadata.npy')).item()
+        metadata_path = os.path.join(self.path, self.name + '_metadata.npy')
+        try:
+            self._data.metadata = np.load(metadata_path, allow_pickle=True).item()
+        except TypeError:
+            self._data.metadata = np.load(metadata_path).item()
 
     def load(self, into_memory=True):
         memory_map_mode = "c"
