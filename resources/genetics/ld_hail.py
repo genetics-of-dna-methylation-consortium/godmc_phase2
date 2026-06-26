@@ -27,6 +27,8 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import psutil
+
 import hail as hl
 import numpy as np
 from hail.linalg import BlockMatrix
@@ -35,7 +37,7 @@ if TYPE_CHECKING:
     from ld_qc import VariantIndex
 
 
-DEFAULT_N_PARTITIONS = 32
+DEFAULT_N_PARTITIONS = 256
 HAIL_VERSION = hl.version()
 AUTOSOMES = {str(c) for c in range(1, 23)}
 VALID_BASES = {"A", "C", "G", "T"}
@@ -65,6 +67,10 @@ def init_hail(
         log_path.parent.mkdir(parents=True, exist_ok=True)
         init_kwargs: dict = {"log": str(log_path), "quiet": True}
         spark_conf: dict[str, str] = {}
+
+        if driver_memory_gb is None:
+            avail_gb = psutil.virtual_memory().available / (1024**3)
+            driver_memory_gb = int(avail_gb * 0.8)
 
         if local_cores is not None:
             if local_cores <= 0:
