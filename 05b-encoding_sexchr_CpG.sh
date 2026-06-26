@@ -6,7 +6,7 @@ set -- $concatenated
 exec &> >(tee ${section_05b_logfile})
 print_version
 
-#Please read resources/bin/hase/README_2.md
+#Please read resources/bin/light_hase/README_2.md
 #An example is also provided below
 
 mkdir -p ${hase_encoding_female}
@@ -19,7 +19,7 @@ if [ -f ${transformed_methylation_adjusted_pcs}.Female.chrX.csv ];
 then
     cp ${transformed_methylation_adjusted_pcs}.Female.chrX.csv ${hase_pheno_female}
     mv ${hase_pheno_female}/transformed_methylation_adjusted_pcs.Female.chrX.csv ${hase_pheno_female}/methylation_data.csv
-    python ${hase}/hase.py \
+    python ${light_hase}/hase.py \
         -mode encoding \
         -study_name ${study_name} \
         -g ${hase_converting_female} \
@@ -33,10 +33,16 @@ fi
 
 if [ -f ${transformed_methylation_adjusted_pcs}.Male.chrX.csv ];
 then
+    if [ ! -f ${transformed_methylation_adjusted_pcs}.Male.chrY.csv ];
+    then
+        echo "ERROR: Missing male chrY methylation file: ${transformed_methylation_adjusted_pcs}.Male.chrY.csv"
+        echo "Male 05b encoding requires both male chrX and chrY files to create the combined phenotype input"
+        exit 1
+    fi
     cat ${transformed_methylation_adjusted_pcs}.Male.chrX.csv <(tail -n +2 ${transformed_methylation_adjusted_pcs}.Male.chrY.csv) > ${transformed_methylation_adjusted_pcs}.Male.chrX.chrY.csv
     cp ${transformed_methylation_adjusted_pcs}.Male.chrX.chrY.csv ${hase_pheno_male}
     mv ${hase_pheno_male}/transformed_methylation_adjusted_pcs.Male.chrX.chrY.csv ${hase_pheno_male}/methylation_data.csv
-    python ${hase}/hase.py \
+    python ${light_hase}/hase.py \
         -mode encoding \
         -study_name ${study_name} \
         -g ${hase_converting_male} \

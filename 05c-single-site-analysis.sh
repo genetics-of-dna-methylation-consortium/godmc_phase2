@@ -6,7 +6,7 @@ set -- $concatenated
 exec &> >(tee ${section_05c_logfile})
 print_version
 
-#Please read resources/bin/hase/README_2.md
+#Please read resources/bin/light_hase/README_2.md
 #An example is also provided below
 
 mkdir -p ${hase_single_site_female}
@@ -14,7 +14,7 @@ mkdir -p ${hase_single_site_male}
 
 if [ -f ${transformed_methylation_adjusted_pcs}.Female.chrX.csv ];
 then
-    python ${hase}/hase.py \
+    python ${light_hase}/hase.py \
         -mode single-meta \
         -study_name ${study_name} \
         -g ${hase_converting_female} \
@@ -42,7 +42,7 @@ fi
 
 if [ -f ${transformed_methylation_adjusted_pcs}.Male.chrX.csv ];
 then
-    python ${hase}/hase.py \
+    python ${light_hase}/hase.py \
         -mode single-meta \
         -study_name ${study_name} \
         -g ${hase_converting_male} \
