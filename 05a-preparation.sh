@@ -15,6 +15,26 @@ mkdir -p ${hase_converting_male}
 mkdir -p ${hase_mapping_female}
 mkdir -p ${hase_mapping_male}
 
+for ref_file in ref-hrc.ref.gz ref-hrc.ref_info.h5
+do
+    if [ ! -f "${light_hase}/data/${ref_file}" ]
+    then
+        if [ ! -f "${hase}/data/${ref_file}" ]
+        then
+            echo "ERROR: Missing source reference file: ${hase}/data/${ref_file}"
+            echo "Please download the HASE reference files from the project SFTP and place them in: ${hase}/data"
+            echo "Required files: ref-hrc.ref.gz and ref-hrc.ref_info.h5"
+            exit 1
+        fi
+        echo "Copying reference file: ${ref_file}"
+        cp "${hase}/data/${ref_file}" "${light_hase}/data/${ref_file}"
+    else
+        echo "Reference file already exists: ${light_hase}/data/${ref_file}"
+    fi
+done
+
+
+
 # female samples
 if [ -f ${transformed_methylation_adjusted_pcs}.Female.chrX.csv ];
 then

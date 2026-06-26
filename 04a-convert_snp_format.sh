@@ -13,8 +13,23 @@ mkdir -p ${light_hase_converting}
 mkdir -p ${light_hase}/data
 
 # assuming ref is in ori hase folder
-cp ${hase}/data/ref-hrc.ref.gz ${light_hase}/data/ref-hrc.ref.gz
-cp ${hase}/data/ref-hrc.ref_info.h5 ${light_hase}/data/ref-hrc.ref_info.h5
+for ref_file in ref-hrc.ref.gz ref-hrc.ref_info.h5
+do
+    if [ ! -f "${light_hase}/data/${ref_file}" ]
+    then
+        if [ ! -f "${hase}/data/${ref_file}" ]
+        then
+            echo "ERROR: Missing source reference file: ${hase}/data/${ref_file}"
+            echo "Please download the HASE reference files from the project SFTP and place them in: ${hase}/data"
+            echo "Required files: ref-hrc.ref.gz and ref-hrc.ref_info.h5"
+            exit 1
+        fi
+        echo "Copying reference file: ${ref_file}"
+        cp "${hase}/data/${ref_file}" "${light_hase}/data/${ref_file}"
+    else
+        echo "Reference file already exists: ${light_hase}/data/${ref_file}"
+    fi
+done
 
 echo "Flipping alleles into hrc reference allele order"
 
