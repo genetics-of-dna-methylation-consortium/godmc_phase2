@@ -110,102 +110,140 @@ check_chr_x_coding() {
     fi
 }
 
-# female samples
-if [ -f ${transformed_methylation_adjusted_pcs}.Female.chrX.csv ];
-then
-    awk -v sex_col="${sex_col}" 'NR > 1 && $sex_col == "F" {print $1}' \
-        "${covariates_combined}.txt" > "${hase_in_female}/female_id"
+make_sex_keep_file() {
+    sex_label="$1"
+    sex_code="$2"
+    id_file="$3"
+    keep_file="$4"
 
-    female_id_count=$(wc -l < "${hase_in_female}/female_id" | awk '{print $1}')
-    echo "Found ${female_id_count} female samples in ${covariates_combined}.txt"
+    awk -v sex_col="${sex_col}" -v sex_code="${sex_code}" 'NR > 1 && $sex_col == sex_code {print $1}' \
+        "${covariates_combined}.txt" > "${id_file}"
 
-    if [ "${female_id_count}" -eq "0" ]
+    sex_id_count=$(wc -l < "${id_file}" | awk '{print $1}')
+    echo "Found ${sex_id_count} ${sex_label} samples in ${covariates_combined}.txt"
+
+    if [ "${sex_id_count}" -eq "0" ]
     then
-        echo "ERROR: No female sample IDs found using Sex_factor == F"
+        echo "ERROR: No ${sex_label} sample IDs found using Sex_factor == ${sex_code}"
         exit 1
     fi
 
     awk 'BEGIN {OFS="\t"} NR==FNR {ids[$1]; next} $2 in ids {print $1, $2}' \
-        "${hase_in_female}/female_id" "${bfile}.fam" > "${hase_in_female}/female_fid_id"
+        "${id_file}" "${bfile}.fam" > "${keep_file}"
 
-    female_keep_count=$(wc -l < "${hase_in_female}/female_fid_id" | awk '{print $1}')
-    echo "Found ${female_keep_count} female samples in ${bfile}.fam"
+    sex_keep_count=$(wc -l < "${keep_file}" | awk '{print $1}')
+    echo "Found ${sex_keep_count} ${sex_label} samples in ${bfile}.fam"
 
-    if [ "${female_keep_count}" -eq "0" ]
+    if [ "${sex_keep_count}" -eq "0" ]
     then
-        echo "ERROR: No female sample IDs from ${covariates_combined}.txt were found in ${bfile}.fam"
+        echo "ERROR: No ${sex_label} sample IDs from ${covariates_combined}.txt were found in ${bfile}.fam"
         exit 1
     fi
 
-    if [ "${female_keep_count}" -lt "${female_id_count}" ]
+    if [ "${sex_keep_count}" -lt "${sex_id_count}" ]
     then
-        echo "WARNING: female samples in fam (${female_keep_count}) are fewer than IDs in covariates (${female_id_count})"
+        echo "WARNING: ${sex_label} samples in fam (${sex_keep_count}) are fewer than IDs in covariates (${sex_id_count})"
     fi
 
-    echo "Preparing female genotype data in hrc reference allele order"
+    rm -f "${id_file}"
+}
 
-    female_haseinput_pgen="${hase_in_female}/data_haseinput_pgen"
+make_sex_hase_input() {
+    sex_label="$1"
+    keep_file="$2"
+    sex_input_dir="$3"
+    sex_haseinput_pgen="${sex_input_dir}/data_haseinput_pgen"
 
-    rm -f "${hase_in_female}"/*.bed "${hase_in_female}"/*.bim "${hase_in_female}"/*.fam "${hase_in_female}"/*.log "${hase_in_female}"/*.nosex
-    rm -f "${hase_in_female}"/*.pgen "${hase_in_female}"/*.pvar "${hase_in_female}"/*.psam
+    echo "Preparing ${sex_label} genotype data in hrc reference allele order"
+
+    rm -f "${sex_input_dir}"/*.bed "${sex_input_dir}"/*.bim "${sex_input_dir}"/*.fam "${sex_input_dir}"/*.log "${sex_input_dir}"/*.nosex
+    rm -f "${sex_input_dir}"/*.pgen "${sex_input_dir}"/*.pvar "${sex_input_dir}"/*.psam
 
     ${plink2} \
         --bfile "${bfile}" \
-        --keep "${hase_in_female}/female_fid_id" \
+        --keep "${keep_file}" \
         --sort-vars \
         --set-all-var-ids @:#_\$1_\$2 \
         --ref-allele force "${hrc_ref_allele}" 2 1 \
         --make-pgen \
         --output-chr 26 \
-        --out "${female_haseinput_pgen}" \
+        --out "${sex_haseinput_pgen}" \
         --threads "${nthreads}"
     if [ "$?" -ne "0" ]
     then
-        echo "ERROR: PLINK2 pgen preparation failed for female samples"
+        echo "ERROR: PLINK2 pgen preparation failed for ${sex_label} samples"
         exit 1
     fi
 
     ${plink2} \
-        --pfile "${female_haseinput_pgen}" \
+        --pfile "${sex_haseinput_pgen}" \
         --make-bed \
         --output-chr 26 \
-        --out "${hase_in_female}/data" \
+        --out "${sex_input_dir}/data" \
         --threads "${nthreads}"
     if [ "$?" -ne "0" ]
     then
-        echo "ERROR: PLINK2 bed conversion failed for female samples"
+        echo "ERROR: PLINK2 bed conversion failed for ${sex_label} samples"
         exit 1
     fi
 
-    rm -f "${female_haseinput_pgen}.pgen" "${female_haseinput_pgen}.pvar" "${female_haseinput_pgen}.psam"
+    rm -f "${sex_haseinput_pgen}.pgen" "${sex_haseinput_pgen}.pvar" "${sex_haseinput_pgen}.psam"
 
-    check_chr_x_coding "${hase_in_female}/data.bim"
+    check_chr_x_coding "${sex_input_dir}/data.bim"
 
-    rm -f "${hase_in_female}/female_id" "${hase_in_female}/female_fid_id"
+    rm -f "${keep_file}"
+}
 
-    echo "Start converting genetic data of female samples"
+convert_and_map_sex_hase() {
+    sex_label="$1"
+    sex_input_dir="$2"
+    sex_converting_dir="$3"
+    sex_mapping_dir="$4"
+
+    echo "Start converting genetic data of ${sex_label} samples"
     python ${light_hase}/hase.py \
         -mode converting \
-        -g ${hase_in_female} \
-        -o ${hase_converting_female} \
+        -g ${sex_input_dir} \
+        -o ${sex_converting_dir} \
         -study_name ${study_name} # the name for your study
     if [ "$?" -ne "0" ]
     then
-        echo "ERROR: light_hase converting failed for female samples"
+        echo "ERROR: light_hase converting failed for ${sex_label} samples"
         exit 1
     fi
 
-    echo "Start mapping genetic data of female samples"
+    echo "Start mapping genetic data of ${sex_label} samples"
     python ${light_hase}/tools/mapper.py \
-        -g ${hase_converting_female} \
-        -o ${hase_mapping_female} \
+        -g ${sex_converting_dir} \
+        -o ${sex_mapping_dir} \
         -study_name ${study_name} \
         -ref_name "ref-hrc"
     if [ "$?" -ne "0" ]
     then
-        echo "ERROR: light_hase mapper failed for female samples"
+        echo "ERROR: light_hase mapper failed for ${sex_label} samples"
         exit 1
     fi
+}
+
+# female samples
+if [ -f ${transformed_methylation_adjusted_pcs}.Female.chrX.csv ];
+then
+    make_sex_keep_file \
+        "female" \
+        "F" \
+        "${hase_in_female}/female_id" \
+        "${hase_in_female}/female_fid_id"
+
+    make_sex_hase_input \
+        "female" \
+        "${hase_in_female}/female_fid_id" \
+        "${hase_in_female}"
+
+    convert_and_map_sex_hase \
+        "female" \
+        "${hase_in_female}" \
+        "${hase_converting_female}" \
+        "${hase_mapping_female}"
 else
     echo "file ${transformed_methylation_adjusted_pcs}.Female.chrX.csv does not exist, please check if no female samples in your dataset"
 fi
@@ -213,99 +251,22 @@ fi
 # male samples
 if [ -f ${transformed_methylation_adjusted_pcs}.Male.chrX.csv ];
 then
-    awk -v sex_col="${sex_col}" 'NR > 1 && $sex_col == "M" {print $1}' \
-        "${covariates_combined}.txt" > "${hase_in_male}/male_id"
+    make_sex_keep_file \
+        "male" \
+        "M" \
+        "${hase_in_male}/male_id" \
+        "${hase_in_male}/male_fid_id"
 
-    male_id_count=$(wc -l < "${hase_in_male}/male_id" | awk '{print $1}')
-    echo "Found ${male_id_count} male samples in ${covariates_combined}.txt"
+    make_sex_hase_input \
+        "male" \
+        "${hase_in_male}/male_fid_id" \
+        "${hase_in_male}"
 
-    if [ "${male_id_count}" -eq "0" ]
-    then
-        echo "ERROR: No male sample IDs found using Sex_factor == M"
-        exit 1
-    fi
-
-    awk 'BEGIN {OFS="\t"} NR==FNR {ids[$1]; next} $2 in ids {print $1, $2}' \
-        "${hase_in_male}/male_id" "${bfile}.fam" > "${hase_in_male}/male_fid_id"
-
-    male_keep_count=$(wc -l < "${hase_in_male}/male_fid_id" | awk '{print $1}')
-    echo "Found ${male_keep_count} male samples in ${bfile}.fam"
-
-    if [ "${male_keep_count}" -eq "0" ]
-    then
-        echo "ERROR: No male sample IDs from ${covariates_combined}.txt were found in ${bfile}.fam"
-        exit 1
-    fi
-
-    if [ "${male_keep_count}" -lt "${male_id_count}" ]
-    then
-        echo "WARNING: male samples in fam (${male_keep_count}) are fewer than IDs in covariates (${male_id_count})"
-    fi
-
-    echo "Preparing male genotype data in hrc reference allele order"
-
-    male_haseinput_pgen="${hase_in_male}/data_haseinput_pgen"
-
-    rm -f "${hase_in_male}"/*.bed "${hase_in_male}"/*.bim "${hase_in_male}"/*.fam "${hase_in_male}"/*.log "${hase_in_male}"/*.nosex
-    rm -f "${hase_in_male}"/*.pgen "${hase_in_male}"/*.pvar "${hase_in_male}"/*.psam
-
-    ${plink2} \
-        --bfile "${bfile}" \
-        --keep "${hase_in_male}/male_fid_id" \
-        --sort-vars \
-        --set-all-var-ids @:#_\$1_\$2 \
-        --ref-allele force "${hrc_ref_allele}" 2 1 \
-        --make-pgen \
-        --output-chr 26 \
-        --out "${male_haseinput_pgen}" \
-        --threads "${nthreads}"
-    if [ "$?" -ne "0" ]
-    then
-        echo "ERROR: PLINK2 pgen preparation failed for male samples"
-        exit 1
-    fi
-
-    ${plink2} \
-        --pfile "${male_haseinput_pgen}" \
-        --make-bed \
-        --output-chr 26 \
-        --out "${hase_in_male}/data" \
-        --threads "${nthreads}"
-    if [ "$?" -ne "0" ]
-    then
-        echo "ERROR: PLINK2 bed conversion failed for male samples"
-        exit 1
-    fi
-
-    rm -f "${male_haseinput_pgen}.pgen" "${male_haseinput_pgen}.pvar" "${male_haseinput_pgen}.psam"
-
-    check_chr_x_coding "${hase_in_male}/data.bim"
-
-    rm -f "${hase_in_male}/male_id" "${hase_in_male}/male_fid_id"
-
-    echo "Start converting genetic data of male samples"
-    python ${light_hase}/hase.py \
-        -mode converting \
-        -g ${hase_in_male} \
-        -o ${hase_converting_male} \
-        -study_name ${study_name} # the name for your study
-    if [ "$?" -ne "0" ]
-    then
-        echo "ERROR: light_hase converting failed for male samples"
-        exit 1
-    fi
-
-    echo "Start mapping genetic data of male samples"
-    python ${light_hase}/tools/mapper.py \
-        -g ${hase_converting_male} \
-        -o ${hase_mapping_male} \
-        -study_name ${study_name} \
-        -ref_name "ref-hrc"
-    if [ "$?" -ne "0" ]
-    then
-        echo "ERROR: light_hase mapper failed for male samples"
-        exit 1
-    fi
+    convert_and_map_sex_hase \
+        "male" \
+        "${hase_in_male}" \
+        "${hase_converting_male}" \
+        "${hase_mapping_male}"
 else
     echo "file ${transformed_methylation_adjusted_pcs}.Male.chrX.csv does not exist, please check if no male samples in your dataset"
 fi
