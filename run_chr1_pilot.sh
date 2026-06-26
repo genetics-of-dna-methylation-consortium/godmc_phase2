@@ -82,7 +82,6 @@ mkdir -p "${SECTION15_DIR}"
   --output-dir "${SECTION15_DIR}" \
   --log-file "${OUTDIR}/section15_chr${CHR}.log" \
   --hail-local-cores 8 \
-  --hail-driver-memory-gb 32 \
   --a-block-size 4096 \
   --a-chunk-rows 50000 \
   --a-max-dense-gb 1.0 \
