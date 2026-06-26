@@ -191,6 +191,7 @@ make_sex_hase_input() {
 
     check_chr_x_coding "${sex_input_dir}/data.bim"
 
+    rm -f "${sex_input_dir}/data.log"
     rm -f "${keep_file}"
 }
 
