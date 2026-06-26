@@ -6,21 +6,18 @@ set -- $concatenated
 exec &> >(tee ${section_04d_logfile})
 print_version
 
-#Please read resources/bin/hase/README_2.md
-#An example is also provided below
+mkdir -p ${light_hase_encoding}
+mkdir -p ${light_hase_pheno}
+cp ${transformed_methylation_adjusted_pcs}.csv ${light_hase_pheno}
+mv ${light_hase_pheno}/transformed_methylation_adjusted_pcs.csv ${light_hase_pheno}/methylation_data.csv
 
-mkdir -p ${hase_encoding}
-mkdir -p ${hase_pheno}
-cp ${transformed_methylation_adjusted_pcs}.csv ${hase_pheno}
-mv ${hase_pheno}/transformed_methylation_adjusted_pcs.csv ${hase_pheno}/methylation_data.csv
-
-python ${hase}/hase.py \
+python ${light_hase}/hase.py \
    -mode encoding \
    -study_name ${study_name} \
-   -g ${hase_converting} \
-   -o ${hase_encoding} \
-   -mapper ${hase_mapping} \
-   -ph ${hase_pheno} \
+   -g ${light_hase_converting} \
+   -o ${light_hase_encoding} \
+   -mapper ${light_hase_mapping} \
+   -ph ${light_hase_pheno} \
    -ref_name ref-hrc
 
 echo "Successfully encoded the genetic data"

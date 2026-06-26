@@ -1,0 +1,5 @@
+ID
+pheno_7
+pheno_missing
+pheno_10
+pheno_30

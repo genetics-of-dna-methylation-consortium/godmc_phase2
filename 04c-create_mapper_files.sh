@@ -6,14 +6,14 @@ set -- $concatenated
 exec &> >(tee ${section_04c_logfile})
 print_version
 
-#Please read resources/bin/hase/README_2.md
+#Please read resources/bin/light_hase/README_2.md
 #An example is also provided below
 
-mkdir -p ${hase_mapping}
+mkdir -p ${light_hase_mapping}
 
-python ${hase}/tools/mapper.py \
-   -g ${hase_converting} \
-   -o ${hase_mapping} \
+python ${light_hase}/tools/mapper.py \
+   -g ${light_hase_converting} \
+   -o ${light_hase_mapping} \
    -study_name ${study_name} \
    -ref_name "ref-hrc"
 

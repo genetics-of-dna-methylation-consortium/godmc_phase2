@@ -244,15 +244,28 @@ resname="res"
 
 #HASE
 hase_dir_plink="${home_directory}/processed_data/hase/hase_plink"
+light_hase_dir_plink="${home_directory}/processed_data/light_hase/light_hase_plink"
+
 hase_dir_in="${home_directory}/processed_data/hase/hase_in"
+light_hase_dir_in="${home_directory}/processed_data/light_hase/light_hase_in"
+
 hase_converting="${home_directory}/processed_data/hase/hase_converting"
+light_hase_converting="${home_directory}/processed_data/light_hase/light_hase_converting"
+
 hase_pheno="${home_directory}/processed_data/hase/hase_pheno"
+light_hase_pheno="${home_directory}/processed_data/light_hase/light_hase_pheno"
 hase_cov="${home_directory}/processed_data/hase/hase_cov"
+light_hase_cov="${home_directory}/processed_data/light_hase/light_hase_cov"
+
 hase_cov_females="${home_directory}/processed_data/hase/hase_cov_females"
 hase_cov_males="${home_directory}/processed_data/hase/hase_cov_males"
+
 hase_encoding="${home_directory}/processed_data/hase/encoding"
+light_hase_encoding="${home_directory}/processed_data/light_hase/encoding"
 hase_mapping="${home_directory}/processed_data/hase/mapped"
+light_hase_mapping="${home_directory}/processed_data/light_hase/mapped"
 hase_single_site="${home_directory}/processed_data/hase/single_site"
+light_hase_single_site="${home_directory}/processed_data/light_hase/single_site"
 
 #HASE1 for sexchr meQTLs
 hase_in_female="${home_directory}/processed_data/hase/hase_in_female"
@@ -302,11 +315,12 @@ sftp_address_nc866="https://86.50.168.229"
 sftp_path_nc866="/remote.php/webdav/GoDMC"
 
 # scripts and binaries
-plink="${scripts_directory}/resources/bin/plink1.90"
-plink2="${scripts_directory}/resources/bin/plink2"
-gcta="${scripts_directory}/resources/bin/gcta-1.94.1"
+plink="/lfs1i3/home/b35cx/haotian.b35cx/miniforge3/envs/deep_env/bin/plink"
+plink2="${scripts_directory}/resources/bin/plink2_aarch64"
+gcta="${scripts_directory}/resources/bin/gcta64_1.95.2_aarch64"
 gemma="${scripts_directory}/resources/bin/gemma"
 hase="${scripts_directory}/resources/bin/hase"
+light_hase="${scripts_directory}/resources/bin/light_hase"
 osca="${scripts_directory}/resources/bin/osca"
 smr="${scripts_directory}/resources/bin/smr-1.3.1"
 
