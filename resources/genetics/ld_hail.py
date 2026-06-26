@@ -70,7 +70,9 @@ def init_hail(
 
         if driver_memory_gb is None:
             avail_gb = psutil.virtual_memory().available / (1024**3)
-            driver_memory_gb = int(avail_gb * 0.8)
+            # 0.65 rather than 0.8: leaves headroom for JVM off-heap (Netty,
+            # Tungsten direct buffers, metaspace, JIT) which sit outside -Xmx
+            driver_memory_gb = int(avail_gb * 0.65)
 
         if local_cores is not None:
             if local_cores <= 0:
@@ -84,6 +86,19 @@ def init_hail(
                     f"driver_memory_gb must be positive; got {driver_memory_gb}"
                 )
             spark_conf["spark.driver.memory"] = f"{driver_memory_gb}g"
+
+        # G1GC handles long-lived large-object heap (BlockMatrix chunks) better
+        # than default GC; start a collection earlier to avoid full-GC stalls.
+        spark_conf["spark.driver.extraJavaOptions"] = (
+            "-XX:+UseG1GC "
+            "-XX:InitiatingHeapOccupancyPercent=65 "
+            "-XX:MaxGCPauseMillis=500"
+        )
+        # Cap Spark driver history retention to prevent metadata accumulation
+        # across the hundreds of stages produced by per-chromosome chunk writes.
+        spark_conf["spark.ui.retainedJobs"] = "50"
+        spark_conf["spark.ui.retainedStages"] = "100"
+        spark_conf["spark.ui.retainedTasks"] = "1000"
 
         if spark_conf:
             init_kwargs["spark_conf"] = spark_conf
