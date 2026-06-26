@@ -130,11 +130,16 @@ check_results_03a () {
 		exit 1
 	fi
 
-	if [ -f "${section_03_dir}/age_prediction_correlation.png" ]; then
-		echo "The matrix correlation plot among predicted age, age acceleration residuals, and chronological age is present"
+	same_age_check=$(awk 'NR>1 {print $3}' ${covariates} | sort -n | uniq | wc -l)
+	if [ "${same_age_check}" -eq 1 ]; then
+		echo "All individuals have the same age. Skipping age prediction correlation matrix and statistics."
 	else
-		echo "Problem: The matrix correlation plot of predicted age is absent"
-		exit 1
+		if [ -f "${section_03_dir}/age_prediction_correlation.png" ]; then
+			echo "The matrix correlation plot among predicted age, age acceleration residuals, and chronological age is present"
+		else
+			echo "Problem: The matrix correlation plot of predicted age is absent"
+			exit 1
+		fi
 	fi
 
 	if [ -f "${section_03_dir}/age_prediction_stats.csv" ]; then
