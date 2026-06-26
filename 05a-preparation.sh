@@ -187,7 +187,7 @@ make_sex_hase_input() {
         exit 1
     fi
 
-    rm -f "${sex_haseinput_pgen}.pgen" "${sex_haseinput_pgen}.pvar" "${sex_haseinput_pgen}.psam"
+    rm -f "${sex_haseinput_pgen}.pgen" "${sex_haseinput_pgen}.pvar" "${sex_haseinput_pgen}.psam" "${sex_haseinput_pgen}.log"
 
     check_chr_x_coding "${sex_input_dir}/data.bim"
 
