@@ -45,6 +45,32 @@ zcat ${light_hase}/data/ref-hrc.ref.gz | wc -l
 echo "${hrc_ref_allele} lines without header:"
 wc -l ${hrc_ref_allele}
 
+check_chr_x_coding() {
+    bim_file="$1"
+    nX=$(awk '{
+        chr=toupper($1)
+        id=toupper($2)
+        if (chr == "X" || id ~ /^X([:_]|$)/) {
+            n++
+        }
+    } END {print n + 0}' "${bim_file}")
+
+    if [ "$nX" -gt "0" ]
+    then
+        echo "ERROR: wrong chrX coding in ${bim_file}"
+        echo "Found ${nX} rows where the first BIM column is X or the second BIM column starts with X: or X_"
+        echo "First affected rows, showing BIM columns 1 and 2:"
+        awk 'BEGIN {OFS="\t"} {
+            chr=toupper($1)
+            id=toupper($2)
+            if (chr == "X" || id ~ /^X([:_]|$)/) {
+                print $1, $2
+            }
+        }' "${bim_file}" | head
+        exit 1
+    fi
+}
+
 haseinput_pgen="${bfile}_haseinput_pgen"
 
 ${plink2} \
@@ -66,8 +92,6 @@ ${plink2} \
 
 rm -f "${haseinput_pgen}.pgen" "${haseinput_pgen}.pvar" "${haseinput_pgen}.psam" "${haseinput_pgen}.log"
 
-nX=`grep ^X ${bfile}_haseinput.bim | wc -l`
-
 echo "Cleaning up the input files"
 
 rm -f ${light_hase_dir_in}/*.bed ${light_hase_dir_in}/*.bim ${light_hase_dir_in}/*.fam ${light_hase_dir_in}/*.log ${light_hase_dir_in}/*.nosex ${light_hase_dir_in}/*.pgen ${light_hase_dir_in}/*.pvar ${light_hase_dir_in}/*.psam
@@ -76,12 +100,7 @@ cp ${bfile}_haseinput.bim ${light_hase_dir_in}/data.bim
 cp ${bfile}_haseinput.fam ${light_hase_dir_in}/data.fam
 cp ${bfile}_haseinput.bed ${light_hase_dir_in}/data.bed
 
-nX=`grep ^X ${light_hase_dir_in}/data.bim | wc -l`
-if [ "$nX" -gt "0" ]
-then
-echo "ERROR: wrong chrX coding"
-fi
-
+check_chr_x_coding "${light_hase_dir_in}/data.bim"
 
 python ${light_hase}/hase.py \
     -mode converting \
