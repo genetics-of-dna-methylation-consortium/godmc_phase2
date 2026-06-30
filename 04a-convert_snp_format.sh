@@ -45,6 +45,15 @@ zcat ${light_hase}/data/ref-hrc.ref.gz | wc -l
 echo "${hrc_ref_allele} lines without header:"
 wc -l ${hrc_ref_allele}
 
+# Allele-direction note:
+# The HASE/light_hase PLINK reader decodes .bed genotypes as .bim allele2
+# dosage, so downstream HASE beta is relative to .bim allele2. The PLINK2
+# --ref-allele force step below sets the requested HRC allele as PLINK REF/A2
+# (.bim column 6), which PLINK association output often treats as the other
+# allele rather than the tested A1 allele. With a straight mapper match in 04c,
+# HASE beta is relative to ref str_allele2, and ref str_allele1 is the HASE
+# other allele.
+
 check_chr_x_coding() {
     bim_file="$1"
     nX=$(awk '{

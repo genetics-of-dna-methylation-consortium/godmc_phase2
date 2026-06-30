@@ -11,6 +11,12 @@ print_version
 
 mkdir -p ${light_hase_mapping}
 
+# Mapper log interpretation:
+# matched means ref allele1/allele2 match the converted PLINK .bim allele1/allele2
+# order; flipped means the reverse order was seen. Since HASE/light_hase decode
+# PLINK .bed as allele2 dosage, a straight match means HASE beta is relative to
+# ref str_allele2, while ref str_allele1 is the other allele.
+
 python ${light_hase}/tools/mapper.py \
    -g ${light_hase_converting} \
    -o ${light_hase_mapping} \

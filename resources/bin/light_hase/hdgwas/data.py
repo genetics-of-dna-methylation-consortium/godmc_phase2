@@ -1253,6 +1253,11 @@ class PLINKFolder(Folder):
         self.N_ind = 0
         self._currentSNP = 0
 
+        # PLINK .bed SNP-major genotype bits are decoded here as 0/1/2.
+        # With the .bim columns read below as allele1=column 5 and
+        # allele2=column 6, this makes the returned genotype matrix an
+        # allele2 dosage matrix. Downstream HASE beta values are therefore
+        # relative to .bim allele2, not .bim allele1.
         self._bedcode = {
             2: ba.bitarray('11'),
             9: ba.bitarray('10'),  # TODO (high) NA data handle
@@ -1328,6 +1333,8 @@ class PLINKFolder(Folder):
 
         self.n_probes_dic[file] = N
 
+        # PLINK .bim columns 5 and 6 are carried through HASE as allele1 and
+        # allele2. The .bed decoder above returns allele2 dosage.
         self.bim = pd.read_table(os.path.join(self.path, file + '.bim'), sep='\t', header=None,
                                  names=['CHR', 'ID', 'distance', 'bp', 'allele1', 'allele2'],
                                  iterator=True)
@@ -1404,6 +1411,8 @@ class PLINKFolder(Folder):
         bit_number = ((2 * (c + b) * nru) - (2 * c * nru)) / 8
         slice.fromfile(self.bed, bit_number)
 
+        # Decode PLINK .bed bits into 0/1/2 allele2 dosages. If mapper matched
+        # ref allele2 to .bim allele2, HASE beta is relative to ref str_allele2.
         X = np.array(slice.decode(self._bedcode), dtype="float64").reshape((b, nru)).T
         X = X[0:n, :]
 

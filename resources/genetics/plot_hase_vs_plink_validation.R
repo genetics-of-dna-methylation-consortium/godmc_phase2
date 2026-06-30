@@ -339,7 +339,7 @@ message("PLINK input rows: ", format_n(nrow(plink)))
 
 require_columns(
   hase,
-  c("ID", "effect_allele", "non_effect_allele", "beta", "standard_error"),
+  c("ID", "beta", "standard_error"),
   "HASE file"
 )
 require_columns(
@@ -347,7 +347,24 @@ require_columns(
   c("ID", "A1", "TEST", "BETA", "SE"),
   "PLINK file"
 )
-message("Using HASE non_effect_allele as the beta allele for PLINK alignment")
+# New validation outputs name the HASE beta allele explicitly. Older outputs
+# used effect_allele/non_effect_allele, but those names were reversed for
+# PLINK-derived HASE data because HASE beta is based on .bim allele2 dosage.
+if (all(c("hase_beta_allele", "hase_other_allele") %in% names(hase))) {
+  message("Using explicit HASE hase_beta_allele/hase_other_allele columns for PLINK alignment")
+} else {
+  require_columns(
+    hase,
+    c("effect_allele", "non_effect_allele"),
+    "HASE file"
+  )
+  message(
+    "Using legacy HASE columns: non_effect_allele is treated as the beta allele ",
+    "and effect_allele as the other allele"
+  )
+  hase[, hase_beta_allele := non_effect_allele]
+  hase[, hase_other_allele := effect_allele]
+}
 
 plink <- plink[TEST == "ADD"]
 message("PLINK rows after TEST == 'ADD': ", format_n(nrow(plink)))
@@ -381,8 +398,6 @@ if (nrow(merged) == 0) {
 }
 
 merged[, A1_clean := clean_allele(A1)]
-merged[, hase_beta_allele := non_effect_allele]
-merged[, hase_other_allele := effect_allele]
 merged[, hase_beta_allele_clean := clean_allele(hase_beta_allele)]
 merged[, hase_other_allele_clean := clean_allele(hase_other_allele)]
 

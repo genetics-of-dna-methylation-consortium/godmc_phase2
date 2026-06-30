@@ -181,8 +181,11 @@ def annotate_variants(df, ref, id_col, allele1_col, allele2_col, chr_col, bp_col
 
     annotated = df.copy()
     annotated["ID"] = variant_index.map(ref[id_col])
-    annotated["effect_allele"] = variant_index.map(ref[allele1_col])
-    annotated["non_effect_allele"] = variant_index.map(ref[allele2_col])
+    # HASE/light_hase decode PLINK .bed genotypes as .bim allele2 dosage.
+    # Therefore the HASE beta is relative to str_allele2, while str_allele1
+    # is the other allele, even though PLINK often labels A2 as "other".
+    annotated["hase_beta_allele"] = variant_index.map(ref[allele2_col])
+    annotated["hase_other_allele"] = variant_index.map(ref[allele1_col])
     if chr_col is not None:
         annotated["CHR"] = variant_index.map(ref[chr_col])
     if bp_col is not None:
@@ -192,7 +195,7 @@ def annotate_variants(df, ref, id_col, allele1_col, allele2_col, chr_col, bp_col
         raise SystemExit("{} results contain unmapped variant_index values".format(label))
 
     preferred_columns = [
-        "variant_index", "ID", "CHR", "bp", "effect_allele", "non_effect_allele"
+        "variant_index", "ID", "CHR", "bp", "hase_beta_allele", "hase_other_allele"
     ]
     ordered_columns = [col for col in preferred_columns if col in annotated.columns]
     ordered_columns.extend([col for col in annotated.columns if col not in ordered_columns])
