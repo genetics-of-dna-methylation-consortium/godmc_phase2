@@ -111,7 +111,7 @@ cp ${bfile}_haseinput.bed ${light_hase_dir_in}/data.bed
 
 check_chr_x_coding "${light_hase_dir_in}/data.bim"
 
-python ${light_hase}/hase.py \
+"${PYTHON_RUNNER[@]}" "${light_hase}/hase.py" \
     -mode converting \
     -g ${light_hase_dir_in} \
     -o ${light_hase_converting} \

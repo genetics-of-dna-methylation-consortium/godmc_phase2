@@ -19,7 +19,7 @@ if [ -f ${transformed_methylation_adjusted_pcs}.Female.chrX.csv ];
 then
     cp ${transformed_methylation_adjusted_pcs}.Female.chrX.csv ${hase_pheno_female}
     mv ${hase_pheno_female}/transformed_methylation_adjusted_pcs.Female.chrX.csv ${hase_pheno_female}/methylation_data.csv
-    python ${light_hase}/hase.py \
+    "${PYTHON_RUNNER[@]}" "${light_hase}/hase.py" \
         -mode encoding \
         -study_name ${study_name} \
         -g ${hase_converting_female} \
@@ -42,7 +42,7 @@ then
     cat ${transformed_methylation_adjusted_pcs}.Male.chrX.csv <(tail -n +2 ${transformed_methylation_adjusted_pcs}.Male.chrY.csv) > ${transformed_methylation_adjusted_pcs}.Male.chrX.chrY.csv
     cp ${transformed_methylation_adjusted_pcs}.Male.chrX.chrY.csv ${hase_pheno_male}
     mv ${hase_pheno_male}/transformed_methylation_adjusted_pcs.Male.chrX.chrY.csv ${hase_pheno_male}/methylation_data.csv
-    python ${light_hase}/hase.py \
+    "${PYTHON_RUNNER[@]}" "${light_hase}/hase.py" \
         -mode encoding \
         -study_name ${study_name} \
         -g ${hase_converting_male} \

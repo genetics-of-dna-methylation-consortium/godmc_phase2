@@ -17,7 +17,7 @@ mkdir -p ${light_hase_mapping}
 # PLINK .bed as allele2 dosage, a straight match means HASE beta is relative to
 # ref str_allele2, while ref str_allele1 is the other allele.
 
-python ${light_hase}/tools/mapper.py \
+"${PYTHON_RUNNER[@]}" "${light_hase}/tools/mapper.py" \
    -g ${light_hase_converting} \
    -o ${light_hase_mapping} \
    -study_name ${study_name} \

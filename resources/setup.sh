@@ -35,3 +35,14 @@ echo ""
 echo "-----------------------------------------------"
 	
 source ${config_file}
+
+if [ -n "${APPTAINER_BIN:-}" ] && [ -n "${HASE_SIF:-}" ]; then
+    apptainer_bind="${APPTAINER_BIND:-${home_directory},${scripts_directory}}"
+    PYTHON_RUNNER=("${APPTAINER_BIN}" exec)
+    if [ -n "${apptainer_bind}" ]; then
+        PYTHON_RUNNER+=(--bind "${apptainer_bind}")
+    fi
+    PYTHON_RUNNER+=("${HASE_SIF}" python)
+else
+    PYTHON_RUNNER=("${Python_directory}python")
+fi

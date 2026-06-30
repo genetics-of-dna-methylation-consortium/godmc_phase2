@@ -11,7 +11,7 @@ mkdir -p ${light_hase_pheno}
 cp ${transformed_methylation_adjusted_pcs}.csv ${light_hase_pheno}
 mv ${light_hase_pheno}/transformed_methylation_adjusted_pcs.csv ${light_hase_pheno}/methylation_data.csv
 
-python ${light_hase}/hase.py \
+"${PYTHON_RUNNER[@]}" "${light_hase}/hase.py" \
    -mode encoding \
    -study_name ${study_name} \
    -g ${light_hase_converting} \

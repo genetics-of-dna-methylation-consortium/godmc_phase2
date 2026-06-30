@@ -61,17 +61,6 @@ fi
 
 check_file "${reference_file}"
 
-if [ -n "${APPTAINER_BIN:-}" ] && [ -n "${HASE_SIF:-}" ]; then
-    apptainer_bind="${APPTAINER_BIND:-${home_directory},${scripts_directory}}"
-    PYTHON_RUNNER=("${APPTAINER_BIN}" exec)
-    if [ -n "${apptainer_bind}" ]; then
-        PYTHON_RUNNER+=(--bind "${apptainer_bind}")
-    fi
-    PYTHON_RUNNER+=("${HASE_SIF}" python)
-else
-    PYTHON_RUNNER=("${Python_directory}python")
-fi
-
 echo "Validating 05 sex-stratified meta inputs with light_hase meta-classic"
 echo "Study: ${study_name}"
 echo "Positive control CpG: ${validation_cpg}"

@@ -202,7 +202,7 @@ convert_and_map_sex_hase() {
     sex_mapping_dir="$4"
 
     echo "Start converting genetic data of ${sex_label} samples"
-    python ${light_hase}/hase.py \
+    "${PYTHON_RUNNER[@]}" "${light_hase}/hase.py" \
         -mode converting \
         -g ${sex_input_dir} \
         -o ${sex_converting_dir} \
@@ -214,7 +214,7 @@ convert_and_map_sex_hase() {
     fi
 
     echo "Start mapping genetic data of ${sex_label} samples"
-    python ${light_hase}/tools/mapper.py \
+    "${PYTHON_RUNNER[@]}" "${light_hase}/tools/mapper.py" \
         -g ${sex_converting_dir} \
         -o ${sex_mapping_dir} \
         -study_name ${study_name} \

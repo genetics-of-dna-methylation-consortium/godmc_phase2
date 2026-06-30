@@ -13,7 +13,7 @@ mkdir -p ${light_hase_single_site}
 #mkdir -p ${hase_cov}
 #awk -v OFS='\t' '{print $1,1}' <${hase_dir_in}/data.fam >${hase_cov}/covariates.txt
 
-python ${light_hase}/hase.py \
+"${PYTHON_RUNNER[@]}" "${light_hase}/hase.py" \
    -mode single-meta \
    -study_name ${study_name} \
    -g ${light_hase_converting} \

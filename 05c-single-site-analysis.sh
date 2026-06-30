@@ -14,7 +14,7 @@ mkdir -p ${hase_single_site_male}
 
 if [ -f ${transformed_methylation_adjusted_pcs}.Female.chrX.csv ];
 then
-    python ${light_hase}/hase.py \
+    "${PYTHON_RUNNER[@]}" "${light_hase}/hase.py" \
         -mode single-meta \
         -study_name ${study_name} \
         -g ${hase_converting_female} \
@@ -42,7 +42,7 @@ fi
 
 if [ -f ${transformed_methylation_adjusted_pcs}.Male.chrX.csv ];
 then
-    python ${light_hase}/hase.py \
+    "${PYTHON_RUNNER[@]}" "${light_hase}/hase.py" \
         -mode single-meta \
         -study_name ${study_name} \
         -g ${hase_converting_male} \
