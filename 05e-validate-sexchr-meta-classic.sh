@@ -61,23 +61,12 @@ fi
 
 check_file "${reference_file}"
 
-if [ -n "${APPTAINER_BIN:-}" ] && [ -n "${HASE_SIF:-}" ]; then
-    apptainer_bind="${APPTAINER_BIND:-${home_directory},${scripts_directory}}"
-    PYTHON_RUNNER=("${APPTAINER_BIN}" exec)
-    if [ -n "${apptainer_bind}" ]; then
-        PYTHON_RUNNER+=(--bind "${apptainer_bind}")
-    fi
-    PYTHON_RUNNER+=("${HASE_SIF}" python)
-else
-    PYTHON_RUNNER=("${Python_directory}python")
-fi
-
 echo "Validating 05 sex-stratified meta inputs with light_hase meta-classic"
 echo "Study: ${study_name}"
 echo "Positive control CpG: ${validation_cpg}"
 echo "Reference file: ${reference_file}"
-echo "Python runner: ${PYTHON_RUNNER[*]}"
 echo "Output: ${validation_out}"
+sex_hase_validation_count=0
 
 run_sex_hase_validation() {
     sex_label="$1"
@@ -89,6 +78,10 @@ run_sex_hase_validation() {
     ph_id_inc="${sex_out}/positive_control_cpg.txt"
 
     echo "Running ${sex_label} HASE meta-classic validation"
+    if [ ! -d "${meta_inputs}" ]; then
+        echo "Skipping ${sex_label} HASE validation because meta input directory is missing: ${meta_inputs}"
+        return 0
+    fi
     check_meta_inputs "${meta_inputs}"
     check_file "${plink_glm_gz}"
 
@@ -97,7 +90,7 @@ run_sex_hase_validation() {
     printf "ID\n%s\n" "${validation_cpg}" > "${ph_id_inc}"
     printf "%s\t%s_intercept\n" "${study_name}" "${study_name}" > "${selected_covariates}"
 
-    "${PYTHON_RUNNER[@]}" "${light_hase}/hase.py" \
+    python "${light_hase}/hase.py" \
         -mode meta-classic \
         -study_name "${study_name}" \
         -g "${meta_inputs}/use_data" \
@@ -116,7 +109,7 @@ run_sex_hase_validation() {
 
     echo "Combining ${sex_label} feather outputs and writing gzip-compressed CSV files"
 
-    "${PYTHON_RUNNER[@]}" - \
+    python - \
         "${run_out}" \
         "${sex_out}" \
         "${study_name}" \
@@ -241,6 +234,8 @@ PY
         "${plink_glm_gz}" \
         "${sex_out}" \
         "${hase_plink_prefix}"
+
+    sex_hase_validation_count=$((sex_hase_validation_count + 1))
 }
 
 run_sex_hase_validation \
@@ -252,5 +247,9 @@ run_sex_hase_validation \
     "male" \
     "${section_05_dir}/meta_inputs_male" \
     "${plink_out}/male/positive_control_male_${validation_cpg}.PHENO1.glm.linear.gz"
+
+if [ "${sex_hase_validation_count}" -eq "0" ]; then
+    fail "No sex-specific 05 meta inputs were found for 05e; nothing to validate."
+fi
 
 echo "05 sex-stratified HASE vs PLINK validation successfully completed"
