@@ -324,7 +324,7 @@ sftp_path_nc866="/remote.php/webdav/GoDMC"
 
 # scripts and binaries
 plink="${scripts_directory}/resources/bin/plink1.90"
-plink2="${scripts_directory}/resources/bin/plink2"
+plink2="${scripts_directory}/resources/bin/plink2_aarch64"
 gcta="${scripts_directory}/resources/bin/gcta-1.94.1"
 gemma="${scripts_directory}/resources/bin/gemma"
 hase="${scripts_directory}/resources/bin/hase"
