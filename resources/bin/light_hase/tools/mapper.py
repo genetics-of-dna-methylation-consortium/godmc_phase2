@@ -125,6 +125,12 @@ def main(argv=None):
 		# 	a.CHR=a.CHR.astype(np.int64)
 		# 	a.bp= a.bp.astype(np.int64)
 		# 	print a.head()
+		# Mapper compares reference alleles to converted probe alleles in
+		# the same order. For PLINK input, probe allele1/allele2 come from
+		# .bim columns 5/6. A straight match means ref str_allele1 matches
+		# .bim allele1 and ref str_allele2 matches .bim allele2; since the
+		# HASE PLINK reader uses allele2 dosage, beta is then relative to
+		# ref str_allele2.
 		merge = {
 				'straight': ["CHR", 'bp', 'allele1', 'allele2'],
 				'reverse': ["CHR", 'bp', 'allele2', 'allele1']
