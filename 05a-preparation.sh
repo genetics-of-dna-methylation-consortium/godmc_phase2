@@ -152,8 +152,7 @@ make_sex_hase_input() {
     sex_label="$1"
     keep_file="$2"
     sex_input_dir="$3"
-    sex_bfile_prefix="${sex_input_dir}/data_${sex_label}"
-    sex_haseinput_pgen="${sex_bfile_prefix}_haseinput_pgen"
+    sex_haseinput_pgen="${sex_input_dir}/data_haseinput_pgen"
 
     echo "Preparing ${sex_label} genotype data in hrc reference allele order"
 
@@ -180,7 +179,7 @@ make_sex_hase_input() {
         --pfile "${sex_haseinput_pgen}" \
         --make-bed \
         --output-chr 26 \
-        --out "${sex_bfile_prefix}" \
+        --out "${sex_input_dir}/data" \
         --threads "${nthreads}"
     if [ "$?" -ne "0" ]
     then
@@ -190,9 +189,9 @@ make_sex_hase_input() {
 
     rm -f "${sex_haseinput_pgen}.pgen" "${sex_haseinput_pgen}.pvar" "${sex_haseinput_pgen}.psam" "${sex_haseinput_pgen}.log"
 
-    check_chr_x_coding "${sex_bfile_prefix}.bim"
+    check_chr_x_coding "${sex_input_dir}/data.bim"
 
-    rm -f "${sex_bfile_prefix}.log"
+    rm -f "${sex_input_dir}/data.log"
     rm -f "${keep_file}"
 }
 
