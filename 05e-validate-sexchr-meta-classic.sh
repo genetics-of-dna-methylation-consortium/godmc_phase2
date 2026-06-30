@@ -61,10 +61,22 @@ fi
 
 check_file "${reference_file}"
 
+if [ -n "${APPTAINER_BIN:-}" ] && [ -n "${HASE_SIF:-}" ]; then
+    apptainer_bind="${APPTAINER_BIND:-${home_directory},${scripts_directory}}"
+    PYTHON_RUNNER=("${APPTAINER_BIN}" exec)
+    if [ -n "${apptainer_bind}" ]; then
+        PYTHON_RUNNER+=(--bind "${apptainer_bind}")
+    fi
+    PYTHON_RUNNER+=("${HASE_SIF}" python)
+else
+    PYTHON_RUNNER=("${Python_directory}python")
+fi
+
 echo "Validating 05 sex-stratified meta inputs with light_hase meta-classic"
 echo "Study: ${study_name}"
 echo "Positive control CpG: ${validation_cpg}"
 echo "Reference file: ${reference_file}"
+echo "Python runner: ${PYTHON_RUNNER[*]}"
 echo "Output: ${validation_out}"
 sex_hase_validation_count=0
 
@@ -90,7 +102,7 @@ run_sex_hase_validation() {
     printf "ID\n%s\n" "${validation_cpg}" > "${ph_id_inc}"
     printf "%s\t%s_intercept\n" "${study_name}" "${study_name}" > "${selected_covariates}"
 
-    python "${light_hase}/hase.py" \
+    "${PYTHON_RUNNER[@]}" "${light_hase}/hase.py" \
         -mode meta-classic \
         -study_name "${study_name}" \
         -g "${meta_inputs}/use_data" \
@@ -109,7 +121,7 @@ run_sex_hase_validation() {
 
     echo "Combining ${sex_label} feather outputs and writing gzip-compressed CSV files"
 
-    python - \
+    "${PYTHON_RUNNER[@]}" - \
         "${run_out}" \
         "${sex_out}" \
         "${study_name}" \

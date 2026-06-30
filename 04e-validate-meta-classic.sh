@@ -67,13 +67,26 @@ check_file "${plink_positive_control}"
 
 printf "ID\n%s\n" "${validation_cpg}" > "${ph_id_inc}"
 
+if [ -n "${APPTAINER_BIN:-}" ] && [ -n "${HASE_SIF:-}" ]; then
+    apptainer_bind="${APPTAINER_BIND:-${home_directory},${scripts_directory}}"
+    PYTHON_RUNNER=("${APPTAINER_BIN}" exec)
+    if [ -n "${apptainer_bind}" ]; then
+        PYTHON_RUNNER+=(--bind "${apptainer_bind}")
+    fi
+    PYTHON_RUNNER+=("${HASE_SIF}" python)
+else
+    PYTHON_RUNNER=("${Python_directory}python")
+fi
+
+echo "Python runner: ${PYTHON_RUNNER[*]}"
+
 printf "%s\t%s_intercept\n" "${study_name}" "${study_name}" > "${selected_covariates}"
 echo "Wrote selected covariates: ${selected_covariates}"
 echo "Selected covariates: ${study_name} ${study_name}_intercept"
 
 echo "Running light_hase meta-classic"
 
-python "${light_hase}/hase.py" \
+"${PYTHON_RUNNER[@]}" "${light_hase}/hase.py" \
     -mode meta-classic \
     -study_name "${study_name}" \
     -g "${meta_inputs}/use_data" \
@@ -92,7 +105,7 @@ python "${light_hase}/hase.py" \
 
 echo "Combining feather outputs and writing gzip-compressed CSV files"
 
-python - \
+"${PYTHON_RUNNER[@]}" - \
     "${run_out}" \
     "${validation_out}" \
     "${study_name}" \
