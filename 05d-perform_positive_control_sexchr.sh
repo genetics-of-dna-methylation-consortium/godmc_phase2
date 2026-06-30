@@ -29,11 +29,8 @@ check_bfile() {
     check_file "${prefix}.fam"
 }
 
-if [ -z "${validation_cpg}" ]; then
-    fail "sexchr_positive_control_cpg is empty. Please set it in your config before running 05d."
-fi
-
 mkdir -p "${plink_out}/female" "${plink_out}/male"
+sex_plink_count=0
 
 echo "Running 05 sex-stratified PLINK positive-control GWAS"
 echo "Study: ${study_name}"
@@ -52,9 +49,13 @@ run_sex_plink() {
     plink_prefix="${out_dir}/positive_control_${sex_label}_${validation_cpg}"
     plink_glm="${plink_prefix}.PHENO1.glm.linear"
     plink_glm_gz="${plink_glm}.gz"
+    plot_file_list="${out_dir}/positive.control.${sex_label}.file.txt"
 
     echo "Preparing ${sex_label} positive-control phenotype"
-    check_file "${phenotype_csv}"
+    if [ ! -f "${phenotype_csv}" ]; then
+        echo "Skipping ${sex_label} PLINK validation because phenotype input is missing: ${phenotype_csv}"
+        return 0
+    fi
     check_bfile "${bfile_prefix}"
 
     awk -F',' -v cpg="${validation_cpg}" 'NR == 1 || $1 == cpg {print $0}' \
@@ -88,6 +89,25 @@ run_sex_plink() {
 
     check_file "${plink_glm_gz}"
     echo "Wrote ${sex_label} PLINK result: ${plink_glm_gz}"
+
+    echo "Making ${sex_label} Manhattan and QQ plots"
+    echo "${plink_glm_gz}" > "${plot_file_list}"
+    ${R_directory}Rscript resources/genetics/plot_gwas.R \
+        "${plot_file_list}" \
+        12 \
+        1 \
+        2 \
+        3 \
+        TRUE \
+        "${sexchr_positive_control_snp_chr}" \
+        "${sexchr_positive_control_snp_pos}" \
+        "${sexchr_positive_control_snp_window}" \
+        "${sexchr_positive_control_threshold}"
+    if [ "$?" -ne "0" ]; then
+        fail "plot_gwas.R failed for ${sex_label} PLINK validation"
+    fi
+
+    sex_plink_count=$((sex_plink_count + 1))
 }
 
 run_sex_plink \
@@ -101,5 +121,9 @@ run_sex_plink \
     "${hase_pheno_male}" \
     "${hase_in_male}/data" \
     "${plink_out}/male"
+
+if [ "${sex_plink_count}" -eq "0" ]; then
+    fail "No sex-specific phenotype inputs were found for 05d; nothing to validate."
+fi
 
 echo "Sex-stratified PLINK positive-control GWAS successfully completed"
