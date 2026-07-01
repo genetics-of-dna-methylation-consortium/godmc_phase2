@@ -132,14 +132,14 @@ run_sex_final_validation() {
 run_sex_final_validation \
     "female" \
     "${hase_pheno_female}" \
-    "${hase_in_female}/data" \
+    "${hase_in_female}/data_female" \
     "${plink_out}/female" \
     "${hase_out}/female"
 
 run_sex_final_validation \
     "male" \
     "${hase_pheno_male}" \
-    "${hase_in_male}/data" \
+    "${hase_in_male}/data_male" \
     "${plink_out}/male" \
     "${hase_out}/male"
 
