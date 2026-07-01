@@ -9,7 +9,12 @@ print_version
 
 validation_cpg="${sexchr_positive_control_cpg}"
 validation_out="${section_05_dir}/sexchr_positive_control_validation"
-plink_out="${validation_out}/plink"
+hase_out="${validation_out}/hase"
+reference_file="${HASE_REF_FILE:-${light_hase}/data/ref-hrc.ref.gz}"
+
+if [ ! -f "${reference_file}" ] && [ -f "${hase}/data/ref-hrc.ref.gz" ]; then
+    reference_file="${hase}/data/ref-hrc.ref.gz"
+fi
 
 fail() {
     echo "ERROR: $*" >&2
@@ -22,108 +27,216 @@ check_file() {
     fi
 }
 
-check_bfile() {
-    prefix="$1"
-    check_file "${prefix}.bed"
-    check_file "${prefix}.bim"
-    check_file "${prefix}.fam"
+check_dir() {
+    if [ ! -d "$1" ]; then
+        fail "Missing required directory: $1"
+    fi
 }
 
-mkdir -p "${plink_out}/female" "${plink_out}/male"
-sex_plink_count=0
+check_meta_inputs() {
+    meta_inputs="$1"
 
-echo "Running 05 sex-stratified PLINK positive-control GWAS"
-echo "Study: ${study_name}"
-echo "Positive control CpG: ${validation_cpg}"
-echo "Output: ${validation_out}"
+    check_file "${meta_inputs}/part_dev/${study_name}_a_cov.npy"
+    check_file "${meta_inputs}/part_dev/${study_name}_b_cov.npy"
+    check_file "${meta_inputs}/part_dev/${study_name}_C.npy"
+    check_file "${meta_inputs}/part_dev/${study_name}_a_test.npy"
+    check_file "${meta_inputs}/part_dev/${study_name}_metadata.npy"
 
-run_sex_plink() {
-    sex_label="$1"
-    pheno_dir="$2"
-    bfile_prefix="$3"
-    out_dir="$4"
+    check_dir "${meta_inputs}/use_data"
+    check_dir "${meta_inputs}/use_data/genotype"
+    check_dir "${meta_inputs}/use_data/individuals"
+    check_dir "${meta_inputs}/use_data/phenotypes"
+    check_dir "${meta_inputs}/use_data/probes"
+    check_dir "${meta_inputs}/mapping"
 
-    phenotype_csv="${pheno_dir}/methylation_data.csv"
-    extracted_csv="${out_dir}/${validation_cpg}.positive_control.csv"
-    plink_pheno="${out_dir}/${validation_cpg}.positive_control.plink"
-    plink_prefix="${out_dir}/positive_control_${sex_label}_${validation_cpg}"
-    plink_glm="${plink_prefix}.PHENO1.glm.linear"
-    plink_glm_gz="${plink_glm}.gz"
-    plot_file_list="${out_dir}/positive.control.${sex_label}.file.txt"
-
-    echo "Preparing ${sex_label} positive-control phenotype"
-    if [ ! -f "${phenotype_csv}" ]; then
-        echo "Skipping ${sex_label} PLINK validation because phenotype input is missing: ${phenotype_csv}"
-        return 0
+    if ! find "${meta_inputs}/mapping" -maxdepth 1 -type f -name "*.npy" | grep -q .; then
+        fail "Missing mapper npy files in: ${meta_inputs}/mapping"
     fi
-    check_bfile "${bfile_prefix}"
-
-    awk -F',' -v cpg="${validation_cpg}" 'NR == 1 || $1 == cpg {print $0}' \
-        "${phenotype_csv}" > "${extracted_csv}"
-
-    nrow=$(wc -l < "${extracted_csv}" | awk '{print $1}')
-    if [ "${nrow}" -lt "2" ]; then
-        fail "Positive control CpG ${validation_cpg} was not found in ${phenotype_csv}"
-    fi
-
-    ${R_directory}Rscript resources/genetics/make_control.R \
-        "${extracted_csv}" \
-        "${bfile_prefix}.fam" \
-        "${plink_pheno}"
-
-    echo "Running PLINK2 for ${sex_label}"
-    ${plink2} \
-        --bfile "${bfile_prefix}" \
-        --pheno "${plink_pheno}" \
-        --glm allow-no-covars \
-        --allow-extra-chr \
-        --human \
-        --output-chr 26 \
-        --threads "${nthreads}" \
-        --out "${plink_prefix}"
-
-    check_file "${plink_glm}"
-
-    tr -s " " < "${plink_glm}" | gzip -c > "${plink_glm_gz}"
-    rm "${plink_glm}"
-
-    check_file "${plink_glm_gz}"
-    echo "Wrote ${sex_label} PLINK result: ${plink_glm_gz}"
-
-    echo "Making ${sex_label} Manhattan and QQ plots"
-    echo "${plink_glm_gz}" > "${plot_file_list}"
-    ${R_directory}Rscript resources/genetics/plot_gwas.R \
-        "${plot_file_list}" \
-        12 \
-        1 \
-        2 \
-        3 \
-        TRUE \
-        "${sexchr_positive_control_snp_chr}" \
-        "${sexchr_positive_control_snp_pos}" \
-        "${sexchr_positive_control_snp_window}" \
-        "${sexchr_positive_control_threshold}"
-    if [ "$?" -ne "0" ]; then
-        fail "plot_gwas.R failed for ${sex_label} PLINK validation"
-    fi
-
-    sex_plink_count=$((sex_plink_count + 1))
 }
 
-run_sex_plink \
-    "female" \
-    "${hase_pheno_female}" \
-    "${hase_in_female}/data" \
-    "${plink_out}/female"
-
-run_sex_plink \
-    "male" \
-    "${hase_pheno_male}" \
-    "${hase_in_male}/data" \
-    "${plink_out}/male"
-
-if [ "${sex_plink_count}" -eq "0" ]; then
-    fail "No sex-specific phenotype inputs were found for 05d; nothing to validate."
+if [ -z "${validation_cpg}" ]; then
+    fail "sexchr_positive_control_cpg is empty. Please set it in your config before running 05d."
 fi
 
-echo "Sex-stratified PLINK positive-control GWAS successfully completed"
+check_file "${reference_file}"
+
+echo "Running 05d sex-stratified HASE meta-classic validation"
+echo "Study: ${study_name}"
+echo "Positive control CpG: ${validation_cpg}"
+echo "Reference file: ${reference_file}"
+echo "Output: ${validation_out}"
+sex_hase_validation_count=0
+
+run_sex_hase_validation() {
+    sex_label="$1"
+    meta_inputs="$2"
+    sex_out="${hase_out}/${sex_label}"
+    run_out="${sex_out}/run"
+    selected_covariates="${sex_out}/selected_covariates.tsv"
+    ph_id_inc="${sex_out}/positive_control_cpg.txt"
+    hase_validation_csv="${sex_out}/cohort_${study_name}_${validation_cpg}.csv.gz"
+
+    echo "Running ${sex_label} HASE meta-classic validation"
+    if [ ! -d "${meta_inputs}" ]; then
+        echo "Skipping ${sex_label} HASE validation because meta input directory is missing: ${meta_inputs}"
+        return 0
+    fi
+    check_meta_inputs "${meta_inputs}"
+
+    mkdir -p "${sex_out}" "${run_out}"
+
+    printf "ID\n%s\n" "${validation_cpg}" > "${ph_id_inc}"
+    printf "%s\t%s_intercept\n" "${study_name}" "${study_name}" > "${selected_covariates}"
+
+    python "${light_hase}/hase.py" \
+        -mode meta-classic \
+        -study_name "${study_name}" \
+        -g "${meta_inputs}/use_data" \
+        -ph "${meta_inputs}/use_data/phenotypes" \
+        -derivatives "${meta_inputs}/part_dev" \
+        -mapper "${meta_inputs}/mapping" \
+        -ph_id_inc "${ph_id_inc}" \
+        -encoded 1 \
+        --selected-covariates "${selected_covariates}" \
+        -ref_name ref-hrc \
+        -o "${run_out}" \
+        -thr 0 \
+        -thr_full_log 0 \
+        -max-missingness-rate 1 \
+        -cluster n
+
+    echo "Combining ${sex_label} feather outputs and writing gzip-compressed CSV files"
+
+    python - \
+        "${run_out}" \
+        "${sex_out}" \
+        "${study_name}" \
+        "${validation_cpg}" \
+        "${reference_file}" <<'PY'
+import glob
+import os
+import sys
+
+import pandas as pd
+
+run_out, validation_out, study_name, cpg, reference_file = sys.argv[1:6]
+
+
+def read_feathers(pattern, label):
+    files = sorted(glob.glob(pattern))
+    if not files:
+        raise SystemExit("No {} feather files found with pattern: {}".format(label, pattern))
+    frames = []
+    for path in files:
+        frames.append(pd.read_feather(path))
+    result = pd.concat(frames, ignore_index=True)
+    if result.empty:
+        raise SystemExit("{} feather files were found but combined data is empty".format(label))
+    return result, files
+
+
+def pick_column(columns, candidates, required=True):
+    for candidate in candidates:
+        if candidate in columns:
+            return candidate
+    if required:
+        raise SystemExit(
+            "Reference file {} is missing one of these columns: {}".format(
+                reference_file, ", ".join(candidates)))
+    return None
+
+
+def load_reference(reference_file):
+    compression = "gzip" if reference_file.endswith(".gz") else None
+    ref = pd.read_csv(reference_file, delim_whitespace=True, compression=compression)
+    ref = ref.reset_index(drop=True)
+
+    id_col = pick_column(ref.columns, ["ID", "id", "variant", "SNP"])
+    allele1_col = pick_column(ref.columns, ["str_allele1", "allele1", "A1", "effect_allele"])
+    allele2_col = pick_column(ref.columns, ["str_allele2", "allele2", "A2", "non_effect_allele"])
+    chr_col = pick_column(ref.columns, ["CHR", "#CHROM", "chromosome", "chr"], required=False)
+    bp_col = pick_column(ref.columns, ["bp", "BP", "pos", "position"], required=False)
+
+    return ref, id_col, allele1_col, allele2_col, chr_col, bp_col
+
+
+def annotate_variants(df, ref, id_col, allele1_col, allele2_col, chr_col, bp_col, label):
+    if "variant_index" not in df.columns:
+        raise SystemExit("{} results do not contain a variant_index column".format(label))
+
+    variant_index = df["variant_index"].astype("int64")
+    if variant_index.min() < 0 or variant_index.max() >= ref.shape[0]:
+        raise SystemExit(
+            "{} variant_index values are outside reference row range 0-{}".format(
+                label, ref.shape[0] - 1))
+
+    annotated = df.copy()
+    annotated["ID"] = variant_index.map(ref[id_col])
+    # HASE/light_hase decode PLINK .bed genotypes as .bim allele2 dosage.
+    # Therefore the HASE beta is relative to str_allele2, while str_allele1
+    # is the other allele, even though PLINK often labels A2 as "other".
+    annotated["hase_beta_allele"] = variant_index.map(ref[allele2_col])
+    annotated["hase_other_allele"] = variant_index.map(ref[allele1_col])
+    if chr_col is not None:
+        annotated["CHR"] = variant_index.map(ref[chr_col])
+    if bp_col is not None:
+        annotated["bp"] = variant_index.map(ref[bp_col])
+
+    if annotated["ID"].isnull().any():
+        raise SystemExit("{} results contain unmapped variant_index values".format(label))
+
+    preferred_columns = [
+        "variant_index", "ID", "CHR", "bp", "hase_beta_allele", "hase_other_allele"
+    ]
+    ordered_columns = [col for col in preferred_columns if col in annotated.columns]
+    ordered_columns.extend([col for col in annotated.columns if col not in ordered_columns])
+    return annotated[ordered_columns]
+
+
+cohort_pattern = os.path.join(
+    run_out, "cohort", "cohort={}".format(study_name), "phenotype={}".format(cpg), "file_*.feather"
+)
+meta_pattern = os.path.join(
+    run_out, "meta", "phenotype={}".format(cpg), "file_*.feather"
+)
+
+cohort_df, cohort_files = read_feathers(cohort_pattern, "cohort")
+meta_df, meta_files = read_feathers(meta_pattern, "meta")
+ref, id_col, allele1_col, allele2_col, chr_col, bp_col = load_reference(reference_file)
+
+cohort_df = annotate_variants(cohort_df, ref, id_col, allele1_col, allele2_col, chr_col, bp_col, "cohort")
+meta_df = annotate_variants(meta_df, ref, id_col, allele1_col, allele2_col, chr_col, bp_col, "meta")
+
+cohort_csv = os.path.join(validation_out, "cohort_{}_{}.csv.gz".format(study_name, cpg))
+meta_csv = os.path.join(validation_out, "meta_{}.csv.gz".format(cpg))
+cohort_df.to_csv(cohort_csv, index=False, compression="gzip")
+meta_df.to_csv(meta_csv, index=False, compression="gzip")
+
+print("Combined cohort feather files: {}".format(len(cohort_files)))
+print("Combined meta feather files: {}".format(len(meta_files)))
+print("Cohort rows: {}".format(cohort_df.shape[0]))
+print("Meta rows: {}".format(meta_df.shape[0]))
+print("Mapped variant_index using reference: {}".format(reference_file))
+print("Wrote cohort CSV: {}".format(cohort_csv))
+print("Wrote meta CSV: {}".format(meta_csv))
+PY
+
+    check_file "${hase_validation_csv}"
+    echo "Wrote ${sex_label} HASE validation CSV: ${hase_validation_csv}"
+
+    sex_hase_validation_count=$((sex_hase_validation_count + 1))
+}
+
+run_sex_hase_validation \
+    "female" \
+    "${section_05_dir}/meta_inputs_female"
+
+run_sex_hase_validation \
+    "male" \
+    "${section_05_dir}/meta_inputs_male"
+
+if [ "${sex_hase_validation_count}" -eq "0" ]; then
+    fail "No sex-specific 05 meta inputs were found for 05d; nothing to validate."
+fi
+
+echo "05d sex-stratified HASE meta-classic validation successfully completed"
