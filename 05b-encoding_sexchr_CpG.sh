@@ -14,6 +14,11 @@ mkdir -p ${hase_pheno_female}
 mkdir -p ${hase_encoding_male}
 mkdir -p ${hase_pheno_male}
 
+rm -rf ${hase_encoding_female:?}/*
+rm -rf ${hase_pheno_female:?}/*
+rm -rf ${hase_encoding_male:?}/*
+rm -rf ${hase_pheno_male:?}/*
+
 # add if file exist check - in case all female / all male
 if [ -f ${transformed_methylation_adjusted_pcs}.Female.chrX.csv ];
 then
