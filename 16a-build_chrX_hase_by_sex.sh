@@ -39,7 +39,7 @@ do
     fi
 done
 
-hrc_ref_allele="${light_hase}/data/hrc_ref_allele.txt"
+hrc_ref_allele="${light_hase}/data/hrc_ref_allele_16.txt"
 
 zcat ${light_hase}/data/ref-hrc.ref.gz \
     | awk 'NR>1 {print $1 "\t" $4}' \
