@@ -289,6 +289,20 @@ hase_pheno_male="${home_directory}/processed_data/hase/hase_pheno_male"
 hase_single_site_female="${home_directory}/processed_data/hase/single_site_female"
 hase_single_site_male="${home_directory}/processed_data/hase/single_site_male"
 
+#HASE for module 16 chrX genotype against all methylation probes
+hase16_chrx_in_female="${home_directory}/processed_data/hase/hase16_chrx_in_female"
+hase16_chrx_in_male="${home_directory}/processed_data/hase/hase16_chrx_in_male"
+hase16_chrx_converting_female="${home_directory}/processed_data/hase/hase16_chrx_converting_female"
+hase16_chrx_converting_male="${home_directory}/processed_data/hase/hase16_chrx_converting_male"
+hase16_chrx_mapping_female="${home_directory}/processed_data/hase/hase16_chrx_mapped_female"
+hase16_chrx_mapping_male="${home_directory}/processed_data/hase/hase16_chrx_mapped_male"
+hase16_chrx_encoding_female="${home_directory}/processed_data/hase/hase16_chrx_encoding_female"
+hase16_chrx_encoding_male="${home_directory}/processed_data/hase/hase16_chrx_encoding_male"
+hase16_allprobes_pheno_female="${home_directory}/processed_data/hase/hase16_allprobes_pheno_female"
+hase16_allprobes_pheno_male="${home_directory}/processed_data/hase/hase16_allprobes_pheno_male"
+hase16_chrx_single_site_female="${home_directory}/processed_data/hase/hase16_chrx_single_site_female"
+hase16_chrx_single_site_male="${home_directory}/processed_data/hase/hase16_chrx_single_site_male"
+
 #vmeQTL
 meth_vmeQTL_directory="${home_directory}/processed_data/methylation_data/vmeQTL"
 meth_vmeQTL_input_chr="${meth_vmeQTL_directory}/meth_vmeQTL_input.chr"

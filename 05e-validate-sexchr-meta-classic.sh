@@ -50,8 +50,10 @@ run_sex_final_validation() {
     hase_dir="$5"
 
     phenotype_csv="${pheno_dir}/methylation_data.csv"
-    extracted_csv="${out_dir}/${validation_cpg}.positive_control.csv"
-    plink_pheno="${out_dir}/${validation_cpg}.positive_control.plink"
+    positive_control_prefix="${transformed_methylation_adjusted}.sexchr_${sex_label}_${validation_cpg}.positive_control"
+    extracted_csv="${positive_control_prefix}"
+    plink_ids="${positive_control_prefix}.ids"
+    plink_pheno="${positive_control_prefix}.plink"
     plink_prefix="${out_dir}/positive_control_${sex_label}_${validation_cpg}"
     plink_glm="${plink_prefix}.PHENO1.glm.linear"
     plink_glm_gz="${plink_glm}.gz"
@@ -75,9 +77,18 @@ run_sex_final_validation() {
         fail "Positive control CpG ${validation_cpg} was not found in ${phenotype_csv}"
     fi
 
+    awk 'BEGIN {OFS="\t"} NR==FNR {ids[$2]; next} $2 in ids {print $1, $2}' \
+        "${intersect_ids_plink}" \
+        "${bfile_prefix}.fam" > "${plink_ids}"
+
+    nids=$(wc -l < "${plink_ids}" | awk '{print $1}')
+    if [ "${nids}" -eq "0" ]; then
+        fail "No ${sex_label} samples from ${bfile_prefix}.fam were found in ${intersect_ids_plink}"
+    fi
+
     ${R_directory}Rscript resources/genetics/make_control.R \
         "${extracted_csv}" \
-        "${bfile_prefix}.fam" \
+        "${plink_ids}" \
         "${plink_pheno}"
 
     echo "Running PLINK2 for ${sex_label}"
