@@ -12,6 +12,9 @@ print_version
 mkdir -p ${hase_single_site_female}
 mkdir -p ${hase_single_site_male}
 
+rm -rf ${hase_single_site_female:?}/*
+rm -rf ${hase_single_site_male:?}/*
+
 if [ -f ${transformed_methylation_adjusted_pcs}.Female.chrX.csv ];
 then
     python ${light_hase}/hase.py \
@@ -31,6 +34,13 @@ then
     mkdir -p ${home_directory}/results/05/meta_inputs_female/use_data/individuals
     mkdir -p ${home_directory}/results/05/meta_inputs_female/use_data/probes
     mkdir -p ${home_directory}/results/05/meta_inputs_female/use_data/genotype
+
+    rm -rf ${home_directory}/results/05/meta_inputs_female/part_dev/*
+    rm -rf ${home_directory}/results/05/meta_inputs_female/mapping/*
+    rm -rf ${home_directory}/results/05/meta_inputs_female/use_data/phenotypes/*
+    rm -rf ${home_directory}/results/05/meta_inputs_female/use_data/individuals/*
+    rm -rf ${home_directory}/results/05/meta_inputs_female/use_data/probes/*
+    rm -rf ${home_directory}/results/05/meta_inputs_female/use_data/genotype/*
 
     cp ${hase_single_site_female}/*npy ${home_directory}/results/05/meta_inputs_female/part_dev
     cp ${hase_encoding_female}/encode_genotype/*h5 ${home_directory}/results/05/meta_inputs_female/use_data/genotype/
@@ -59,6 +69,13 @@ then
     mkdir -p ${home_directory}/results/05/meta_inputs_male/use_data/individuals
     mkdir -p ${home_directory}/results/05/meta_inputs_male/use_data/probes
     mkdir -p ${home_directory}/results/05/meta_inputs_male/use_data/genotype
+
+    rm -rf ${home_directory}/results/05/meta_inputs_male/part_dev/*
+    rm -rf ${home_directory}/results/05/meta_inputs_male/mapping/*
+    rm -rf ${home_directory}/results/05/meta_inputs_male/use_data/phenotypes/*
+    rm -rf ${home_directory}/results/05/meta_inputs_male/use_data/individuals/*
+    rm -rf ${home_directory}/results/05/meta_inputs_male/use_data/probes/*
+    rm -rf ${home_directory}/results/05/meta_inputs_male/use_data/genotype/*
 
     cp ${hase_single_site_male}/*npy ${home_directory}/results/05/meta_inputs_male/part_dev
     cp ${hase_encoding_male}/encode_genotype/*h5 ${home_directory}/results/05/meta_inputs_male/use_data/genotype/
