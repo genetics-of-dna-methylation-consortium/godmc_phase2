@@ -31,7 +31,7 @@ check_bfile() {
 }
 
 if [ -z "${validation_cpg}" ]; then
-    fail "sexchr_positive_control_cpg is empty. Please set it in your config before running 05e."
+    fail "sexchr_positive_control_cpg is empty."
 fi
 
 mkdir -p "${plink_out}/female" "${plink_out}/male"
