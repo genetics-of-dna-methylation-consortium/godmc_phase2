@@ -21,7 +21,7 @@ do
    mkdir -p ${home_directory}/results/0$i
 done
 
-for i in {10..14}
+for i in {10..16}
 do
    mkdir -p ${home_directory}/results/$i
 done
@@ -64,6 +64,9 @@ mkdir -p "${section_12_dir}/logs/"
 mkdir -p "${section_13_dir}/logs_a/"
 mkdir -p "${section_13_dir}/logs/"
 mkdir -p "${section_14_dir}/logs/"
+mkdir -p "${section_16_dir}/logs_a/"
+mkdir -p "${section_16_dir}/logs_b/"
+mkdir -p "${section_16_dir}/logs_c/"
 
 chmod +x *.sh
 chmod +x ./resources/bin/*
