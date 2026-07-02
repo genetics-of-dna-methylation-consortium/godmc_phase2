@@ -50,8 +50,9 @@ run_sex_final_validation() {
     hase_dir="$5"
 
     phenotype_csv="${pheno_dir}/methylation_data.csv"
-    extracted_csv="${out_dir}/${validation_cpg}.positive_control.csv"
-    plink_pheno="${out_dir}/${validation_cpg}.positive_control.plink"
+    positive_control_prefix="${transformed_methylation_adjusted}.sexchr_${sex_label}_${validation_cpg}.positive_control"
+    extracted_csv="${positive_control_prefix}"
+    plink_pheno="${positive_control_prefix}.plink"
     plink_prefix="${out_dir}/positive_control_${sex_label}_${validation_cpg}"
     plink_glm="${plink_prefix}.PHENO1.glm.linear"
     plink_glm_gz="${plink_glm}.gz"
