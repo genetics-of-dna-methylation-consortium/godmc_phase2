@@ -141,14 +141,14 @@ cd "${home_directory}/results"
 md5sum "05_${study_name}.tgz" > "05_${study_name}.tgz.md5sum"
 md5sum -c "05_${study_name}.tgz.md5sum"
 
-# echo "Encrypting Module 05 archive"
-# gpg --output "05_${study_name}.tgz.gpg" \
-#     --symmetric \
-#     --cipher-algo AES256 \
-#     "05_${study_name}.tgz"
+echo "Encrypting Module 05 archive"
+gpg --output "05_${study_name}.tgz.gpg" \
+    --symmetric \
+    --cipher-algo AES256 \
+    "05_${study_name}.tgz"
 
-# check_file "${checksum}"
-# check_file "${encrypted}"
+check_file "${checksum}"
+check_file "${encrypted}"
 
 echo ""
 echo "Module 05 archive successfully created and encrypted."
