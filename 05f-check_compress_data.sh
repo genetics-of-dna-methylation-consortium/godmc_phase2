@@ -124,11 +124,12 @@ archive="${home_directory}/results/05_${study_name}.tgz"
 checksum="${archive}.md5sum"
 encrypted="${archive}.gpg"
 
+echo "Removing old tgz, md5 and gpg files"
 rm -f "${archive}" "${checksum}" "${encrypted}"
 
 echo "Compressing Module 05 results"
 tar -zcf "${archive}" \
-    --exclude="results/05/sexchr_positive_control_validation/hase/*/run" \
+    --exclude="results/05/sexchr_positive_control_validation/hase/*/run/*"  \
     "${config_to_archive}" \
     "${scripts_directory}/resources/parameters" \
     "results/05"
