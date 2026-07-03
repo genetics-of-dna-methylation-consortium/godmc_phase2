@@ -77,6 +77,56 @@ fi
 
 echo "Using Sex_factor column: ${sex_col}"
 
+n_female=$(awk -v sex_col="${sex_col}" 'NR > 1 && $sex_col == "F" {n++} END {print n + 0}' "${covariates_combined}.txt")
+n_male=$(awk -v sex_col="${sex_col}" 'NR > 1 && $sex_col == "M" {n++} END {print n + 0}' "${covariates_combined}.txt")
+
+echo "Found ${n_female} female samples and ${n_male} male samples in ${covariates_combined}.txt"
+
+check_methylation_csv_sample_count() {
+    sex_label="$1"
+    cov_count="$2"
+    methylation_csv="$3"
+
+    if [ ! -f "${methylation_csv}" ]
+    then
+        echo "ERROR: Missing ${sex_label} methylation CSV: ${methylation_csv}"
+        exit 1
+    fi
+
+    csv_count=$(awk -F',' 'NR == 1 {print NF - 1; exit}' "${methylation_csv}")
+
+    if [ "${csv_count}" -ne "${cov_count}" ]
+    then
+        echo "ERROR: Sample count mismatch for ${methylation_csv}"
+        echo "Covariates Sex_factor ${sex_label} count: ${cov_count}"
+        echo "Methylation CSV sample count: ${csv_count}"
+        exit 1
+    fi
+
+    echo "Sample count check passed for ${methylation_csv}: ${csv_count} samples"
+}
+
+if [ "${n_female}" -gt "0" ]
+then
+    check_methylation_csv_sample_count \
+        "female" \
+        "${n_female}" \
+        "${transformed_methylation_adjusted_pcs}.Female.chrX.csv"
+fi
+
+if [ "${n_male}" -gt "0" ]
+then
+    check_methylation_csv_sample_count \
+        "male" \
+        "${n_male}" \
+        "${transformed_methylation_adjusted_pcs}.Male.chrX.csv"
+
+    check_methylation_csv_sample_count \
+        "male" \
+        "${n_male}" \
+        "${transformed_methylation_adjusted_pcs}.Male.chrY.csv"
+fi
+
 check_chr_x_coding() {
     bim_file="$1"
 
