@@ -18,6 +18,64 @@ check_file() {
     fi
 }
 
+check_dir() {
+    if [ ! -d "$1" ]; then
+        fail "Missing required directory: $1"
+    fi
+}
+
+check_any_file() {
+    dir="$1"
+    pattern="$2"
+    label="$3"
+
+    if ! find "${dir}" -maxdepth 1 -type f -name "${pattern}" | grep -q .; then
+        fail "Missing ${label} in ${dir}"
+    fi
+}
+
+check_meta_inputs() {
+    sex_label="$1"
+    meta_inputs="${section_05_dir}/meta_inputs_${sex_label}"
+
+    echo "Checking Module 05 ${sex_label} meta-analysis inputs: ${meta_inputs}"
+
+    check_dir "${meta_inputs}"
+    check_dir "${meta_inputs}/part_dev"
+    check_dir "${meta_inputs}/mapping"
+    check_dir "${meta_inputs}/use_data"
+    check_dir "${meta_inputs}/use_data/genotype"
+    check_dir "${meta_inputs}/use_data/individuals"
+    check_dir "${meta_inputs}/use_data/probes"
+    check_dir "${meta_inputs}/use_data/phenotypes"
+
+    check_any_file "${meta_inputs}/part_dev" "*.npy" "single-site partial derivative npy files"
+    check_any_file "${meta_inputs}/mapping" "*.npy" "mapper npy files"
+    check_any_file "${meta_inputs}/use_data/genotype" "*.h5" "encoded genotype h5 files"
+    check_any_file "${meta_inputs}/use_data/individuals" "*.h5" "encoded individual h5 files"
+    check_any_file "${meta_inputs}/use_data/probes" "*.h5" "probe h5 files"
+    check_any_file "${meta_inputs}/use_data/phenotypes" "*.csv" "encoded phenotype csv files"
+}
+
+check_positive_control_outputs() {
+    sex_label="$1"
+    validation_cpg="${sexchr_positive_control_cpg}"
+
+    echo "Checking Module 05 ${sex_label} positive-control validation outputs for ${validation_cpg}"
+
+    check_file "${section_05_dir}/sexchr_positive_control_validation/hase/${sex_label}/cohort_${study_name}_${validation_cpg}.csv.gz"
+    check_file "${section_05_dir}/sexchr_positive_control_validation/hase/${sex_label}/meta_${validation_cpg}.csv.gz"
+    check_file "${section_05_dir}/sexchr_positive_control_validation/plink/${sex_label}/positive_control_${sex_label}_${validation_cpg}.PHENO1.glm.linear.gz"
+    check_file "${section_05_dir}/sexchr_positive_control_validation/hase/${sex_label}/${study_name}_${sex_label}_${validation_cpg}.merged.tsv.gz"
+}
+
+check_expected_sex_outputs() {
+    sex_label="$1"
+
+    check_meta_inputs "${sex_label}"
+    check_positive_control_outputs "${sex_label}"
+}
+
 if [ "${config_file:0:1}" = "/" ]; then
     config_to_archive="${config_file}"
 else
@@ -26,9 +84,38 @@ fi
 
 check_file "${config_to_archive}"
 check_file "${scripts_directory}/resources/parameters"
+check_file "${covariates_combined}.txt"
 
-if [ ! -d "${section_05_dir}/meta_inputs_female" ] && [ ! -d "${section_05_dir}/meta_inputs_male" ]; then
-    fail "Missing Module 05 meta input directories. Please run 05c before 05f."
+sex_col=$(awk 'NR == 1 {
+    for (i = 1; i <= NF; i++) {
+        if ($i == "Sex_factor") {
+            print i
+            exit
+        }
+    }
+}' "${covariates_combined}.txt")
+
+if [ -z "${sex_col}" ]; then
+    fail "Cannot find Sex_factor column in ${covariates_combined}.txt"
+fi
+
+n_female=$(awk -v sex_col="${sex_col}" 'NR > 1 && $sex_col == "F" {n++} END {print n + 0}' "${covariates_combined}.txt")
+n_male=$(awk -v sex_col="${sex_col}" 'NR > 1 && $sex_col == "M" {n++} END {print n + 0}' "${covariates_combined}.txt")
+
+echo "Sex_factor counts: female=${n_female}, male=${n_male}"
+
+if [ "${n_female}" -gt "0" ] && [ "${n_male}" -gt "0" ]; then
+    echo "Cohort contains both female and male samples"
+    check_expected_sex_outputs "female"
+    check_expected_sex_outputs "male"
+elif [ "${n_female}" -gt "0" ]; then
+    echo "Cohort female only"
+    check_expected_sex_outputs "female"
+elif [ "${n_male}" -gt "0" ]; then
+    echo "Cohort male only"
+    check_expected_sex_outputs "male"
+else
+    fail "No M or F values found in Sex_factor column of ${covariates_combined}.txt"
 fi
 
 cd "${home_directory}"
@@ -53,7 +140,7 @@ md5sum "${study_name}_05.tgz" > "${study_name}_05.tgz.md5sum"
 md5sum -c "${study_name}_05.tgz.md5sum"
 
 # echo "Encrypting Module 05 archive"
-# gpg --output "${study_name}_05.tgz.aes" \
+# gpg --output "${study_name}_05.tgz.gpg" \
 #     --symmetric \
 #     --cipher-algo AES256 \
 #     "${study_name}_05.tgz"
