@@ -34,7 +34,7 @@ do
     fi
 done
 
-echo "Flipping alleles into hrc reference allele order"
+echo "Preparing hrc reference allele order file"
 
 hrc_ref_allele="${light_hase}/data/hrc_ref_allele.txt"
 
@@ -276,6 +276,8 @@ convert_and_map_sex_hase() {
         exit 1
     fi
 }
+
+echo "Prepare mapping files"
 
 # female samples
 if [ -f ${transformed_methylation_adjusted_pcs}.Female.chrX.csv ];
