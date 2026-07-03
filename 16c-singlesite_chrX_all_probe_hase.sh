@@ -52,7 +52,7 @@ run_chrx_all_probe_single_meta() {
         return 1
     fi
 
-    echo "Running module 16 chrX all-probe HASE single-meta for ${sex_label} samples"
+    echo "Running module 16 chrX sex-specific all-probe HASE single-meta for ${sex_label} samples"
     python ${light_hase}/hase.py \
         -mode single-meta \
         -study_name ${study_name} \
@@ -112,4 +112,4 @@ then
     exit 1
 fi
 
-echo "Module 16 chrX genotype against all methylation probes successfully completed"
+echo "Module 16 chrX genotype against sex-specific all methylation probes successfully completed"
