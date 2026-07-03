@@ -120,7 +120,7 @@ fi
 
 cd "${home_directory}"
 
-archive="${home_directory}/results/${study_name}_05.tgz"
+archive="${home_directory}/results/05_${study_name}.tgz"
 checksum="${archive}.md5sum"
 encrypted="${archive}.gpg"
 
@@ -137,14 +137,14 @@ check_file "${archive}"
 
 echo "Generating md5 checksum"
 cd "${home_directory}/results"
-md5sum "${study_name}_05.tgz" > "${study_name}_05.tgz.md5sum"
-md5sum -c "${study_name}_05.tgz.md5sum"
+md5sum "05_${study_name}.tgz" > "05_${study_name}.tgz.md5sum"
+md5sum -c "05_${study_name}.tgz.md5sum"
 
 # echo "Encrypting Module 05 archive"
-# gpg --output "${study_name}_05.tgz.gpg" \
+# gpg --output "05_${study_name}.tgz.gpg" \
 #     --symmetric \
 #     --cipher-algo AES256 \
-#     "${study_name}_05.tgz"
+#     "05_${study_name}.tgz"
 
 # check_file "${checksum}"
 # check_file "${encrypted}"
