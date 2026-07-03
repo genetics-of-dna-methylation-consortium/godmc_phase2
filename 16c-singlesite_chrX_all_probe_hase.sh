@@ -3,6 +3,7 @@
 source resources/setup.sh "$@"
 set -- $concatenated
 
+mkdir -p "${section_16_dir}/logs_c"
 exec &> >(tee ${section_16c_logfile})
 print_version
 
