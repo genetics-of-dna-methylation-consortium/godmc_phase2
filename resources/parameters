@@ -47,6 +47,7 @@ section_05b_logfile="${section_05_dir}/logs_b/log.txt"
 section_05c_logfile="${section_05_dir}/logs_c/log.txt"
 section_05d_logfile="${section_05_dir}/logs_d/log.txt"
 section_05e_logfile="${section_05_dir}/logs_e/log.txt"
+section_05f_logfile="${section_05_dir}/logs_f/log.txt"
 
 section_06_logfile="${section_06_dir}/logs/log.txt"
 
