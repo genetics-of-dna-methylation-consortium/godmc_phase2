@@ -99,9 +99,9 @@ positive_control_snp_pos="50053871"
 positive_control_snp_window="100000"
 positive_control_threshold="0.001"
 
-sexchr_positive_control_cpg="cg06307153"
-sexchr_positive_control_snp_chr="16"
-sexchr_positive_control_snp_pos="3313025"
+sexchr_positive_control_cpg="cg11001470"
+sexchr_positive_control_snp_chr="22"
+sexchr_positive_control_snp_pos="42295653"
 sexchr_positive_control_snp_window="100000"
 sexchr_positive_control_threshold="0.001"
 
