@@ -74,6 +74,8 @@ section_16a_logfile="${section_16_dir}/logs_a/log.txt"
 section_16b_logfile="${section_16_dir}/logs_b/log.txt"
 section_16c_logfile="${section_16_dir}/logs_c/log.txt"
 section_16d_logfile="${section_16_dir}/logs_d/log.txt"
+section_16e_logfile="${section_16_dir}/logs_e/log.txt"
+section_16f_logfile="${section_16_dir}/logs_f/log.txt"
 section_17a_logfile="${section_17_dir}/logs_a/log.txt"
 section_17b_logfile="${section_17_dir}/logs_b/log.txt"
 
@@ -105,6 +107,12 @@ sexchr_positive_control_snp_chr="22"
 sexchr_positive_control_snp_pos="42295653"
 sexchr_positive_control_snp_window="100000"
 sexchr_positive_control_threshold="0.001"
+
+module16_positive_control_cpg="cg02883100"
+module16_positive_control_snp_chr="23"
+module16_positive_control_snp_pos="53417183"
+module16_positive_control_snp_window="100000"
+module16_positive_control_threshold="0.001"
 
 # Descriptives
 genetic_descriptives="${home_directory}/processed_data/ids/genetic_descriptives.RData"
