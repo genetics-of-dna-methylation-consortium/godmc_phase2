@@ -7,7 +7,7 @@ mkdir -p "${section_16_dir}/logs_c"
 exec &> >(tee ${section_16c_logfile})
 print_version
 
-echo "Encoding Module 16 chrX genotype and sex-specific all-probe phenotypes"
+echo "Encoding Module 16 chrX/chrY genotype and sex-specific all-probe phenotypes"
 echo "This script uses the HASE mamba environment and consumes phenotypes from 16a."
 
 mkdir -p ${hase16_chrx_encoding_female}
@@ -25,7 +25,7 @@ encode_chrx_all_probes() {
 
     if [ ! -d "${converting_dir}/probes" ]
     then
-        echo "Skipping ${sex_label}: chrX converted genotype directory is missing: ${converting_dir}/probes"
+        echo "Skipping ${sex_label}: chrX/chrY converted genotype directory is missing: ${converting_dir}/probes"
         return 1
     fi
 
@@ -42,7 +42,7 @@ encode_chrx_all_probes() {
         return 1
     fi
 
-    echo "Encoding sex-specific all available methylation probes against chrX genotypes for ${sex_label} samples"
+    echo "Encoding sex-specific all available methylation probes against chrX/chrY genotypes for ${sex_label} samples"
     python ${light_hase}/hase.py \
         -mode encoding \
         -study_name ${study_name} \
@@ -88,4 +88,4 @@ then
     exit 1
 fi
 
-echo "Successfully encoded module 16 chrX genotype and sex-specific all-probe methylation data"
+echo "Successfully encoded module 16 chrX/chrY genotype and sex-specific all-probe methylation data"

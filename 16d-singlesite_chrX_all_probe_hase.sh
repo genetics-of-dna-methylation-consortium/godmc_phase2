@@ -7,7 +7,7 @@ mkdir -p "${section_16_dir}/logs_d"
 exec &> >(tee ${section_16d_logfile})
 print_version
 
-echo "Running Module 16 chrX genotype against sex-specific all-probe single-meta"
+echo "Running Module 16 chrX/chrY genotype against sex-specific all-probe single-meta"
 echo "This script uses the HASE mamba environment."
 
 mkdir -p ${hase16_chrx_single_site_female}
@@ -56,7 +56,7 @@ run_chrx_all_probe_single_meta() {
         return 1
     fi
 
-    echo "Running module 16 chrX sex-specific all-probe HASE single-meta for ${sex_label} samples"
+    echo "Running module 16 chrX/chrY sex-specific all-probe HASE single-meta for ${sex_label} samples"
     python ${light_hase}/hase.py \
         -mode single-meta \
         -study_name ${study_name} \
@@ -116,4 +116,4 @@ then
     exit 1
 fi
 
-echo "Module 16 chrX genotype against sex-specific all methylation probes successfully completed"
+echo "Module 16 chrX/chrY genotype against sex-specific all methylation probes successfully completed"

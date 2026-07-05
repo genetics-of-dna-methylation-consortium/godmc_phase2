@@ -7,7 +7,7 @@ mkdir -p "${section_16_dir}/logs_b"
 exec &> >(tee ${section_16b_logfile})
 print_version
 
-echo "Building Module 16 chrX HASE genotype inputs"
+echo "Building Module 16 chrX/chrY HASE genotype inputs"
 echo "This script uses the HASE mamba environment. Keep it active for 16c and 16d."
 
 mkdir -p ${hase16_chrx_in_female}
@@ -78,31 +78,31 @@ fi
 
 echo "Using Sex_factor column: ${sex_col}"
 
-check_chrx_coding() {
+check_sexchr_coding() {
     bim_file="$1"
 
     if [ ! -f "${bim_file}" ]
     then
-        echo "ERROR: Missing BIM file for chrX coding check: ${bim_file}"
+        echo "ERROR: Missing BIM file for sex chromosome coding check: ${bim_file}"
         exit 1
     fi
 
-    nX=$(awk '{
+    n_bad=$(awk '{
         chr=toupper($1)
         id=toupper($2)
-        if (chr == "X" || id ~ /^X:/) {
+        if (chr == "X" || chr == "Y" || id ~ /^[XY]:/) {
             n++
         }
     } END {print n + 0}' "${bim_file}")
 
-    if [ "$nX" -gt "0" ]
+    if [ "$n_bad" -gt "0" ]
     then
-        echo "ERROR: wrong chrX coding in ${bim_file}"
-        echo "Found ${nX} rows where the first BIM column is X or the second BIM column starts with X:"
+        echo "ERROR: wrong sex chromosome coding in ${bim_file}"
+        echo "Found ${n_bad} rows where the first BIM column is X/Y or the second BIM column starts with X:/Y:"
         awk 'BEGIN {OFS="\t"} {
             chr=toupper($1)
             id=toupper($2)
-            if (chr == "X" || id ~ /^X:/) {
+            if (chr == "X" || chr == "Y" || id ~ /^[XY]:/) {
                 print $1, $2
             }
         }' "${bim_file}" | head
@@ -159,7 +159,7 @@ make_chrx_hase_input() {
     sex_haseinput_pgen="${sex_input_dir}/data_haseinput_pgen"
     sex_bfile_prefix="${sex_input_dir}/data_${sex_label}"
 
-    echo "Preparing chrX genotype data for ${sex_label} samples"
+    echo "Preparing chrX/chrY genotype data for ${sex_label} samples"
 
     rm -f "${sex_input_dir}"/*.bed "${sex_input_dir}"/*.bim "${sex_input_dir}"/*.fam "${sex_input_dir}"/*.log "${sex_input_dir}"/*.nosex
     rm -f "${sex_input_dir}"/*.pgen "${sex_input_dir}"/*.pvar "${sex_input_dir}"/*.psam
@@ -167,7 +167,7 @@ make_chrx_hase_input() {
     ${plink2} \
         --bfile "${bfile}" \
         --keep "${keep_file}" \
-        --chr X \
+        --chr X Y \
         --sort-vars \
         --set-all-var-ids @:#_\$1_\$2 \
         --ref-allele force "${hrc_ref_allele}" 2 1 \
@@ -177,7 +177,7 @@ make_chrx_hase_input() {
         --threads "${nthreads}"
     if [ "$?" -ne "0" ]
     then
-        echo "ERROR: PLINK2 chrX pgen preparation failed for ${sex_label} samples"
+        echo "ERROR: PLINK2 chrX/chrY pgen preparation failed for ${sex_label} samples"
         exit 1
     fi
 
@@ -189,13 +189,13 @@ make_chrx_hase_input() {
         --threads "${nthreads}"
     if [ "$?" -ne "0" ]
     then
-        echo "ERROR: PLINK2 chrX bed conversion failed for ${sex_label} samples"
+        echo "ERROR: PLINK2 chrX/chrY bed conversion failed for ${sex_label} samples"
         exit 1
     fi
 
     rm -f "${sex_haseinput_pgen}.pgen" "${sex_haseinput_pgen}.pvar" "${sex_haseinput_pgen}.psam" "${sex_haseinput_pgen}.log"
 
-    check_chrx_coding "${sex_bfile_prefix}.bim"
+    check_sexchr_coding "${sex_bfile_prefix}.bim"
 
     rm -f "${sex_bfile_prefix}.log"
     rm -f "${keep_file}"
@@ -207,7 +207,7 @@ convert_and_map_chrx_hase() {
     sex_converting_dir="$3"
     sex_mapping_dir="$4"
 
-    echo "Start converting chrX genetic data of ${sex_label} samples"
+    echo "Start converting chrX/chrY genetic data of ${sex_label} samples"
     python ${light_hase}/hase.py \
         -mode converting \
         -g ${sex_input_dir} \
@@ -215,11 +215,11 @@ convert_and_map_chrx_hase() {
         -study_name ${study_name}
     if [ "$?" -ne "0" ]
     then
-        echo "ERROR: light_hase converting failed for ${sex_label} chrX samples"
+        echo "ERROR: light_hase converting failed for ${sex_label} chrX/chrY samples"
         exit 1
     fi
 
-    echo "Start mapping chrX genetic data of ${sex_label} samples"
+    echo "Start mapping chrX/chrY genetic data of ${sex_label} samples"
     python ${light_hase}/tools/mapper.py \
         -g ${sex_converting_dir} \
         -o ${sex_mapping_dir} \
@@ -227,7 +227,7 @@ convert_and_map_chrx_hase() {
         -ref_name "ref-hrc"
     if [ "$?" -ne "0" ]
     then
-        echo "ERROR: light_hase mapper failed for ${sex_label} chrX samples"
+        echo "ERROR: light_hase mapper failed for ${sex_label} chrX/chrY samples"
         exit 1
     fi
 }
@@ -250,8 +250,8 @@ fi
 
 if [ "${processed_sex_count}" -eq "0" ]
 then
-    echo "ERROR: No female or male chrX genotype inputs were prepared for module 16"
+    echo "ERROR: No female or male chrX/chrY genotype inputs were prepared for module 16"
     exit 1
 fi
 
-echo "Successfully prepared module 16 chrX HASE inputs"
+echo "Successfully prepared module 16 chrX/chrY HASE inputs"
