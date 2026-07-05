@@ -80,10 +80,31 @@ echo "Using Sex_factor column: ${sex_col}"
 
 check_sexchr_coding() {
     bim_file="$1"
+    sex_label="$2"
 
     if [ ! -f "${bim_file}" ]
     then
         echo "ERROR: Missing BIM file for sex chromosome coding check: ${bim_file}"
+        exit 1
+    fi
+
+    n_chrX=$(awk '$1 == "23" {n++} END {print n + 0}' "${bim_file}")
+    n_chrY=$(awk '$1 == "24" {n++} END {print n + 0}' "${bim_file}")
+
+    echo "${sex_label} chrX variants in HASE input: ${n_chrX}"
+    echo "${sex_label} chrY variants in HASE input: ${n_chrY}"
+
+    if [ "${n_chrX}" -gt "0" ] && [ "${n_chrY}" -gt "0" ]
+    then
+        echo "${sex_label} genotype input contains both chrX and chrY variants"
+    elif [ "${n_chrX}" -gt "0" ]
+    then
+        echo "${sex_label} genotype input contains chrX variants only"
+    elif [ "${n_chrY}" -gt "0" ]
+    then
+        echo "${sex_label} genotype input contains chrY variants only"
+    else
+        echo "ERROR: No chrX or chrY variants found in ${bim_file}"
         exit 1
     fi
 
@@ -195,7 +216,7 @@ make_chrx_hase_input() {
 
     rm -f "${sex_haseinput_pgen}.pgen" "${sex_haseinput_pgen}.pvar" "${sex_haseinput_pgen}.psam" "${sex_haseinput_pgen}.log"
 
-    check_sexchr_coding "${sex_bfile_prefix}.bim"
+    check_sexchr_coding "${sex_bfile_prefix}.bim" "${sex_label}"
 
     rm -f "${sex_bfile_prefix}.log"
     rm -f "${keep_file}"
