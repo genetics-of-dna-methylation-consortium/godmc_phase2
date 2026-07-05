@@ -3,9 +3,12 @@
 source resources/setup.sh "$@"
 set -- $concatenated
 
-mkdir -p "${section_16_dir}/logs_c"
-exec &> >(tee ${section_16c_logfile})
+mkdir -p "${section_16_dir}/logs_d"
+exec &> >(tee ${section_16d_logfile})
 print_version
+
+echo "Running Module 16 chrX genotype against sex-specific all-probe single-meta"
+echo "This script uses the HASE mamba environment."
 
 mkdir -p ${hase16_chrx_single_site_female}
 mkdir -p ${hase16_chrx_single_site_male}

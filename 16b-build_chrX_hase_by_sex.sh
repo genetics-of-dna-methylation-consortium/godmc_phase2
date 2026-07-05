@@ -3,9 +3,12 @@
 source resources/setup.sh "$@"
 set -- $concatenated
 
-mkdir -p "${section_16_dir}/logs_a"
-exec &> >(tee ${section_16a_logfile})
+mkdir -p "${section_16_dir}/logs_b"
+exec &> >(tee ${section_16b_logfile})
 print_version
+
+echo "Building Module 16 chrX HASE genotype inputs"
+echo "This script uses the HASE mamba environment. Keep it active for 16c and 16d."
 
 mkdir -p ${hase16_chrx_in_female}
 mkdir -p ${hase16_chrx_in_male}
@@ -45,12 +48,6 @@ hrc_ref_allele="${light_hase}/data/hrc_ref_allele_16.txt"
 zcat ${light_hase}/data/ref-hrc.ref.gz \
     | awk 'NR>1 {print $1 "\t" $4}' \
     > ${hrc_ref_allele}
-
-if [ ! -f "${transformed_methylation_adjusted_pcs}.csv" ]
-then
-    echo "ERROR: Missing all-probe methylation file: ${transformed_methylation_adjusted_pcs}.csv"
-    exit 1
-fi
 
 if [ ! -f "${covariates_combined}.txt" ]
 then
