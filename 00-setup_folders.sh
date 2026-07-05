@@ -71,6 +71,7 @@ mkdir -p "${section_16_dir}/logs_c/"
 mkdir -p "${section_16_dir}/logs_d/"
 mkdir -p "${section_16_dir}/logs_e/"
 mkdir -p "${section_16_dir}/logs_f/"
+mkdir -p "${section_16_dir}/logs_g/"
 
 chmod +x *.sh
 chmod +x ./resources/bin/*
