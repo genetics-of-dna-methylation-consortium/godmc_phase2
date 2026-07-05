@@ -50,8 +50,13 @@ append_methylation_csv_by_fam() {
 
     awk -F',' -v OFS=',' -v sex_label="${sex_label}" -v write_header="${write_header}" '
         NR == FNR {
+            split($0, fam_fields, /[[:space:]]+/)
+            if (fam_fields[2] == "") {
+                print "ERROR: Missing IID in fam file line " FNR ": " FILENAME > "/dev/stderr"
+                exit 2
+            }
             n++
-            ids[n] = $2
+            ids[n] = fam_fields[2]
             next
         }
         FNR == 1 {
