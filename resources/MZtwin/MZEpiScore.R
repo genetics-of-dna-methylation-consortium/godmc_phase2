@@ -157,7 +157,6 @@ if (length(unique(obs_zyg)) < 2) {
     auc <- NA
 } else {
     prob <-  predict(cv.glmmod,type="response", newx =beta_imp_tmp, s = "lambda.min")
-    prob    <- obs_zyg
     pred <- prediction(prob,obs_zyg)
     auc <- performance(pred, "auc")@y.values[[1]]
 }
