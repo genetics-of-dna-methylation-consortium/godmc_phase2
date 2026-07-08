@@ -76,6 +76,8 @@ message("Loading methylation data")
 # Load your DNA methylation data object "beta" (rows=samples, columns=CpGs). Values=methylation beta-values.
 load(methylation)
 print(dim(norm.beta))
+message("Checking if beta value object contains any missing values")
+print(any(is.na(norm.beta)))
 m <- match(fam[,"IID"], colnames(norm.beta))
 beta <- norm.beta[,m]
 message("Checking if IIDs match")
@@ -134,19 +136,28 @@ beta_imp[,missingCpGs] <- 0
 rownames(beta_imp) <- IIDs
 
 # Classification: Predicted MZ twin status
+message("Running Classification")
 predicted <- as.matrix(predict(cv.glmmod, newx =beta_imp, s = "lambda.min", type = "class"))
 predicted[which(predicted==1)] <- 'Predicted MZ'
 predicted[which(predicted==0)] <- 'Predicted non-MZ'
+message("Frequency of predicted")
+print(table(predicted))
 
 #AUC
+message("Frequency of observed")
+print(table(obs_zyg))
 obs_zyg <- rep(0,nrow(pheno))
 obs_zyg[which(pheno$Twinzygosity=="MZ")] <- 1
+obs_zyg <- obs_zyg[which(!pheno$Twinzygosity=="UZ")]
+beta_imp_tmp <- beta_imp[which(!pheno$Twinzygosity=="UZ"),]
+
+message("computing AUC")
+   
 if (length(unique(obs_zyg)) < 2) {
     auc <- NA
 } else {
-    prob <-  predict(cv.glmmod,type="response", newx =beta_imp, s = "lambda.min")
-    obs_zyg <- obs_zyg[which(!pheno$Twinzygosity=="UZ")]
-    prob    <- prob[which(!pheno$Twinzygosity=="UZ")]
+    prob <-  predict(cv.glmmod,type="response", newx =beta_imp_tmp, s = "lambda.min")
+    prob    <- obs_zyg
     pred <- prediction(prob,obs_zyg)
     auc <- performance(pred, "auc")@y.values[[1]]
 }
