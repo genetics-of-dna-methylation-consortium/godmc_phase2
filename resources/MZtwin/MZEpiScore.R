@@ -145,11 +145,11 @@ print(table(predicted))
 
 #AUC
 message("Frequency of observed")
-print(table(obs_zyg))
 obs_zyg <- rep(0,nrow(pheno))
 obs_zyg[which(pheno$Twinzygosity=="MZ")] <- 1
 obs_zyg <- obs_zyg[which(!pheno$Twinzygosity=="UZ")]
 beta_imp_tmp <- beta_imp[which(!pheno$Twinzygosity=="UZ"),]
+print(table(obs_zyg))
 
 message("computing AUC")
    
