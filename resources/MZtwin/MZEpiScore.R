@@ -80,8 +80,12 @@ message("Checking if beta value object contains any missing values")
 print(any(is.na(norm.beta)))
 m <- match(fam[,"IID"], colnames(norm.beta))
 beta <- norm.beta[,m]
-message("Checking if IIDs match")
+message("Checking if IIDs match, fam file vs methylation beta-values")
 print(table(fam[,"IID"]==colnames(beta)))
+m2 <- match(fam[,"IID"],pheno[,"IID"])
+pheno <- pheno[m2,]
+message("Checking if IIDs match, phenotype file vs methylation beta-values")
+print(table(pheno[,"IID"]==colnames(beta)))
 rm(norm.beta)
 gc()
 
