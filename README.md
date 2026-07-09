@@ -53,15 +53,25 @@ The scripts in this repository were developed by the core GoDMC team and individ
 
 The developer group of these scripts are listed in alphabetical order below:
 
+
 Carlos Ruiz Arenas  
-Olalekan Awoniran  
+
+Olalekan Awoniran
+Olivia Castellini-Pérez  
+Toby Clark  
 Eilis Hannon  
-Gibran Hemani  
+Gibran Hemani
+Thomas Jonkman
+Natalia Llonga     
 Josine Min  
-Maria Soler Artigas  
-Natalia Llonga  
-Olivia Castellini  
-Siyi Wang  
-Sonja Rajic  
-Thomas Jonkman  
+Anh Nguyen
+Ting Qi
+Emma Raitoharju
+Sonja Rajic
+Manuel Donato Rodríguez-Romero
+Maria Soler Artigas
+Haotian Tang  
+Jenny van Dongen
+Siyi Wang
+Jian Yang  
 Xiaopu Zhang  
