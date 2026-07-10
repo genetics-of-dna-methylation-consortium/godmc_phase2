@@ -53,7 +53,6 @@ ${gcta} \
           --fastGWA-mlm \
           --pheno ${section_13_dir}/MZEpi_all.pheno \
 	  --qcovar ${home_directory}/processed_data/covariate_data/covariates_intersectids.numeric	\
-	  --covar ${home_directory}/processed_data/covariate_data/covariates_intersectids.factor	\
 	  --thread-num ${nthreads}
 
 
@@ -70,7 +69,6 @@ ${gcta} \
           --fastGWA-mlm \
           --pheno ${section_13_dir}/MZEpi_MZtwins.pheno \
 	  --qcovar ${home_directory}/processed_data/covariate_data/covariates_intersectids.numeric	\
-	  --covar ${home_directory}/processed_data/covariate_data/covariates_intersectids.factor	\
 	  --thread-num ${nthreads}
 
 
@@ -88,7 +86,6 @@ ${gcta} \
           --fastGWA-mlm \
           --pheno ${section_13_dir}/MZEpi_nontwins.pheno \
 	  --qcovar ${home_directory}/processed_data/covariate_data/covariates_intersectids.numeric	\
-	  --covar ${home_directory}/processed_data/covariate_data/covariates_intersectids.factor	\
 	  --thread-num ${nthreads}
 
 
@@ -110,7 +107,6 @@ ${gcta} \
           --fastGWA-mlm \
           --pheno ${section_13_dir}/MZEpi_nontwins.pheno \
 	  --qcovar ${home_directory}/processed_data/covariate_data/covariates_intersectids.numeric	\
-	  --covar ${home_directory}/processed_data/covariate_data/covariates_intersectids.factor	\
 	  --thread-num ${nthreads}
 
 fi
