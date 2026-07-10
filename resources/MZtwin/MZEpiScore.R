@@ -32,6 +32,58 @@ pc_file =arguments[6]
 # Prepare covariates files for GWAS 
 #############################################################################################################################################################################################################################
 covariates <- read.table(paste0(covariates_dir,"/covariates_intersectids.txt"),header=T)
+
+age_index <- grep("^age_numeric$", names(covariates), ignore.case=TRUE)
+  count_age <- length(unique(covariates[,age_index]))
+  sex_index <- grep("^Sex_factor$", names(covariates), ignore.case = TRUE)
+  count_sex <- length(unique(covariates[, sex_index]))
+
+  age_valid = FALSE
+  sex_valid = FALSE
+  
+  if(length(age_index) != 1 | length(sex_index) != 1){
+    message("There should be only one column in the covariate file called 
+         'Age_numeric' and 'Sex_factor', regardless of case.")
+    valid_vector <- c('IID')
+  }else if (count_age == 1 & count_sex == 1){
+    message("Age variable is contant, which should not be considered.")
+    message(paste0("Sex variable has 1 level, which is ", unique(covs[, sex_index])))
+    message("There is no sex factor but age numeric should be considered.")
+    valid_vector <- c('IID')
+  }else if (count_age == 1 & count_sex != 1){
+    message("Age variable is contant, which should not be considered.")
+    message("Sex variable has ", count_sex, " levels.")
+    sex_valid = TRUE
+    valid_vector <- c('IID', 'Sex_factor')
+  }else if (count_age != 1 & count_sex == 1){
+    message("Sex variable has one level, which should not be considered.")
+    age_valid = TRUE
+    valid_vector <- c('IID', 'Age_numeric')
+  }else {
+    age_valid = TRUE
+    sex_valid = TRUE
+    valid_vector <- c('IID', 'Sex_factor', 'Age_numeric')
+  }
+
+message("Is age covariate valid?")
+print(age_valid)
+message("Is sex covariate valid?")
+print(sex_valid)
+
+covariates <- covariates[,valid_vector]
+covariates$Sex_numeric <- rep(NA,nrow(covariates))
+
+if (sex_valid) {
+  covariates$Sex_numeric <- as.numeric(as.factor(covariates$Sex_factor))
+  print(table(covariates$Sex_factor, covariates$Sex_numeric))
+} else {
+  covariates <- covariates[, colnames(covariates) != "Sex_numeric", drop = FALSE]
+}
+
+if(age_valid){
+print(summary(covariates$Age_numeric))} 
+
+
 cols <- grep("numeric", names(covariates), value = TRUE)
 sel <- c("IID",cols)
 sel
@@ -43,18 +95,12 @@ numcov <- merge(pc,covariates_numeric,by.x="IID",by.y="IID",all.x=T)
 numcov <- numcov[,c("FID","IID","pc1","pc2","pc3","pc4","pc5","pc6","pc7","pc8","pc9","pc10",cols)]
 write.table(numcov, paste0(covariates_dir,"covariates_intersectids.numeric"),col.names=F, row.names=F,quote=F)
 
-colsf <- grep("factor", names(covariates), value = TRUE)
-sel2 <- c("IID",colsf)
-sel2
-covariates_fac <- covariates[,sel2]
-faccov <- merge(pc,covariates_fac,by.x="IID",by.y="IID",all.x=T)
-faccov <- faccov[,c("FID","IID",colsf)]
-
-write.table(faccov, paste0(covariates_dir,"covariates_intersectids.factor"),col.names=F, row.names=F,quote=F)
-
+message("The following covariates were written to covariates_intersectids.numeric")
+print(colnames(numcov))
+print(dim(numcov))
 
 #############################################################################################################################################################################################################################
-# LOAD DATA
+# LOAD METHYLATION DATA
 #############################################################################################################################################################################################################################
 
 ##### 1 fam file  #####
