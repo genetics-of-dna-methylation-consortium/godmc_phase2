@@ -106,11 +106,11 @@ main <- function()
     covs <- covs[match(colnames(norm.beta), rownames(covs)), , drop=FALSE]
     covs <- subset(covs, , select=colnames(covs)[!colnames(covs)%in%c("IID")])
 
-    ewas.ret <- meffil.ewas(norm.beta, variable=phen[,1], covariates=covs,winsorize.pct = NA, most.variable = min(nrow(norm.beta), 20000), sva=F, isva=T)       
+    ewas.ret <- meffil.ewas(norm.beta, variable=phen[,1], covariates=covs,winsorize.pct = NA, most.variable = min(nrow(norm.beta), 20000), sva=F, isva=F)       
   }
   
   if(!l_cov & !l_pc){ 
-    ewas.ret <- meffil.ewas(norm.beta, variable=phen[,1], winsorize.pct = NA, most.variable = min(nrow(norm.beta), 20000), sva=F, isva=T)       
+    ewas.ret <- meffil.ewas(norm.beta, variable=phen[,1], winsorize.pct = NA, most.variable = min(nrow(norm.beta), 20000), sva=F, isva=F)       
   }
  
   res<-as.data.frame(ewas.ret$p.value)
@@ -119,7 +119,6 @@ main <- function()
   qqplot_pval(res$none, file=paste(qqplot_file,"nocovs.pdf",sep="."))
   if(l_cov | l_pc){ qqplot_pval(res$all, file=paste(qqplot_file,"allcovs.pdf",sep=".")) }
   if(!l_cov & !l_pc){ message("no QQ plot provided with covariate adjustment: no covariates provided") }  
-  qqplot_pval(res$isva, file=paste(qqplot_file,"isvacovs.pdf",sep="."))
 
   main_model <- "none" #model with no additional covariates for the EWAS report
     

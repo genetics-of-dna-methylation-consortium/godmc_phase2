@@ -130,11 +130,16 @@ check_results_03a () {
 		exit 1
 	fi
 
-	if [ -f "${section_03_dir}/age_prediction_correlation.png" ]; then
-		echo "The matrix correlation plot among predicted age, age acceleration residuals, and chronological age is present"
+	same_age_check=$(awk 'NR>1 {print $3}' ${covariates} | sort -n | uniq | wc -l)
+	if [ "${same_age_check}" -eq 1 ]; then
+		echo "All individuals have the same age. Skipping age prediction correlation matrix and statistics."
 	else
-		echo "Problem: The matrix correlation plot of predicted age is absent"
-		exit 1
+		if [ -f "${section_03_dir}/age_prediction_correlation.png" ]; then
+			echo "The matrix correlation plot among predicted age, age acceleration residuals, and chronological age is present"
+		else
+			echo "Problem: The matrix correlation plot of predicted age is absent"
+			exit 1
+		fi
 	fi
 
 	if [ -f "${section_03_dir}/age_prediction_stats.csv" ]; then
@@ -283,27 +288,28 @@ check_results_04 () {
 
 check_results_07 () {
 
-    chunk_count=`cat ${section_07_dir}/tabfile.info1 | wc -l`
-    BFfile=`ls ${section_07_dir}/vQTL_BF_*besd | wc -l`
-    svlmfile=`ls ${section_07_dir}/vQTL_BF_*besd | wc -l`
-    drmfile=`ls ${section_07_dir}/vQTL_BF_*besd | wc -l`
+    #chunk_count=`cat ${section_07_dir}/tabfile.info1 | wc -l`
+    #BFfile=`ls ${section_07_dir}/vQTL_BF_*besd | wc -l`
+    #svlmfile=`ls ${section_07_dir}/vQTL_BF_*besd | wc -l`
+    #drmfile=`ls ${section_07_dir}/vQTL_BF_*besd | wc -l`
 
-    if [ $chunk_count = $BFfile ]; then
-        echo "vQTL detection results with BF method present"
-    fi
+    #if [ $chunk_count = $BFfile ]; then
+    #    echo "vQTL detection results with BF method present"
+    #fi
 
-    if [ $chunk_count = $svlmfile ]; then
-        echo "vQTL detection results with svlm method present"
-    fi 
+    #if [ $chunk_count = $svlmfile ]; then
+    #    echo "vQTL detection results with svlm method present"
+    #fi 
 
-    if [ $chunk_count = $drmfile ]; then
-        echo "vQTL detection results with drm method present"
-    fi
-
-    if [ -f "${home_directory}/results/${study_name}_07.tgz" ]; then
+    #if [ $chunk_count = $drmfile ]; then
+    #    echo "vQTL detection results with drm method present"
+    #fi
+    
+    tarfile=`ls ${home_directory}/results/${study_name}_07_chr*.tgz | wc -l`
+    if [ $tarfile = 22 ]; then
         echo "vQTL tar results present"
     else
-        echo "vQTL tar results absent. Please re-run"
+        echo "vQTL tar results are missing. Please re-run"
     fi
 }
 
@@ -376,7 +382,7 @@ check_results_09 () {
 		  exit 1
 	  fi
 
-		 if [ -f "${section_09_dir}/${PRS}/${study_name}_PRS_${PRS}_EWAS_qqplot.isvacovs.pdf" ] && [ -f "${section_09_dir}/${PRS}/${study_name}_PRS_${PRS}_EWAS_qqplot.nocovs.pdf" ]; then
+		 if [ -f "${section_09_dir}/${PRS}/${study_name}_PRS_${PRS}_EWAS_qqplot.nocovs.pdf" ]; then
 		
       echo "QQplots for $PRS PRS EWAS present"
 	  else
@@ -402,5 +408,10 @@ check_results_14 () {
 	else
 		echo "Problem: nc866 frequency file is absent"
 		exit 1
+	fi
+ 
+  	if [ -f "${section_14_dir}/nc886_groups.txt" ]; then
+		rm ${section_14_dir}/nc886_groups.txt
+  
 	fi
 	}
