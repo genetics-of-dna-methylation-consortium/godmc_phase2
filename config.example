@@ -108,5 +108,11 @@ meth_pc_threshold="1e-7"
 # Matrixeqtl parameters
 soft_threshold="1e-5"
 
+# Optional Hail overrides
+# ld_hail_local_cores="8"
+# ld_hail_partitions="256"
+# ld_hail_driver_memory_gb="32"
+# ld_hail_tmp_dir="/path/to/scratch/godmc15_hail_tmp"
+
 # DO NOT MODIFY
 source ${scripts_directory}/resources/parameters
