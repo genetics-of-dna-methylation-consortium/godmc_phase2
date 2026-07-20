@@ -47,7 +47,13 @@ section_05b_logfile="${section_05_dir}/logs_b/log.txt"
 section_05c_logfile="${section_05_dir}/logs_c/log.txt"
 section_05d_logfile="${section_05_dir}/logs_d/log.txt"
 
-section_06_logfile="${section_06_dir}/logs/log.txt"
+section_06a_logfile="${section_06_dir}/logs_a/log.txt"
+section_06b_logfile="${section_06_dir}/logs_b/log.txt"
+section_06c_logfile="${section_06_dir}/logs_c/log.txt"
+section_06d_logfile="${section_06_dir}/logs_d/log.txt"
+section_06e_logfile="${section_06_dir}/logs_e/log.txt"
+section_06f_logfile="${section_06_dir}/logs_f/log.txt"
+section_06g_logfile="${section_06_dir}/logs_g/log.txt"
 
 section_07a_logfile="${section_07_dir}/logs_a/log.txt"
 section_07b_logfile="${section_07_dir}/logs_b/log.txt"
@@ -260,6 +266,13 @@ meth_vmeQTL_input_chr="${meth_vmeQTL_directory}/meth_vmeQTL_input.chr"
 meth_vmeQTL_annotation="${scripts_directory}/resources/methylation/vmeQTL/EPIC_annotation_autochr"
 vmeQTL_thread="10"
 
+# module 06
+vmeQTL_list1="${home_directory}/resources/methylation/vmeQTL/vmeQTL_list1.txt"
+vmeQTL_list2="${home_directory}/resources/methylation/vmeQTL/vmeQTL_list2.txt"
+vmeQTL_list3="${home_directory}/resources/methylation/vmeQTL/vmeQTL_list3.txt"
+vmeQTL_list4="${home_directory}/resources/methylation/vmeQTL/vmeQTL_list4.txt"
+vmeQTL_list5="${home_directory}/resources/methylation/vmeQTL/vmeQTL_list5.txt"
+envs_input="${home_directory}/resources/methylation/vmeQTL/all_environmental_factor.txt"
 
 # SFTP details
 # This is the location your results will be uploaded
@@ -294,6 +307,7 @@ gcta="${scripts_directory}/resources/bin/gcta-1.94.1"
 gemma="${scripts_directory}/resources/bin/gemma"
 hase="${scripts_directory}/resources/bin/hase"
 osca="${scripts_directory}/resources/bin/osca"
+osca_new="${scripts_directory}/resources/bin/osca_new"
 smr="${scripts_directory}/resources/bin/smr-1.3.1"
 
 # Functions
