@@ -7,7 +7,7 @@ mkdir -p ${section_06_dir}/logs_f
 mkdir -p ${section_06_dir}/GEI_trans/candidate_SNPs
 mkdir -p ${section_06_dir}/GEI_trans/epistasis
 
-exec &> >(tee ${section_06f_logfile}_chr${1})
+exec &> >(tee ${section_06f_logfile}_chunk${1})
 print_version
 
 source ~/miniforge3/etc/profile.d/mamba.sh

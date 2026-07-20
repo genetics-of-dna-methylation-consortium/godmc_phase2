@@ -6,7 +6,7 @@ set -- $concatenated
 mkdir -p ${section_06_dir}/logs_g
 mkdir -p ${section_06_dir}/GEI_trans/candidate_CpGs
 
-exec &> >(tee ${section_06g_logfile})
+exec &> >(tee ${section_06g_logfile}_chr${1})
 print_version
 
 source ~/miniforge3/etc/profile.d/mamba.sh
