@@ -19,7 +19,7 @@ ${osca} \
     --vqtl \
     --vqtl-mtd 2 \
     --bfile ${tabfile}.prunedSNPs.chr${chr} \
-    --befile ${meth_vmeQTL_directory}/vmeQTL_phase2/cpg_of_interest \
+    --befile ${meth_vmeQTL_directory}/vmeQTL_phase2/cpgs_of_interest \
     --trans \
     --trans-wind 2000 \
     --thread-num 10 \
@@ -31,7 +31,7 @@ ${osca_new} \
     --vqtl \
     --vqtl-mtd ${vQTL_method} \
     --geno ${tabfile}.prunedSNPs.chr${chr} \
-    --pheno-bod ${meth_vmeQTL_directory}/vmeQTL_phase2/cpg_of_interest \
+    --pheno-bod ${meth_vmeQTL_directory}/vmeQTL_phase2/cpgs_of_interest \
     --trans \
     --trans-wind 2000000 \
     --thread-num 10 \
