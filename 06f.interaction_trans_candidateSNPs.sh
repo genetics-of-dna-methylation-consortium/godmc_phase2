@@ -10,7 +10,6 @@ mkdir -p ${section_06_dir}/GEI_trans/epistasis
 exec &> >(tee ${section_06f_logfile}_chunk${1})
 print_version
 
-source ~/miniforge3/etc/profile.d/mamba.sh
 mamba activate tensorqtl_godmc
 
 chunk=$1
@@ -24,7 +23,7 @@ python ${scripts_directory}/resources/methylation/interaction_trans.py \
     0 \
     0.05
 
-for i in $(seq 1 5);
+for row in $(seq 1 5);
 do
     if [ -f ${tabfile}_epi_row${row}.raw ];
     then
@@ -36,7 +35,7 @@ do
             0 \
             1
     else
-        echo "Skipping epistasis pair $i"
+        echo "Skipping epistasis pair $row"
     fi
 done
 echo "06f CpG chunk ${chunk} has been done at $(date)"

@@ -9,7 +9,6 @@ mkdir -p ${section_06_dir}/GEI_cis/
 exec &> >(tee ${section_06c_logfile}_chunk${1}_chr${2})
 print_version
 
-source ~/miniforge3/etc/profile.d/mamba.sh
 mamba activate tensorqtl_godmc
 
 echo "Start to run 06c chunk${1} chr${2} at $(date)"
