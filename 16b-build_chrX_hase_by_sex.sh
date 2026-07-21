@@ -188,7 +188,7 @@ make_chrx_hase_input() {
     ${plink2} \
         --bfile "${bfile}" \
         --keep "${keep_file}" \
-        --chr X Y \
+        --chr X Y XY PAR1 PAR2 \
         --sort-vars \
         --set-all-var-ids @:#_\$1_\$2 \
         --ref-allele force "${hrc_ref_allele}" 2 1 \
