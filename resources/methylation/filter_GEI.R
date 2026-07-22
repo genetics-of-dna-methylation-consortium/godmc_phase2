@@ -2,6 +2,7 @@ library(tidyr)
 library(dplyr)
 library(arrow)
 library(future.apply)
+library(data.table)
 
 args <- commandArgs(T)
 GEIpath <- args[1]
