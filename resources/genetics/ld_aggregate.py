@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -674,6 +675,21 @@ class _PairCursor:
             self._cursor += 1
 
 
+def _reserve_panel_version_dir(panel_root: Path) -> tuple[Path, Path]:
+    """Return (work_dir, final_dir) for the next immutable panel_vN output."""
+    panel_root.mkdir(parents=True, exist_ok=True)
+    used = []
+    for child in panel_root.iterdir():
+        match = re.match(r"^panel_v([0-9]+)$", child.name)
+        if match and child.is_dir():
+            used.append(int(match.group(1)))
+    version = max(used, default=0) + 1
+    final_dir = panel_root / f"panel_v{version}"
+    work_dir = panel_root / f".{final_dir.name}.tmp.{os.getpid()}"
+    work_dir.mkdir(parents=True, exist_ok=False)
+    return work_dir, final_dir
+
+
 def finalise(precursor_dir, panel_dir, r_writer, maf_threshold, min_adj_diag,
              block_size, max_dense_gb=1.0, min_cohorts=None):
     """Resolve intersection, adjust, convert to R, write a versioned panel."""
@@ -708,8 +724,8 @@ def finalise(precursor_dir, panel_dir, r_writer, maf_threshold, min_adj_diag,
     sid_to_pooled = dict(zip(surv["stable_id"].to_numpy(), surv["pooled_index"].to_numpy()))
     pos_all = surv["pos"].to_numpy(np.int64)
 
-    panel_dir.mkdir(parents=True, exist_ok=True)
-    r_root = panel_dir / "R_blocks"
+    panel_work_dir, panel_final_dir = _reserve_panel_version_dir(panel_dir)
+    r_root = panel_work_dir / "R_blocks"
 
     for chrom, sub in surv.groupby("chr", sort=False):
         idx = sub["pooled_index"].to_numpy(np.int64)
@@ -747,12 +763,14 @@ def finalise(precursor_dir, panel_dir, r_writer, maf_threshold, min_adj_diag,
             r_writer(r_block, st, sp, out_dir, block_size)
             row_start, chunk_no = row_stop, chunk_no + 1
 
-    _write_panel_artefacts(panel_dir, pm, surv, dropped, d_matrix, d_rank,
-                           maf_threshold, min_adj_diag)
+    _write_panel_artefacts(panel_work_dir, pm, surv, dropped, d_matrix, d_rank,
+                           maf_threshold, min_adj_diag, panel_final_dir.name)
+    panel_work_dir.rename(panel_final_dir)
+    return panel_final_dir
 
 
 def _write_panel_artefacts(panel_dir, pm, surv, dropped, d_matrix, d_rank,
-                           maf_threshold, min_adj_diag):
+                           maf_threshold, min_adj_diag, panel_version):
     cols = ["chr", "pos", "ref", "alt", "variant_id", "pooled_index",
             "b_intercept", "a_diag", "a_adj_diag"]
     surv["maf"] = np.minimum(surv["b_intercept"] / (2 * d_matrix[0, 0]),
@@ -763,7 +781,8 @@ def _write_panel_artefacts(panel_dir, pm, surv, dropped, d_matrix, d_rank,
     pd.DataFrame(pm["cohorts"]).to_csv(panel_dir / "cohort_inclusion.tsv",
                                        sep="\t", index=False)
     manifest = {
-        "module": "15b", "panel_specification_version": pm["panel_specification_version"],
+        "module": "15b", "panel_version": panel_version,
+        "panel_specification_version": pm["panel_specification_version"],
         "covariate_schema": pm["contract"]["schema_id"], "n_cohorts": pm["n_cohorts"],
         "cohorts": [c["study_name"] for c in pm["cohorts"]],
         "n_variants_panel": int(len(surv)), "n_variants_dropped": int(len(dropped)),

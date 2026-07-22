@@ -300,19 +300,28 @@ check_logs_14 () {
 
 check_logs_15 () {
 
-	compare_version "15a"
-	if grep -i -q "Successfully prepared LD cohort scaffold outputs" ${section_15a_logfile}; then
-		echo "15a-ld_prepare_stats.sh completed successfully."
-	else
-		echo "Problem: 15a-ld_prepare_stats.sh did not complete successfully"
-		exit 1
+	section_15_ok=0
+	if [ -f "${section_15a_logfile}" ]; then
+		compare_version "15a"
+		if grep -i -E -q "Successfully (prepared LD cohort scaffold outputs|ran and uploaded all section-15 LD cohort chromosomes)" ${section_15a_logfile}; then
+			echo "Section 15 cohort workflow completed successfully."
+			section_15_ok=1
+		fi
 	fi
 
-	compare_version "15b"
-	if grep -i -E -q "Successfully (accumulated cohort into the LD precursor|finalised the pooled LD panel)" ${section_15b_logfile}; then
-		echo "15b-ld_aggregate_stats.sh completed successfully."
-	else
-		echo "Problem: 15b-ld_aggregate_stats.sh did not complete successfully"
+	if [ -f "${section_15b_logfile}" ]; then
+		compare_version "15b"
+		if grep -i -E -q "Successfully (accumulated cohort into the LD precursor|finalised the pooled LD panel)" ${section_15b_logfile}; then
+			echo "15b-ld_aggregate_stats.sh completed successfully."
+			section_15_ok=1
+		else
+			echo "Problem: 15b-ld_aggregate_stats.sh did not complete successfully"
+			exit 1
+		fi
+	fi
+
+	if [ "${section_15_ok}" -eq 0 ]; then
+		echo "Problem: no completed section 15 cohort or central workflow log was found"
 		exit 1
 	fi
 
@@ -351,4 +360,3 @@ check_logs_09 () {
 
 
 }
-

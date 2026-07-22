@@ -419,38 +419,27 @@ check_results_14 () {
 check_results_15 () {
 
 	if [ -f "${ld_prepare_dir}/manifest.json" ]; then
-		echo "LD cohort scaffold manifest present"
+		echo "LD cohort manifest present"
+		for f in variants.tsv.gz D.npy B.npy checksums.json; do
+			if [ ! -f "${ld_prepare_dir}/${f}" ]; then
+				echo "Problem: LD cohort ${f} is absent"
+				exit 1
+			fi
+		done
+		if [ -d "${ld_prepare_dir}/A_blocks" ]; then
+			echo "LD cohort A_blocks directory present"
+		else
+			echo "Problem: LD cohort A_blocks directory is absent"
+			exit 1
+		fi
 	else
-		echo "Problem: LD cohort scaffold manifest is absent"
-		exit 1
-	fi
-
-	if [ -f "${ld_prepare_dir}/variants.tsv.gz" ]; then
-		echo "LD cohort scaffold variants present"
-	else
-		echo "Problem: LD cohort scaffold variants are absent"
-		exit 1
-	fi
-
-	if [ -f "${ld_prepare_dir}/D.npy" ]; then
-		echo "LD cohort D matrix present"
-	else
-		echo "Problem: LD cohort D matrix is absent"
-		exit 1
-	fi
-
-	if [ -f "${ld_prepare_dir}/B.npy" ]; then
-		echo "LD cohort B matrix present"
-	else
-		echo "Problem: LD cohort B matrix is absent"
-		exit 1
-	fi
-
-	if [ -d "${ld_prepare_dir}/A_blocks" ]; then
-		echo "LD cohort A_blocks directory present"
-	else
-		echo "Problem: LD cohort A_blocks directory is absent"
-		exit 1
+		for chr in ${ld_chromosomes}; do
+			if [ ! -f "${ld_prepare_dir}/chr${chr}/.uploaded" ]; then
+				echo "Problem: LD chr${chr} upload sentinel is absent"
+				exit 1
+			fi
+		done
+		echo "LD 15c per-chromosome upload sentinels present"
 	fi
 
 	if [ -d "${ld_precursor_dir}" ]; then
@@ -462,10 +451,27 @@ check_results_15 () {
 		fi
 	fi
 
-	if [ -d "${ld_panel_dir}" ] && [ -n "$(ls -A ${ld_panel_dir} 2>/dev/null)" ]; then
-		if [ -f "${ld_panel_dir}/pooled_manifest.json" ]; then
+	if [ -d "${ld_panel_dir}" ]; then
+		latest_panel=""
+		latest_panel_n=0
+		panel_has_entries=0
+		shopt -s nullglob
+		for panel_entry in "${ld_panel_dir}"/*; do
+			panel_has_entries=1
+		done
+		for panel in "${ld_panel_dir}"/panel_v*; do
+			panel_n="${panel##*panel_v}"
+			if [[ "${panel_n}" =~ ^[0-9]+$ ]] && [ "${panel_n}" -gt "${latest_panel_n}" ]; then
+				latest_panel="${panel}"
+				latest_panel_n="${panel_n}"
+			fi
+		done
+		shopt -u nullglob
+		if [ -n "${latest_panel}" ] && [ -f "${latest_panel}/pooled_manifest.json" ]; then
+				echo "LD pooled panel manifest present in ${latest_panel}"
+		elif [ -f "${ld_panel_dir}/pooled_manifest.json" ]; then
 			echo "LD pooled panel manifest present"
-		else
+		elif [ "${panel_has_entries}" -eq 1 ]; then
 			echo "Problem: LD pooled panel manifest is absent"
 			exit 1
 		fi
