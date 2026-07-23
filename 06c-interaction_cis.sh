@@ -9,7 +9,7 @@ mkdir -p ${section_06_dir}/GEI_cis/
 exec &> >(tee ${section_06c_logfile}_chunk${1}_chr${2})
 print_version
 
-mamba activate tensorqtl_godmc
+#mamba activate tensorqtl_godmc
 
 echo "Start to run 06c chunk${1} chr${2} at $(date)"
 chunk=$1
@@ -30,7 +30,7 @@ ${R_directory}Rscript ${scripts_directory}/resources/methylation/filter_GEI.R ${
 
 if [ -f ${section_06_dir}/GEI_cis/chunk_${chunk}_chr_${chr}/GEI_geneticPC_interaction_5e-8.csv ];
 then
-    rm GEI_chunk${chunk}_chr${chr}_E_genetic_pc*candidate*parquet
+    rm ${section_06_dir}/GEI_cis/chunk_${chunk}_chr_${chr}/GEI_chunk${chunk}_chr${chr}_E_genetic_pc*candidate*parquet
 fi
 
 echo "06c chunk${1} chr${2} has been done successfully at $(date)"
