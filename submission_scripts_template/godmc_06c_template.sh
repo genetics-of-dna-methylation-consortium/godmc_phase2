@@ -26,5 +26,5 @@ cat ${section_06_dir}/tabfile.GEI.info1 | while read line;
 do 
     genetic_chunk=`echo $line | cut -d " " -f 1`
     chr=`echo $line | cut -d " " -f 2`
-    sbatch --mem 64G 06c.interaction_cis.sh $genetic_chunk $chr
+    sbatch --mem 64G 06c-interaction_cis.sh $genetic_chunk $chr
 done
