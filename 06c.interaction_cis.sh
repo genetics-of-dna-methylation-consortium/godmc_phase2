@@ -15,7 +15,7 @@ echo "Start to run 06c chunk${1} chr${2} at $(date)"
 chunk=$1
 chr=$2
 
-mkdir ${section_06_dir}/GEI_cis/chunk_${chunk}_chr_${chr}
+mkdir -p ${section_06_dir}/GEI_cis/chunk_${chunk}_chr_${chr}
 
 python ${scripts_directory}/resources/methylation/interaction_cis.py \
     ${vmeQTL_list1} \
