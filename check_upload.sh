@@ -24,7 +24,7 @@ checkSecondArg () {
 source resources/logs/check_logs.sh
 source resources/logs/check_results.sh
 
-sections=("01" "02" "03" "03a" "03d" "04" "07" "08" "09" "10" "11" "14")
+sections=("01" "02" "03" "03a" "03d" "04" "06" "07" "08" "09" "10" "11" "14")
 checkFirstArg "$1" "${sections[@]}"
 
 actions=("check" "upload")
@@ -41,7 +41,7 @@ eval "check_results_$1"
 echo ""
 echo "Section $1 has been successfully completed!"
 
-if [[ "$2" = "upload" && ( $1 = "01" || $1 = "02" || $1 = "03" || $1 = "03a" || $1 = "03d" || $1 = "04" || $1 = "07" || $1 = "08" ) ]]
+if [[ "$2" = "upload" && ( $1 = "01" || $1 = "02" || $1 = "03" || $1 = "03a" || $1 = "03d" || $1 = "04" || $1 = "06" || $1 = "07" || $1 = "08" ) ]]
 then
 
 	echo ""
