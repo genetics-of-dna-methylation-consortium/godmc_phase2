@@ -9,7 +9,7 @@ mkdir -p ${section_06_dir}/GEI_cis/
 exec &> >(tee ${section_06c_logfile}_chunk${1}_chr${2})
 print_version
 
-#mamba activate tensorqtl_godmc
+mamba activate tensorqtl_godmc
 
 echo "Start to run 06c chunk${1} chr${2} at $(date)"
 chunk=$1
