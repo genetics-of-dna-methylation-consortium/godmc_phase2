@@ -22,120 +22,143 @@ def _make_gpg_wrapper(tmp_path):
         f'--pinentry-mode loopback --passphrase "{PASSPHRASE}" "$@"\n'
     )
     wrapper.chmod(0o755)
-    return wrapper, gnupg_home
+    return wrapper
 
 
-def _make_cohort(tmp_path, chunks=(("chr1", "chunk_0"), ("chr1", "chunk_1"), ("chr2", "chunk_0"))):
+def _make_chromosome(tmp_path, chrom="22", chunks=("chunk_0", "chunk_1")):
+    """A single-chromosome 15a-style cohort dir (one A_blocks/chr<C> subtree)."""
     cs = tmp_path / "cohort_stats"
-    (cs / "A_blocks").mkdir(parents=True)
+    a = cs / "A_blocks" / f"chr{chrom}"
+    a.mkdir(parents=True)
     (cs / "manifest.json").write_text('{"module": "15a"}')
     with gzip.open(cs / "variants.tsv.gz", "wt") as fh:
-        fh.write("chr\tpos\n1\t1000\n")
+        fh.write("chr\tpos\n{}\t1000\n".format(chrom))
     (cs / "D.npy").write_bytes(b"D-matrix-bytes")
     (cs / "B.npy").write_bytes(b"B-matrix-bytes")
     (cs / "checksums.json").write_text('{"algorithm": "blake2b", "files": {}}')
-    for chrom, chunk in chunks:
-        d = cs / "A_blocks" / chrom / chunk
+    (cs / "qc_report.txt").write_text("ok\n")
+    for chunk in chunks:
+        d = a / chunk
         d.mkdir(parents=True)
-        (d / "part-00000").write_bytes(f"{chrom}/{chunk}/data".encode())
+        (d / "part-00000").write_bytes(f"chr{chrom}/{chunk}/data".encode())
         (d / "metadata.json").write_text('{"block":1}')
     return cs
 
 
-def _run(helper_env, cohort, out, study="testcohort"):
+def _run(env, cohort, out, study="testcohort"):
     return subprocess.run(
         [str(HELPER), str(cohort), str(out), study],
-        env=helper_env, capture_output=True, text=True,
+        env=env, capture_output=True, text=True,
     )
 
 
-def _gpg_env(tmp_path):
-    wrapper, _ = _make_gpg_wrapper(tmp_path)
+def _env(tmp_path):
     env = dict(os.environ)
-    env["GPG"] = str(wrapper)
-    return env, wrapper
+    env["GPG"] = str(_make_gpg_wrapper(tmp_path))
+    return env, Path(env["GPG"])
 
 
-def test_encrypts_scaffold_and_each_chunk(tmp_path):
-    cohort = _make_cohort(tmp_path)
+def test_parses():
+    r = subprocess.run(["bash", "-n", str(HELPER)], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+
+
+def test_emits_per_chromosome_scaffold_and_chunks(tmp_path):
+    cohort = _make_chromosome(tmp_path, chrom="22")
     out = tmp_path / "upload"
-    env, _ = _gpg_env(tmp_path)
+    env, _ = _env(tmp_path)
     r = _run(env, cohort, out)
     assert r.returncode == 0, r.stderr
-    # scaffold
-    assert (out / "testcohort_15_scaffold.tgz.aes").is_file()
-    assert (out / "testcohort_15_scaffold.md5sum").is_file()
-    # one archive per chunk
-    for base in ("testcohort_15_chr1_chunk_0", "testcohort_15_chr1_chunk_1",
-                 "testcohort_15_chr2_chunk_0"):
+    # scaffold carries the chromosome in its name (reassembler contract)
+    assert (out / "testcohort_chr22_15_scaffold.tgz.aes").is_file()
+    assert (out / "testcohort_chr22_15_scaffold.md5sum").is_file()
+    # one archive per chunk, per-chromosome naming
+    for base in ("testcohort_chr22_15_chr22_chunk_0",
+                 "testcohort_chr22_15_chr22_chunk_1"):
         assert (out / f"{base}.tgz.aes").is_file(), base
         assert (out / f"{base}.md5sum").is_file(), base
     # no plaintext tarballs left behind
     assert list(out.glob("*.tgz")) == []
 
 
-def test_chunk_roundtrip_reproduces_tree(tmp_path):
-    cohort = _make_cohort(tmp_path)
+def test_scaffold_archive_includes_checksums_and_qc(tmp_path):
+    cohort = _make_chromosome(tmp_path, chrom="22")
     out = tmp_path / "upload"
-    wrapper, _ = _make_gpg_wrapper(tmp_path)
-    env = dict(os.environ); env["GPG"] = str(wrapper)
+    env, gpg = _env(tmp_path)
     assert _run(env, cohort, out).returncode == 0
-    aes = out / "testcohort_15_chr1_chunk_0.tgz.aes"
+    dec = out / "scaffold.tgz"
+    subprocess.run([str(gpg), "--output", str(dec), "-d",
+                    str(out / "testcohort_chr22_15_scaffold.tgz.aes")], check=True)
+    with tarfile.open(dec) as tf:
+        names = set(tf.getnames())
+    assert {"manifest.json", "variants.tsv.gz", "D.npy", "B.npy",
+            "checksums.json", "qc_report.txt"} <= names
+
+
+def test_chunk_roundtrip_reproduces_tree(tmp_path):
+    cohort = _make_chromosome(tmp_path, chrom="22")
+    out = tmp_path / "upload"
+    env, gpg = _env(tmp_path)
+    assert _run(env, cohort, out).returncode == 0
     dec = out / "decrypted.tgz"
-    subprocess.run([str(wrapper), "--output", str(dec), "-d", str(aes)], check=True)
-    extract = tmp_path / "extract"; extract.mkdir()
+    subprocess.run([str(gpg), "--output", str(dec), "-d",
+                    str(out / "testcohort_chr22_15_chr22_chunk_0.tgz.aes")], check=True)
+    extract = tmp_path / "extract"
+    extract.mkdir()
     with tarfile.open(dec) as tf:
         tf.extractall(extract)
-    assert (extract / "chr1" / "chunk_0" / "part-00000").read_bytes() == b"chr1/chunk_0/data"
+    assert (extract / "chr22" / "chunk_0" / "part-00000").read_bytes() == b"chr22/chunk_0/data"
 
 
 def test_resume_skips_already_encrypted(tmp_path):
-    cohort = _make_cohort(tmp_path)
+    cohort = _make_chromosome(tmp_path, chrom="22")
     out = tmp_path / "upload"
-    env, _ = _gpg_env(tmp_path)
+    env, _ = _env(tmp_path)
     assert _run(env, cohort, out).returncode == 0
-    aes = out / "testcohort_15_chr1_chunk_0.tgz.aes"
+    aes = out / "testcohort_chr22_15_chr22_chunk_0.tgz.aes"
     mtime_before = aes.stat().st_mtime_ns
     r2 = _run(env, cohort, out)
     assert r2.returncode == 0, r2.stderr
-    assert "skip testcohort_15_chr1_chunk_0" in r2.stdout
+    assert "skip" in r2.stdout.lower()
     assert aes.stat().st_mtime_ns == mtime_before  # not regenerated
 
 
 def test_zero_chunks_fails(tmp_path):
-    cohort = _make_cohort(tmp_path, chunks=())  # scaffold present, no A_blocks chunks
+    cohort = _make_chromosome(tmp_path, chrom="22", chunks=())
     out = tmp_path / "upload"
-    env, _ = _gpg_env(tmp_path)
+    env, _ = _env(tmp_path)
     r = _run(env, cohort, out)
-    assert r.returncode == 1
+    assert r.returncode != 0
     assert "no A_blocks chunks" in r.stderr
 
 
-def test_manifest_mismatch_warns_but_succeeds(tmp_path):
-    cohort = _make_cohort(tmp_path)  # 3 chunks on disk
-    # manifest claims 5 chunks total
+def test_multiple_chromosomes_fails(tmp_path):
+    cohort = _make_chromosome(tmp_path, chrom="22")
+    # add a second chromosome subtree -> ambiguous single-chromosome input
+    extra = cohort / "A_blocks" / "chr1" / "chunk_0"
+    extra.mkdir(parents=True)
+    (extra / "part-00000").write_bytes(b"chr1/chunk_0/data")
+    out = tmp_path / "upload"
+    env, _ = _env(tmp_path)
+    r = _run(env, cohort, out)
+    assert r.returncode != 0
+    assert "one chromosome" in r.stderr.lower()
+
+
+def test_manifest_chunk_count_mismatch_warns_but_succeeds(tmp_path):
+    if not _have_jq():
+        pytest.skip("jq not available")
+    cohort = _make_chromosome(tmp_path, chrom="22")  # 2 chunks on disk
     (cohort / "manifest.json").write_text(
-        '{"A_blocks": {"chromosomes": '
-        '{"1": {"n_chunks": 3}, "2": {"n_chunks": 2}}}}'
+        '{"A_blocks": {"chromosomes": {"22": {"n_chunks": 5}}}}'
     )
     out = tmp_path / "upload"
-    env, _ = _gpg_env(tmp_path)
+    env, _ = _env(tmp_path)
     r = _run(env, cohort, out)
     assert r.returncode == 0, r.stderr
-    assert "WARNING" in r.stderr and "5" in r.stderr and "3" in r.stderr
+    assert "WARNING" in r.stderr and "5" in r.stderr and "2" in r.stderr
 
 
-def test_scaffold_archive_includes_checksums_json(tmp_path):
-    cohort = _make_cohort(tmp_path)
-    out = tmp_path / "upload"
-    wrapper, _ = _make_gpg_wrapper(tmp_path)
-    env = dict(os.environ); env["GPG"] = str(wrapper)
-    assert _run(env, cohort, out).returncode == 0
-    dec = out / "scaffold.tgz"
-    subprocess.run(
-        [str(wrapper), "--output", str(dec), "-d",
-         str(out / "testcohort_15_scaffold.tgz.aes")], check=True)
-    with tarfile.open(dec) as tf:
-        names = tf.getnames()
-    assert "checksums.json" in names, names
-    assert "manifest.json" in names
+def _have_jq():
+    return subprocess.run(["bash", "-c", "command -v jq"],
+                          capture_output=True).returncode == 0

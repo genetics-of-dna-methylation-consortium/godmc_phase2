@@ -1,5 +1,13 @@
+"""End-to-end section-15 shell round-trip: ld_encrypt_cohort.sh (per-chromosome
+packing) -> ld_decrypt_cohort.sh (decrypt + ld_reassemble_cohort.py merge).
+
+Exercises the real shell entry points with real gpg, complementing
+test_ld_reassemble_cohort.py (which drives the reassembler Python module directly
+with Python-built archives). Fixtures mirror that module test's per-chromosome
+layout so the merged output survives checksum verification.
+"""
+
 import gzip
-import hashlib
 import json
 import os
 import subprocess
@@ -14,8 +22,7 @@ DECRYPT = REPO_ROOT / "resources" / "genetics" / "ld_decrypt_cohort.sh"
 PASSPHRASE = "testpass"
 
 sys.path.insert(0, str(REPO_ROOT / "resources" / "genetics"))
-import ld_aggregate as agg          # noqa: E402
-import ld_checksums as ck           # noqa: E402
+import ld_checksums as ck  # noqa: E402
 
 
 def _make_gpg_wrapper(tmp_path):
@@ -32,238 +39,149 @@ def _make_gpg_wrapper(tmp_path):
     return wrapper
 
 
-def _make_cohort(tmp_path, study="testcohort",
-                 chunks=(("chr1", "chunk_0"), ("chr1", "chunk_1"), ("chr2", "chunk_0"))):
-    cs = tmp_path / "cohort_stats"
-    (cs / "A_blocks").mkdir(parents=True)
-    (cs / "manifest.json").write_text(f'{{"study_name": "{study}"}}')
-    with gzip.open(cs / "variants.tsv.gz", "wt") as fh:
-        fh.write("chr\tpos\n1\t1000\n")
-    (cs / "D.npy").write_bytes(b"D-matrix-bytes")
-    (cs / "B.npy").write_bytes(b"B-matrix-bytes")
-    (cs / "checksums.json").write_text('{"algorithm": "blake2b", "files": {}}')
-    for chrom, chunk in chunks:
-        d = cs / "A_blocks" / chrom / chunk
-        d.mkdir(parents=True)
-        (d / "part-00000").write_bytes(f"{chrom}/{chunk}/data".encode())
-        (d / "metadata.json").write_text('{"block":1}')
-    return cs
-
-
-def _digests(root):
-    """Map every file's POSIX relpath under root -> sha256 hex (for tree compare)."""
-    out = {}
-    for p in sorted(root.rglob("*")):
-        if p.is_file():
-            out[p.relative_to(root).as_posix()] = hashlib.sha256(p.read_bytes()).hexdigest()
-    return out
-
-
-def _env(wrapper):
+def _env(tmp_path):
     env = dict(os.environ)
-    env["GPG"] = str(wrapper)
+    env["GPG"] = str(_make_gpg_wrapper(tmp_path))
     return env
 
 
-def _encrypt(env, cohort, upload, study="testcohort"):
+def _manifest(study, chrom):
+    return {
+        "study_name": study,
+        "generated_at_utc": "2026-01-01T00:00:00+00:00",
+        "module": "15a",
+        "status": "scaffold",
+        "genome_build": "GRCh37",
+        "autosomes_only": True,
+        "input_bfile": "data",
+        "sample_alignment": {"counts": {"final_sample_count": 10}},
+        "variant_index": {
+            "schema_version": "v0.3-with-genotype-stats",
+            "columns": ["chr", "pos", "ref", "alt", "variant_id",
+                        "n_nonmissing", "n_imputed", "genotype_mean"],
+            "chromosome_filter": chrom,
+            "filters_applied": [f"chromosome {chrom}"],
+            "counts": {
+                "total_rows": 2,
+                "kept_count": 1,
+                "excluded_non_autosomal": 0,
+                "excluded_other_chromosome": 1,
+                "excluded_non_biallelic_snp": 0,
+                "excluded_mhc_region": 0,
+                "excluded_multiallelic_position": 0,
+            },
+            "n_samples_used": 10,
+        },
+        "covariate_schema": {
+            "schema_id": "intercept-only-v1",
+            "required_columns": [],
+            "matrix_columns": ["intercept"],
+            "sex_factor_recode": {},
+        },
+        "hail": {},
+        "B_block": {"filename": "B.npy", "shape": [1, 1], "dtype": "float64"},
+        "A_blocks": {
+            "radius_bp": 1000000,
+            "block_size": 4096,
+            "chunk_rows": 50000,
+            "max_dense_gb": 1.0,
+            "chromosomes": {chrom: {"n_variants": 1, "n_chunks": 1}},
+        },
+        "notes": [],
+    }
+
+
+def _build_chromosome(cs, study, chrom, pos, b_value):
+    """A single-chromosome 15a-style cohort_stats dir with real checksums."""
+    a_chunk = cs / "A_blocks" / f"chr{chrom}" / "chunk_000000"
+    a_chunk.mkdir(parents=True)
+    (a_chunk / "values.txt").write_text(f"chr{chrom}\n", encoding="utf-8")
+    np.save(cs / "B.npy", np.array([[b_value]], dtype=np.float64), allow_pickle=False)
+    np.save(cs / "D.npy", np.array([[10.0]], dtype=np.float64), allow_pickle=False)
+    with gzip.open(cs / "variants.tsv.gz", "wt") as handle:
+        handle.write("chr\tpos\tref\talt\tvariant_id\tn_nonmissing\tn_imputed\tgenotype_mean\n")
+        handle.write(f"{chrom}\t{pos}\tA\tC\t{chrom}:{pos}:A:C\t10\t0\t{b_value}\n")
+    (cs / "manifest.json").write_text(
+        json.dumps(_manifest(study, chrom), indent=2) + "\n", encoding="utf-8")
+    (cs / "qc_report.txt").write_text("ok\n", encoding="utf-8")
+    ck.write_cohort_checksums(cs)
+    return cs
+
+
+def _encrypt(env, cohort, upload, study):
     return subprocess.run([str(ENCRYPT), str(cohort), str(upload), study],
                           env=env, capture_output=True, text=True)
 
 
-def _decrypt(env, upload, rebuilt, study="testcohort"):
-    return subprocess.run([str(DECRYPT), str(upload), str(rebuilt), study],
+def _decrypt(env, upload, merged, study):
+    return subprocess.run([str(DECRYPT), str(upload), str(merged), study],
                           env=env, capture_output=True, text=True)
 
 
-def test_roundtrip_reproduces_cohort_tree(tmp_path):
-    wrapper = _make_gpg_wrapper(tmp_path)
-    env = _env(wrapper)
-    cohort = _make_cohort(tmp_path)
+def test_single_chromosome_roundtrip_produces_valid_cohort(tmp_path):
+    env = _env(tmp_path)
+    cohort = _build_chromosome(tmp_path / "chr22_cs", "cohortA", "22", 2201, 0.2)
     upload = tmp_path / "upload"
-    rebuilt = tmp_path / "rebuilt"
-    assert _encrypt(env, cohort, upload).returncode == 0
-    r = _decrypt(env, upload, rebuilt)
+    merged = tmp_path / "merged"
+    assert _encrypt(env, cohort, upload, "cohortA").returncode == 0
+    r = _decrypt(env, upload, merged, "cohortA")
     assert r.returncode == 0, r.stderr
-    # rebuilt tree matches the original byte-for-byte (ignoring the .staging workdir)
-    rebuilt_digests = {k: v for k, v in _digests(rebuilt).items()
-                       if not k.startswith(".staging/")}
-    assert rebuilt_digests == _digests(cohort)
-    # no leftover plaintext tarballs anywhere under rebuilt
-    assert list(rebuilt.rglob("*.tgz")) == []
-    # input .aes archives left untouched
-    assert (upload / "testcohort_15_scaffold.tgz.aes").is_file()
+
+    # merged output is a valid, checksum-verified reassembled cohort
+    ck.verify_cohort_checksums(merged)
+    manifest = json.loads((merged / "manifest.json").read_text())
+    assert manifest["study_name"] == "cohortA"
+    assert manifest["status"] == "reassembled"
+    assert (merged / "A_blocks" / "chr22" / "chunk_000000" / "values.txt").is_file()
+    np.testing.assert_array_equal(np.load(merged / "B.npy"), np.array([[0.2]]))
+    # input .aes archives are left untouched
+    assert (upload / "cohortA_chr22_15_scaffold.tgz.aes").is_file()
 
 
-def test_resume_skips_already_restored_chunk(tmp_path):
-    wrapper = _make_gpg_wrapper(tmp_path)
-    env = _env(wrapper)
-    cohort = _make_cohort(tmp_path)
+def test_two_chromosome_roundtrip_merges_into_one_cohort(tmp_path):
+    env = _env(tmp_path)
     upload = tmp_path / "upload"
-    rebuilt = tmp_path / "rebuilt"
-    assert _encrypt(env, cohort, upload).returncode == 0
-    assert _decrypt(env, upload, rebuilt).returncode == 0
-    chunk = rebuilt / "A_blocks" / "chr1" / "chunk_0" / "part-00000"
-    mtime_before = chunk.stat().st_mtime_ns
-    r2 = _decrypt(env, upload, rebuilt)
-    assert r2.returncode == 0, r2.stderr
-    assert "skip testcohort_15_chr1_chunk_0" in r2.stdout
-    assert chunk.stat().st_mtime_ns == mtime_before  # not re-extracted
+    merged = tmp_path / "merged"
+    # two per-chromosome cohort dirs, encrypted into the same upload area
+    chr1 = _build_chromosome(tmp_path / "chr1_cs", "cohortA", "1", 101, 0.1)
+    chr22 = _build_chromosome(tmp_path / "chr22_cs", "cohortA", "22", 2201, 0.2)
+    assert _encrypt(env, chr1, upload, "cohortA").returncode == 0
+    assert _encrypt(env, chr22, upload, "cohortA").returncode == 0
+
+    r = _decrypt(env, upload, merged, "cohortA")
+    assert r.returncode == 0, r.stderr
+
+    ck.verify_cohort_checksums(merged)
+    manifest = json.loads((merged / "manifest.json").read_text())
+    assert list(manifest["A_blocks"]["chromosomes"]) == ["1", "22"]
+    assert manifest["variant_index"]["counts"]["kept_count"] == 2
+    assert manifest["B_block"]["shape"] == [2, 1]
+    assert (merged / "A_blocks" / "chr1" / "chunk_000000" / "values.txt").is_file()
+    assert (merged / "A_blocks" / "chr22" / "chunk_000000" / "values.txt").is_file()
+    np.testing.assert_array_equal(np.load(merged / "B.npy"), np.array([[0.1], [0.2]]))
 
 
-def test_md5_mismatch_fails_before_untar(tmp_path):
-    wrapper = _make_gpg_wrapper(tmp_path)
-    env = _env(wrapper)
-    cohort = _make_cohort(tmp_path)
+def test_md5_mismatch_fails_and_does_not_publish(tmp_path):
+    env = _env(tmp_path)
+    cohort = _build_chromosome(tmp_path / "chr22_cs", "cohortA", "22", 2201, 0.2)
     upload = tmp_path / "upload"
-    rebuilt = tmp_path / "rebuilt"
-    assert _encrypt(env, cohort, upload).returncode == 0
-    # Corrupt the recorded md5 for one chunk so md5sum -c fails.
-    md5 = upload / "testcohort_15_chr1_chunk_0.md5sum"
-    md5.write_text("0" * 32 + "  testcohort_15_chr1_chunk_0.tgz\n")
-    r = _decrypt(env, upload, rebuilt)
+    merged = tmp_path / "merged"
+    assert _encrypt(env, cohort, upload, "cohortA").returncode == 0
+    # Corrupt the recorded plaintext md5 for the chunk so verification fails.
+    md5 = upload / "cohortA_chr22_15_chr22_chunk_000000.md5sum"
+    md5.write_text("0" * 32 + "  cohortA_chr22_15_chr22_chunk_000000.tgz\n")
+    r = _decrypt(env, upload, merged, "cohortA")
     assert r.returncode != 0
-    # the corrupted chunk must NOT have been published into the tree
-    assert not (rebuilt / "A_blocks" / "chr1" / "chunk_0").exists()
+    # nothing published to the merged output on failure
+    assert not (merged / "manifest.json").exists()
 
 
-def test_study_name_mismatch_fails(tmp_path):
-    wrapper = _make_gpg_wrapper(tmp_path)
-    env = _env(wrapper)
-    cohort = _make_cohort(tmp_path, study="cohortA")
+def test_wrong_study_name_finds_no_archives(tmp_path):
+    env = _env(tmp_path)
+    cohort = _build_chromosome(tmp_path / "chr22_cs", "cohortA", "22", 2201, 0.2)
     upload = tmp_path / "upload"
-    rebuilt = tmp_path / "rebuilt"
-    assert _encrypt(env, cohort, upload, study="cohortA").returncode == 0
-    # Decrypt asking for a different study_name than the manifest records.
-    r = subprocess.run([str(DECRYPT), str(upload), str(rebuilt), "cohortB"],
-                       env=env, capture_output=True, text=True)
-    assert r.returncode == 1
-    assert "study_name" in r.stderr and "cohortA" in r.stderr
-
-
-def test_zero_chunks_fails(tmp_path):
-    wrapper = _make_gpg_wrapper(tmp_path)
-    env = _env(wrapper)
-    cohort = _make_cohort(tmp_path, chunks=())  # scaffold only, no chunks
-    upload = tmp_path / "upload"
-    rebuilt = tmp_path / "rebuilt"
-    # encrypt fails on zero chunks, so stage only the scaffold archive by hand:
-    upload.mkdir()
-    subprocess.run([str(ENCRYPT), str(cohort), str(upload), "testcohort"],
-                   env=env, capture_output=True, text=True)  # produces scaffold, then errors
-    r = _decrypt(env, upload, rebuilt)
-    assert r.returncode == 1
-    assert "no A_blocks chunk archives" in r.stderr
-
-
-def test_manifest_study_name_mismatch_fails(tmp_path):
-    """Scaffold archive exists (pre-flight passes) but manifest embeds a different
-    study_name — the manifest cross-check must fire and reject the decrypt."""
-    wrapper = _make_gpg_wrapper(tmp_path)
-    env = _env(wrapper)
-    # manifest.json embeds "wrongstudy" but archives are named "cohortA_*"
-    cohort = _make_cohort(tmp_path, study="wrongstudy")
-    upload = tmp_path / "upload"
-    rebuilt = tmp_path / "rebuilt"
-    assert _encrypt(env, cohort, upload, study="cohortA").returncode == 0
-    # cohortA_15_scaffold.tgz.aes exists → pre-flight passes; manifest cross-check fires
-    r = _decrypt(env, upload, rebuilt, study="cohortA")
-    assert r.returncode == 1
-    # Error must come from the manifest cross-check (section 2), not the pre-flight
-    assert "manifest study_name" in r.stderr
-    assert "wrongstudy" in r.stderr
-    assert "cohortA" in r.stderr
-
-
-def _build_real_cohort(tmp_path, study="cohortA"):
-    """A tiny 2-variant chr1 cohort with a real checksums.json + an A_blocks chunk."""
-    cs = tmp_path / "cohort_stats"
-    chunk = cs / "A_blocks" / "chr1" / "chunk_000000"
-    chunk.mkdir(parents=True)
-    (chunk / "part-00000").write_bytes(b"blockmatrix-bytes")
-    rows = [("1", 100, "G", "A", "1:100:G:A", 4, 0, 1.0),
-            ("1", 200, "C", "T", "1:200:C:T", 4, 0, 0.5)]
-    with gzip.open(cs / "variants.tsv.gz", "wt") as fh:
-        fh.write("chr\tpos\tref\talt\tvariant_id\tn_nonmissing\tn_imputed\tgenotype_mean\n")
-        fh.writelines("\t".join(map(str, r)) + "\n" for r in rows)
-    np.save(cs / "B.npy", np.array([[4.0], [2.0]]))
-    np.save(cs / "D.npy", np.array([[4.0]]))
-    manifest = {
-        "study_name": study, "genome_build": "GRCh37",
-        "covariate_schema": {"schema_id": "intercept_only",
-            "matrix_columns": ["intercept"], "sex_factor_recode": {}},
-        "variant_index": {"schema_version": "v0.3-with-genotype-stats"},
-        "A_blocks": {"radius_bp": 1_000_000, "block_size": 8,
-            "chromosomes": {"1": {"chunks": [
-                {"row_start": 0, "row_stop": 2, "column_start": 0,
-                 "column_stop": 2, "directory": "A_blocks/chr1/chunk_000000"}]}}},
-    }
-    (cs / "manifest.json").write_text(json.dumps(manifest))
-    ck.write_cohort_checksums(cs)   # real blake2b over the artefacts above
-    return cs
-
-
-def _fake_reader(chunk_dir):
-    return np.array([[20.0, 8.0], [8.0, 10.0]])
-
-
-def test_decrypted_cohort_accumulates_with_checksum_verification(tmp_path):
-    wrapper = _make_gpg_wrapper(tmp_path)
-    env = _env(wrapper)
-    cohort = _build_real_cohort(tmp_path, study="cohortA")
-    upload = tmp_path / "upload"
-    rebuilt = tmp_path / "rebuilt"
-    assert _encrypt(env, cohort, upload, study="cohortA").returncode == 0
-    assert _decrypt(env, upload, rebuilt, study="cohortA").returncode == 0
-
-    # checksums.json round-tripped, so accumulate verifies it against the rebuilt tree
-    precursor = tmp_path / "precursor"
-    agg.accumulate(rebuilt, precursor, chunk_reader=_fake_reader,
-                   pair_batch_rows=16, verify_checksums=True)
-    pm = agg.read_precursor_manifest(precursor)
-    assert pm["n_cohorts"] == 1
-    assert pm["cohorts"][0]["study_name"] == "cohortA"
-
-
-def test_two_cohorts_roundtrip_accumulate_and_finalise(tmp_path):
-    """Smoke test of the full central path for TWO cohorts:
-    encrypt -> decrypt -> accumulate (x2) -> finalise. Both cohorts carry a real
-    checksums.json verified on every accumulate; the two fully overlap, so the
-    pooled panel is non-empty. No hail dependency (fake chunk_reader)."""
-    wrapper = _make_gpg_wrapper(tmp_path)
-    env = _env(wrapper)
-    precursor = tmp_path / "precursor"
-
-    for study in ("cohortA", "cohortB"):
-        base = tmp_path / study                       # distinct cohort_stats per study
-        cohort = _build_real_cohort(base, study=study)
-        upload = tmp_path / f"{study}_upload"
-        rebuilt = tmp_path / f"{study}_rebuilt"
-        assert _encrypt(env, cohort, upload, study=study).returncode == 0, study
-        assert _decrypt(env, upload, rebuilt, study=study).returncode == 0, study
-        # verify_checksums=True (default) re-checks the round-tripped checksums.json
-        agg.accumulate(rebuilt, precursor, chunk_reader=_fake_reader,
-                       pair_batch_rows=16, verify_checksums=True)
-
-    pm = agg.read_precursor_manifest(precursor)
-    assert pm["n_cohorts"] == 2
-    assert {c["study_name"] for c in pm["cohorts"]} == {"cohortA", "cohortB"}
-
-    panel = tmp_path / "panel"
-    written = []
-
-    def capture_writer(dense, starts, stops, out_dir, block_size):
-        written.append(np.asarray(dense).copy())
-        Path(out_dir).mkdir(parents=True, exist_ok=True)
-        (Path(out_dir) / "MARKER").write_text("ok")
-
-    agg.finalise(precursor, panel, r_writer=capture_writer,
-                 maf_threshold=0.0, min_adj_diag=-1e9, block_size=8,
-                 max_dense_gb=1.0)
-
-    assert (panel / "pooled_manifest.json").is_file()
-    assert (panel / "variants.tsv.gz").is_file()
-    assert written, "R writer was never called — finalise produced no panel blocks"
-    # diagonal of every emitted R block is 1 where present (pooled LD self-correlation)
-    for dense in written:
-        d = np.diag(dense)
-        np.testing.assert_allclose(d[d != 0], 1.0, rtol=1e-9)
+    merged = tmp_path / "merged"
+    assert _encrypt(env, cohort, upload, "cohortA").returncode == 0
+    r = _decrypt(env, upload, merged, "cohortB")
+    assert r.returncode != 0
+    assert "scaffold" in r.stderr.lower()

@@ -17,6 +17,9 @@ set -euo pipefail
 
 GPG="${GPG:-gpg}"
 
+# Shared tar+md5+GPG primitive (single source of truth for section-15 packing).
+source "$(dirname "${BASH_SOURCE[0]}")/resources/genetics/ld_pack.sh"
+
 # chr_done <outdir> — true if the chromosome's upload sentinel exists.
 chr_done () {
 	[ -f "$1/.uploaded" ]
@@ -38,12 +41,7 @@ ship_file () {
 # tar+md5(plaintext)+gpg one path; removes the intermediate .tgz.
 encrypt_archive () {
 	local src_parent="$1" member="$2" out_dir="$3" base="$4"
-	mkdir -p "${out_dir}"
-	tar czf "${out_dir}/${base}.tgz" -C "${src_parent}" "${member}"
-	( cd "${out_dir}" && md5sum "${base}.tgz" > "${base}.md5sum" )
-	"${GPG}" --output "${out_dir}/${base}.tgz.aes" \
-		--symmetric --cipher-algo AES256 "${out_dir}/${base}.tgz"
-	rm -f "${out_dir}/${base}.tgz"
+	ld_pack_archive "${out_dir}" "${base}" "${src_parent}" "${member}"
 }
 
 # process_chunk <chunk_dir> <ablocks_dir> <out_dir> <study_tag>
@@ -114,13 +112,8 @@ check_chromosome () {
 ship_scaffold () {
 	local outdir="$1" out_dir="$2" study_tag="$3"
 	local base="${study_tag}_15_scaffold"
-	mkdir -p "${out_dir}"
-	tar czf "${out_dir}/${base}.tgz" -C "${outdir}" \
+	ld_pack_archive "${out_dir}" "${base}" "${outdir}" \
 		manifest.json variants.tsv.gz D.npy B.npy checksums.json qc_report.txt
-	( cd "${out_dir}" && md5sum "${base}.tgz" > "${base}.md5sum" )
-	"${GPG}" --output "${out_dir}/${base}.tgz.aes" \
-		--symmetric --cipher-algo AES256 "${out_dir}/${base}.tgz"
-	rm -f "${out_dir}/${base}.tgz"
 	if ship_file "${out_dir}/${base}.tgz.aes" && ship_file "${out_dir}/${base}.md5sum"; then
 		rm -f "${out_dir}/${base}.tgz.aes" "${out_dir}/${base}.md5sum"
 		echo "[15c] shipped ${base}"
