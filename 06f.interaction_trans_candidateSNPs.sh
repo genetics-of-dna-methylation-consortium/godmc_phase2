@@ -10,7 +10,7 @@ mkdir -p ${section_06_dir}/GEI_trans/epistasis
 exec &> >(tee ${section_06f_logfile}_chunk${1})
 print_version
 
-mamba activate tensorqtl_godmc
+#mamba activate tensorqtl_godmc
 
 chunk=$1
 
@@ -27,10 +27,11 @@ for row in $(seq 1 5);
 do
     if [ -f ${tabfile}_epi_row${row}.raw ];
     then
+        awk 'BEGIN{FS=" ";OFS="\t"}{print $2,$7}' ${tabfile}_epi_row${row}.raw > ${tabfile}_epi_row${row}.raw1
         python ${scripts_directory}/resources/methylation/interaction_trans.py \
             ${tabfile}_epi_row${row} \
             ${meth_vmeQTL_directory}/vmeQTL_phase2/adjustcovs_cpg_phase2_allCpGs_chunk${chunk}.bed.gz \
-            ${tabfile}_epi_row${row}.raw \
+            ${tabfile}_epi_row${row}.raw1 \
             ${section_06_dir}/GEI_trans/epistasis/epistasis_cpg_chunk${chunk} \
             0 \
             1
