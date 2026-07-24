@@ -6,7 +6,9 @@ set -o pipefail
 
 source "${scripts_directory}/resources/genetics/ld_pack.sh"
 
-mkdir -p "${ld_prepare_dir}" "${ld_upload_dir}" "${section_15_dir}/logs_b"
+section_15_upload_dir="${section_15_dir}/upload"
+
+mkdir -p "${ld_prepare_dir}" "${section_15_upload_dir}" "${section_15_dir}/logs_b"
 
 required_files="manifest.json variants.tsv.gz B.npy D.npy checksums.json qc_report.txt"
 
@@ -75,7 +77,7 @@ PY
 
 artifact_pair_exists () {
 	local base="$1"
-	[ -f "${ld_upload_dir}/${base}.tgz.aes" ] && [ -f "${ld_upload_dir}/${base}.md5sum" ]
+	[ -f "${section_15_upload_dir}/${base}.tgz.aes" ] && [ -f "${section_15_upload_dir}/${base}.md5sum" ]
 }
 
 all_artifacts_exist () {
@@ -91,7 +93,7 @@ all_artifacts_exist () {
 pack_scaffold () {
 	local chr="$1" outdir="$2" base
 	base="${study_name}_chr${chr}_15_scaffold"
-	ld_pack_archive "${ld_upload_dir}" "${base}" "${outdir}" \
+	ld_pack_archive "${section_15_upload_dir}" "${base}" "${outdir}" \
 		manifest.json variants.tsv.gz D.npy B.npy checksums.json qc_report.txt
 	artifact_pair_exists "${base}"
 }
@@ -108,7 +110,7 @@ pack_chunk () {
 		echo "Problem: raw chunk ${chunk_dir} is missing and ${base} has not been packaged" >&2
 		return 1
 	fi
-	ld_pack_archive "${ld_upload_dir}" "${base}" "${outdir}/A_blocks" "chr${chr}/${chunk}"
+	ld_pack_archive "${section_15_upload_dir}" "${base}" "${outdir}/A_blocks" "chr${chr}/${chunk}"
 	artifact_pair_exists "${base}"
 	rm -rf "${chunk_dir}"
 }

@@ -416,31 +416,27 @@ check_results_14 () {
 	fi
 	}
 
-check_results_15 () {
+ld_manifest_chunks_15 () {
+	local outdir="$1" chr="$2"
+	python - "${outdir}" "${chr}" <<'PY'
+import json
+import sys
+from pathlib import Path
 
-	if [ -f "${ld_prepare_dir}/manifest.json" ]; then
-		echo "LD cohort manifest present"
-		for f in variants.tsv.gz D.npy B.npy checksums.json; do
-			if [ ! -f "${ld_prepare_dir}/${f}" ]; then
-				echo "Problem: LD cohort ${f} is absent"
-				exit 1
-			fi
-		done
-		if [ -d "${ld_prepare_dir}/A_blocks" ]; then
-			echo "LD cohort A_blocks directory present"
-		else
-			echo "Problem: LD cohort A_blocks directory is absent"
-			exit 1
-		fi
-	else
-		for chr in ${ld_chromosomes}; do
-			if [ ! -f "${ld_prepare_dir}/chr${chr}/.uploaded" ]; then
-				echo "Problem: LD chr${chr} upload sentinel is absent"
-				exit 1
-			fi
-		done
-		echo "LD 15c per-chromosome upload sentinels present"
-	fi
+outdir = Path(sys.argv[1])
+chrom = sys.argv[2]
+manifest = json.loads((outdir / "manifest.json").read_text(encoding="utf-8"))
+chrom_meta = manifest.get("A_blocks", {}).get("chromosomes", {}).get(str(chrom))
+if not chrom_meta:
+    raise SystemExit(f"manifest lacks A_blocks metadata for chr{chrom}")
+for chunk in chrom_meta.get("chunks", []):
+    name = chunk.get("name")
+    if name:
+        print(name)
+PY
+}
+
+check_section_15_central_results () {
 
 	if [ -d "${ld_precursor_dir}" ]; then
 		if [ -f "${ld_precursor_dir}/precursor_manifest.json" ]; then
@@ -476,5 +472,81 @@ check_results_15 () {
 			exit 1
 		fi
 	fi
+
+}
+
+check_section_15_upload_dir () {
+	local path base ok=1 section_15_upload_dir="${section_15_dir}/upload"
+	if [ ! -d "${section_15_upload_dir}" ]; then
+		echo "Problem: LD upload staging directory is absent: ${section_15_upload_dir}"
+		exit 1
+	fi
+	shopt -s nullglob dotglob
+	for path in "${section_15_upload_dir}"/*; do
+		base="$(basename "${path}")"
+		case "${base}" in
+			*.tgz.aes|*.md5sum|.uploaded_*) ;;
+			*)
+				echo "Problem: unexpected raw or unsupported file in LD upload directory: ${path}"
+				exit 1
+				;;
+		esac
+	done
+	shopt -u nullglob dotglob
+	for path in "${section_15_upload_dir}"/*.tgz.aes; do
+		ok=0
+		if [ ! -f "${path%.tgz.aes}.md5sum" ]; then
+			echo "Problem: missing md5sum for ${path}"
+			exit 1
+		fi
+	done
+	if [ "${ok}" -ne 0 ]; then
+		echo "Problem: no LD encrypted archives found in ${section_15_upload_dir}"
+		exit 1
+	fi
+}
+
+check_results_15 () {
+
+	check_section_15_central_results
+	check_section_15_upload_dir
+	section_15_upload_dir="${section_15_dir}/upload"
+
+	for chr in ${ld_chromosomes}; do
+		outdir="${ld_prepare_dir}/chr${chr}"
+		if [ ! -f "${outdir}/.packaged" ]; then
+			echo "Problem: LD chr${chr} packaged sentinel is absent"
+			exit 1
+		fi
+		for f in manifest.json variants.tsv.gz D.npy B.npy checksums.json qc_report.txt; do
+			if [ ! -f "${outdir}/${f}" ]; then
+				echo "Problem: LD chr${chr} ${f} is absent"
+				exit 1
+			fi
+		done
+		if [ -d "${outdir}/A_blocks" ]; then
+			echo "Problem: LD chr${chr} A_blocks still exists after packaging"
+			exit 1
+		fi
+		scaffold="${study_name}_chr${chr}_15_scaffold"
+		if [ ! -f "${section_15_upload_dir}/${scaffold}.tgz.aes" ] || [ ! -f "${section_15_upload_dir}/${scaffold}.md5sum" ]; then
+			echo "Problem: LD chr${chr} scaffold upload artefacts are absent"
+			exit 1
+		fi
+		chunk_count=0
+		while IFS= read -r chunk; do
+			chunk_base="${study_name}_chr${chr}_15_chr${chr}_${chunk}"
+			if [ ! -f "${section_15_upload_dir}/${chunk_base}.tgz.aes" ] || [ ! -f "${section_15_upload_dir}/${chunk_base}.md5sum" ]; then
+				echo "Problem: LD chr${chr} chunk upload artefacts are absent for ${chunk}"
+				exit 1
+			fi
+			chunk_count=$((chunk_count + 1))
+		done < <(ld_manifest_chunks_15 "${outdir}" "${chr}")
+		if [ "${chunk_count}" -eq 0 ]; then
+			echo "Problem: LD chr${chr} has no chunk upload artefacts"
+			exit 1
+		fi
+		echo "LD chr${chr} packaged artefacts present"
+	done
 
 }

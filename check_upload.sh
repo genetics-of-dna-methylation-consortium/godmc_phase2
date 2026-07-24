@@ -1,7 +1,22 @@
 #!/bin/bash
 
-source resources/setup.sh "$@"
-set -- $concatenated
+setup_args=()
+section_args=()
+while [ "$#" -gt 0 ]; do
+	case "$1" in
+		-c)
+			setup_args+=("$1" "$2")
+			shift 2
+			;;
+		*)
+			section_args+=("$1")
+			shift
+			;;
+	esac
+done
+
+source resources/setup.sh "${setup_args[@]}" "${section_args[@]}"
+set -- "${section_args[@]}"
 
 checkFirstArg () {
 	local e
@@ -24,6 +39,48 @@ checkSecondArg () {
 source resources/logs/check_logs.sh
 source resources/logs/check_results.sh
 
+ship_section_15_file () {
+	local path="$1"
+	if [ -n "${LD_SHIP_CMD:-}" ]; then
+		"${LD_SHIP_CMD}" "${path}"
+		return $?
+	fi
+	rsync --partial --append --checksum \
+		-e "ssh -i ${imperial_key}" \
+		"${path}" "${imperial_user}@${imperial_host}:${imperial_path}/"
+}
+
+upload_section_15 () {
+	local path sentinel failed=0 uploaded=0 section_15_upload_dir="${section_15_dir}/upload"
+	mkdir -p "${section_15_upload_dir}"
+	shopt -s nullglob
+	for path in "${section_15_upload_dir}"/*.tgz.aes "${section_15_upload_dir}"/*.md5sum; do
+		sentinel="${section_15_upload_dir}/.uploaded_$(basename "${path}")"
+		if [ -f "${sentinel}" ]; then
+			echo "Section 15 upload already recorded for $(basename "${path}")"
+			uploaded=$((uploaded + 1))
+			continue
+		fi
+		if ship_section_15_file "${path}"; then
+			touch "${sentinel}"
+			echo "Uploaded section 15 artefact $(basename "${path}")"
+			uploaded=$((uploaded + 1))
+		else
+			echo "Problem: failed to upload section 15 artefact ${path}" >&2
+			failed=1
+		fi
+	done
+	shopt -u nullglob
+	if [ "${uploaded}" -eq 0 ]; then
+		echo "Problem: no section 15 upload artefacts found in ${section_15_upload_dir}"
+		exit 1
+	fi
+	if [ "${failed}" -ne 0 ]; then
+		exit 1
+	fi
+	echo "Successfully uploaded section 15 staged artefacts"
+}
+
 sections=("01" "02" "03" "03a" "03d" "04" "07" "08" "09" "10" "11" "14" "15")
 checkFirstArg "$1" "${sections[@]}"
 
@@ -40,6 +97,16 @@ eval "check_results_$1"
 
 echo ""
 echo "Section $1 has been successfully completed!"
+
+if [[ "$1" = "15" ]]
+then
+	if [[ "$2" = "upload" ]]; then
+		upload_section_15
+	else
+		echo "Section 15 staged artefacts are ready for upload."
+	fi
+	exit 0
+fi
 
 if [[ "$2" = "upload" && ( $1 = "01" || $1 = "02" || $1 = "03" || $1 = "03a" || $1 = "03d" || $1 = "04" || $1 = "07" || $1 = "08" ) ]]
 then

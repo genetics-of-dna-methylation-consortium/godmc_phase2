@@ -112,8 +112,9 @@ meth_pc_threshold="1e-7"
 soft_threshold="1e-5"
 
 # Optional Hail overrides
-# Section 15 cohorts should run `./15c-ld_run_upload.sh -c <config>`; do not use `check_upload.sh 15 upload`.
-# ld_chromosomes="22"  # pilot override; default is autosomes 1-22
+# Section 15 cohorts should run 15a then 15b for one ld_chromosome at a time.
+# ld_chromosome="22"   # current chromosome for 15a/15b
+# ld_chromosomes="22"  # expected set for check_upload.sh 15 check/upload; default is autosomes 1-22
 # ld_hail_local_cores="8"
 # ld_hail_partitions="256"
 # ld_hail_driver_memory_gb="32"
