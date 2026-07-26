@@ -182,6 +182,7 @@ else
             ${meth_vmeQTL_input_chr}${chr}.oii \
             ${bfile}.fam
 done
+fi
 
 echo "Generating methylation data of the CpGs of interest"
 ${R_directory}Rscript ${scripts_directory}/resources/methylation/observe_subset_cpgs.R \
