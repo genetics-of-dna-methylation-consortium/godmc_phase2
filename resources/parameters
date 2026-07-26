@@ -267,12 +267,12 @@ meth_vmeQTL_annotation="${scripts_directory}/resources/methylation/vmeQTL/EPIC_a
 vmeQTL_thread="10"
 
 # module 06
-vmeQTL_list1="${home_directory}/resources/methylation/vmeQTL/vmeQTL_list1.txt"
-vmeQTL_list2="${home_directory}/resources/methylation/vmeQTL/vmeQTL_list2.txt"
-vmeQTL_list3="${home_directory}/resources/methylation/vmeQTL/vmeQTL_list3.txt"
-vmeQTL_list4="${home_directory}/resources/methylation/vmeQTL/vmeQTL_list4.txt"
-vmeQTL_list5="${home_directory}/resources/methylation/vmeQTL/vmeQTL_list5.txt"
-envs_input="${home_directory}/resources/methylation/vmeQTL/all_environmental_factor.txt"
+vmeQTL_list1="${scripts_directory}/resources/methylation/vmeQTL/vmeQTL_list1.txt"
+vmeQTL_list2="${scripts_directory}/resources/methylation/vmeQTL/vmeQTL_list2.txt"
+vmeQTL_list3="${scripts_directory}/resources/methylation/vmeQTL/vmeQTL_list3.txt"
+vmeQTL_list4="${scripts_directory}/resources/methylation/vmeQTL/vmeQTL_list4.txt"
+vmeQTL_list5="${scripts_directory}/resources/methylation/vmeQTL/vmeQTL_list5.txt"
+envs_input="${scripts_directory}/resources/methylation/vmeQTL/all_environmental_factor.txt"
 
 # SFTP details
 # This is the location your results will be uploaded
