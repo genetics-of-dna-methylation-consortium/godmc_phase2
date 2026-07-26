@@ -9,7 +9,6 @@ mkdir -p ${section_06_dir}/GEI_trans/candidate_CpGs
 exec &> >(tee ${section_06g_logfile}_chr${1})
 print_version
 
-mamba activate tensorqtl_godmc
 
 chr=$1
 

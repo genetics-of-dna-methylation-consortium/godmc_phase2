@@ -10,8 +10,6 @@ mkdir -p ${section_06_dir}/GEI_trans/epistasis
 exec &> >(tee ${section_06f_logfile}_chunk${1})
 print_version
 
-mamba activate tensorqtl_godmc
-
 chunk=$1
 
 echo "Start to run 06f CpG chunk ${chunk} at $(date)"
