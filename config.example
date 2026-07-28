@@ -115,6 +115,9 @@ soft_threshold="1e-5"
 # Section 15 cohorts should run 15a then 15b for one ld_chromosome at a time.
 # ld_chromosome="22"   # current chromosome for 15a/15b
 # ld_chromosomes="22"  # expected set for check_upload.sh 15 check/upload; default is autosomes 1-22
+# Required for section-15 15b compression/encryption, especially under SLURM.
+# Store this outside the repository/results tree and protect it with: chmod 600 <file>
+# ld_gpg_passphrase_file="/secure/path/godmc15.pass"
 # ld_hail_local_cores="8"
 # ld_hail_partitions="256"
 # ld_hail_driver_memory_gb="32"
