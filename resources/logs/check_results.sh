@@ -508,7 +508,6 @@ check_section_15_upload_dir () {
 
 check_results_15 () {
 
-	check_section_15_central_results
 	check_section_15_upload_dir
 	section_15_upload_dir="${section_15_dir}/upload"
 
