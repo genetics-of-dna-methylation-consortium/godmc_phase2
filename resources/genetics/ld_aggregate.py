@@ -1,5 +1,5 @@
 # resources/genetics/ld_aggregate.py
-"""Pure-Python central LD aggregation for section 15b.
+"""Pure-Python central LD aggregation for section 15.
 
 This module deliberately does NOT import hail. Every code path that touches
 Hail BlockMatrix IO lives in ld_hail.py; this module operates on NumPy arrays,
@@ -19,7 +19,7 @@ import pandas as pd
 
 import ld_checksums
 
-PRECURSOR_SCHEMA_VERSION = "15b-precursor-v1"
+PRECURSOR_SCHEMA_VERSION = "15-aggregate-precursor-v1"
 DEFAULT_PANEL_SPEC_VERSION = "0.1.0"
 DEFAULT_MAF_THRESHOLD = 0.01
 DEFAULT_MIN_ADJ_DIAG = 0.0
@@ -781,7 +781,7 @@ def _write_panel_artefacts(panel_dir, pm, surv, dropped, d_matrix, d_rank,
     pd.DataFrame(pm["cohorts"]).to_csv(panel_dir / "cohort_inclusion.tsv",
                                        sep="\t", index=False)
     manifest = {
-        "module": "15b", "panel_version": panel_version,
+        "module": "15_aggregate", "panel_version": panel_version,
         "panel_specification_version": pm["panel_specification_version"],
         "covariate_schema": pm["contract"]["schema_id"], "n_cohorts": pm["n_cohorts"],
         "cohorts": [c["study_name"] for c in pm["cohorts"]],
@@ -793,5 +793,5 @@ def _write_panel_artefacts(panel_dir, pm, surv, dropped, d_matrix, d_rank,
     (panel_dir / "pooled_manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     (panel_dir / "qc_report.txt").write_text(
-        f"Section 15b panel built: {len(surv)} variants, {len(dropped)} dropped, "
+        f"Section 15 aggregate panel built: {len(surv)} variants, {len(dropped)} dropped, "
         f"{pm['n_cohorts']} cohorts, D rank {d_rank}.\n")

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Reassemble section-15 15c per-chromosome uploads for 15b accumulate."""
+"""Reassemble section-15 15c per-chromosome uploads for central accumulation."""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ def parse_args() -> argparse.Namespace:
         description="Decrypt and reassemble 15c per-chromosome LD uploads"
     )
     parser.add_argument("input_dir", help="directory holding 15c .tgz.aes uploads")
-    parser.add_argument("output_dir", help="merged cohort directory for 15b accumulate")
+    parser.add_argument("output_dir", help="merged cohort directory for central accumulation")
     parser.add_argument("study_name", help="cohort study_name without chromosome suffix")
     parser.add_argument(
         "--gpg",
@@ -254,7 +254,7 @@ def write_qc_report(output_dir: Path, chromosomes: list[str], n_variants: int) -
         "Section 15 central cohort reassembly completed successfully.",
         f"Chromosomes reassembled: {', '.join('chr' + c for c in chromosomes)}",
         f"Merged variants: {n_variants}",
-        "Output is suitable for one 15b accumulate call.",
+        "Output is suitable for one central accumulate call.",
     ]
     (output_dir / "qc_report.txt").write_text("\n".join(text) + "\n", encoding="utf-8")
 

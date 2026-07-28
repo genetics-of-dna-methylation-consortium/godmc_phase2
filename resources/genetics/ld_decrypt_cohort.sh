@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ld_decrypt_cohort.sh — central decrypt + reassemble section-15 15c uploads
-# into the cohort_stats/ tree that `15b accumulate` consumes. No network I/O.
+# into the cohort_stats/ tree that central accumulation consumes. No network I/O.
 #
 # Usage: ld_decrypt_cohort.sh <input_dir> <output_dir> <study_name>
 #   input_dir   dir holding <study>_chr<C>_15_*.tgz.aes + .md5sum (left untouched)

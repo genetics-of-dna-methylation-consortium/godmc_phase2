@@ -1,11 +1,11 @@
 # resources/genetics/ld_checksums.py
 """Fast file checksums for section-15 federated artefact integrity.
 
-Cohort-side (15a) emits a ``checksums.json`` over the artefacts that 15b
-consumes and then deletes (``B.npy``, ``D.npy``, ``variants.tsv.gz``,
-``manifest.json``, and every file under ``A_blocks/``). Central-side (15b
-``accumulate``) re-verifies before folding a cohort in, so a corrupted or
-truncated upload is caught *before* the cohort's raw data is discarded.
+Cohort-side (15a) emits a ``checksums.json`` over the artefacts that section-15
+packaging and central aggregation consume (``B.npy``, ``D.npy``,
+``variants.tsv.gz``, ``manifest.json``, and every file under ``A_blocks/``).
+Central aggregate ``accumulate`` re-verifies before folding a cohort in, so a
+corrupted or truncated upload is caught *before* the cohort's raw data is discarded.
 
 Hashing uses ``hashlib.blake2b`` (Python stdlib): meaningfully faster than
 sha256 in software, cryptographically strong, and adds no new dependency to the
@@ -22,7 +22,7 @@ from pathlib import Path
 
 CHECKSUM_ALGORITHM = "blake2b"
 CHECKSUM_FILENAME = "checksums.json"
-# Per-cohort artefacts that 15b consumes (and that get deleted afterwards).
+# Per-cohort artefacts that section-15 packaging and central aggregation consume.
 CORE_ARTIFACTS = ("B.npy", "D.npy", "variants.tsv.gz", "manifest.json")
 _READ_CHUNK = 1 << 20  # 1 MiB streaming reads
 

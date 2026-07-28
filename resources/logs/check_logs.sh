@@ -300,18 +300,6 @@ check_logs_14 () {
 
 check_logs_15 () {
 
-	section_15_central_ok=0
-	if [ -f "${section_15b_logfile}" ]; then
-		compare_version "15b"
-		if grep -i -E -q "Successfully (accumulated cohort into the LD precursor|finalised the pooled LD panel)" ${section_15b_logfile}; then
-			echo "15-ld_aggregate_stats.sh completed successfully."
-			section_15_central_ok=1
-		fi
-	fi
-	if [ "${section_15_central_ok}" -eq 1 ]; then
-		return 0
-	fi
-
 	for chr in ${ld_chromosomes}; do
 		log_a="${section_15_dir}/logs_a/chr${chr}.log"
 		log_b="${section_15_dir}/logs_b/chr${chr}.log"
@@ -320,7 +308,7 @@ check_logs_15 () {
 			exit 1
 		fi
 		if [ ! -f "${log_b}" ] || ! grep -i -q "Successfully packaged LD cohort chromosome chr${chr}" "${log_b}"; then
-			echo "Problem: 15b-ld_check_compress_data.sh did not complete successfully for chr${chr}"
+			echo "Problem: 15b-ld_compress_data.sh did not complete successfully for chr${chr}"
 			exit 1
 		fi
 		echo "Section 15 chr${chr} prepared and packaged successfully."

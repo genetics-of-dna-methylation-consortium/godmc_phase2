@@ -312,7 +312,7 @@ def main() -> None:
             f"chr{c}={meta['n_chunks']}"
             for c, meta in a_blocks_meta["chromosomes"].items()
         ),
-        "Next implementation step: pooled aggregation in 15b.",
+        "Next implementation step: central pooled aggregation.",
     ]
 
     (output_dir / "manifest.json").write_text(
@@ -324,7 +324,8 @@ def main() -> None:
     (blocks_dir / ".gitkeep").write_text("", encoding="utf-8")
 
     # Final step: checksum the consumed artefacts (B/D/variants/manifest + all of
-    # A_blocks/) so 15b can verify a faithful upload before folding the cohort in
+    # A_blocks/) so downstream packaging and aggregation can verify a faithful
+    # transfer before folding the cohort in
     # and the raw data is deleted. Must run after manifest.json is written.
     log_step("Writing artefact checksums (checksums.json)")
     ld_checksums.write_cohort_checksums(output_dir)

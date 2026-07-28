@@ -162,7 +162,7 @@ process_chromosome () {
 
 if [ "${ld_chromosome}" = "all" ]; then
 	echo "Problem: section 15 must be packaged one chromosome at a time, immediately after 15a."
-	echo "Run, for example: ld_chromosome=22 bash 15b-ld_check_compress_data.sh -c config"
+	echo "Run, for example: ld_chromosome=22 bash 15b-ld_compress_data.sh -c config"
 	exit 1
 fi
 

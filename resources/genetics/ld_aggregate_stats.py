@@ -7,7 +7,7 @@ from ld_hail import init_hail, read_a_block_chunk
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Section-15b central LD aggregation")
+    p = argparse.ArgumentParser(description="Section-15 central LD aggregation")
     p.add_argument("--mode", required=True, choices=["accumulate", "finalise"])
     p.add_argument("--precursor-dir", required=True)
     p.add_argument("--log-file", required=True)
@@ -31,7 +31,7 @@ def main() -> None:
         init_hail(hail_log)
         agg.accumulate(args.cohort_dir, args.precursor_dir,
                        chunk_reader=read_a_block_chunk, force=args.force)
-        print(f"[section15b] accumulated cohort into {args.precursor_dir}", flush=True)
+        print(f"[section15_aggregate] accumulated cohort into {args.precursor_dir}", flush=True)
     else:
         if not args.panel_dir:
             raise SystemExit("--panel-dir is required for finalise mode")
@@ -43,7 +43,7 @@ def main() -> None:
             maf_threshold=args.maf_threshold, min_adj_diag=args.min_adj_diag,
             block_size=args.a_block_size or DEFAULT_A_BLOCK_SIZE,
             max_dense_gb=args.a_max_dense_gb, min_cohorts=args.min_cohorts)
-        print(f"[section15b] finalised panel into {panel_dir}", flush=True)
+        print(f"[section15_aggregate] finalised panel into {panel_dir}", flush=True)
 
 
 if __name__ == "__main__":
