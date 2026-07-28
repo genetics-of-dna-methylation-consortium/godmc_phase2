@@ -4,7 +4,7 @@ source resources/setup.sh "$@"
 set -- $concatenated
 
 mkdir -p ${section_06_dir}/logs_f
-mkdir -p ${section_06_dir}/GEI_trans/candidate_SNPs
+mkdir -p ${section_06_dir}/GEI_trans/candidate_SNPs/cpg_chunk${chunk}
 mkdir -p ${section_06_dir}/GEI_trans/epistasis
 
 exec &> >(tee ${section_06f_logfile}_chunk${1})
@@ -17,7 +17,7 @@ python ${scripts_directory}/resources/methylation/interaction_trans.py \
     ${tabfile}.vQTLs \
     ${meth_vmeQTL_directory}/vmeQTL_phase2/adjustcovs_cpg_phase2_allCpGs_chunk${chunk}.bed.gz \
     ${envs_input} \
-    ${section_06_dir}/GEI_trans/candidate_SNPs/GEI_trans_cpg_chunk${chunk} \
+    ${section_06_dir}/GEI_trans/candidate_SNPs/cpg_chunk${chunk}/GEI_trans_cpg_chunk${chunk} \
     0 \
     0.05
 
@@ -26,10 +26,11 @@ do
     if [ -f ${tabfile}_epi_row${row}.raw ];
     then
         awk 'BEGIN{FS=" ";OFS="\t"}{print $2,$7}' ${tabfile}_epi_row${row}.raw > ${tabfile}_epi_row${row}.raw1
+        grep -v NA ${tabfile}_epi_row${row}.raw1 > ${tabfile}_epi_row${row}.raw2
         python ${scripts_directory}/resources/methylation/interaction_trans.py \
             ${tabfile}_epi_row${row} \
             ${meth_vmeQTL_directory}/vmeQTL_phase2/adjustcovs_cpg_phase2_allCpGs_chunk${chunk}.bed.gz \
-            ${tabfile}_epi_row${row}.raw1 \
+            ${tabfile}_epi_row${row}.raw2 \
             ${section_06_dir}/GEI_trans/epistasis/epistasis_cpg_chunk${chunk} \
             0 \
             1
