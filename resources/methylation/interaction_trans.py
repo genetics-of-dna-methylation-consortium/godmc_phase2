@@ -33,20 +33,6 @@ def runGE(Env):
     output_file = output_prefix_file+'.'+Env+'.parquet'
     trans_df.to_parquet(output_file, engine='pyarrow', compression='snappy')
 
-def runGE_PC(Env):
-    E_df_tmp = E_df[[Env]].dropna()
-    interaction_series = E_df_tmp.squeeze()
-    trans_df = trans.map_trans(genotype_df, phenotype_df, covariates_df=None,
-                               interaction_s=interaction_series,
-                               return_sparse=True,
-                               pval_threshold=5e-8, maf_threshold=maf_thres)
-    trans_df = trans.filter_cis(trans_df, phenotype_pos_df, variant_df, window=2000000)
-    output_file = output_prefix_file+'.'+Env+'.parquet'
-    trans_df.to_parquet(output_file, engine='pyarrow', compression='snappy')
-
 for column_name in E_df.columns:
     print(f"Starting execution for: {column_name}")
-    if "genetic_pc" in column_name:
-        runGE_PC(column_name)
-    else:
-        runGE(column_name)
+    runGE(column_name)
