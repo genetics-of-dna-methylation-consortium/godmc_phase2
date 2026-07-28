@@ -4,13 +4,13 @@ source resources/setup.sh "$@"
 set -- $concatenated
 
 mkdir -p ${section_06_dir}/logs_f
-mkdir -p ${section_06_dir}/GEI_trans/candidate_SNPs/cpg_chunk${chunk}
 mkdir -p ${section_06_dir}/GEI_trans/epistasis
 
 exec &> >(tee ${section_06f_logfile}_chunk${1})
 print_version
 
 chunk=$1
+mkdir -p ${section_06_dir}/GEI_trans/candidate_SNPs/cpg_chunk${chunk}
 
 echo "Start to run 06f CpG chunk ${chunk} at $(date)"
 python ${scripts_directory}/resources/methylation/interaction_trans.py \
