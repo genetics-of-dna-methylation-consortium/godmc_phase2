@@ -23,9 +23,9 @@ python ${scripts_directory}/resources/methylation/interaction_trans.py \
 
 ${R_directory}Rscript ${scripts_directory}/resources/methylation/filter_GEI.R ${section_06_dir}/GEI_trans/candidate_CpGs/snp_chr${chr}
 
-if [ -f ${section_06_dir}/GEI_trans/candidate_CpGs/snp_chr${chr}/chr${chr}/GEI_geneticPC_interaction_5e-8.csv ];
+if [ -f ${section_06_dir}/GEI_trans/candidate_CpGs/snp_chr${chr}/GEI_geneticPC_interaction_5e-8.csv ];
 then
-    rm ${section_06_dir}/${section_06_dir}/GEI_trans/candidate_CpGs/snp_chr${chr}/chr${chr}/*genetic_pc*candidate*parquet
+    rm ${section_06_dir}/GEI_trans/candidate_CpGs/snp_chr${chr}/*genetic_pc*parquet
 fi
 
 echo "06g chr ${chr} has been done successfully at $(date)"

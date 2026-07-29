@@ -21,6 +21,13 @@ python ${scripts_directory}/resources/methylation/interaction_trans.py \
     0 \
     0.05
 
+${R_directory}Rscript ${scripts_directory}/resources/methylation/filter_GEI.R ${section_06_dir}/GEI_trans/candidate_SNPs/cpg_chunk${chunk}/
+
+if [ -f ${section_06_dir}/GEI_trans/candidate_SNPs/cpg_chunk${chunk}/GEI_geneticPC_interaction_5e-8.csv ];
+then
+    rm ${section_06_dir}/GEI_trans/candidate_SNPs/cpg_chunk${chunk}/*genetic_pc*parquet
+fi
+
 for row in $(seq 1 5);
 do
     if [ -f ${tabfile}_epi_row${row}.raw ];
