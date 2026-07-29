@@ -38,4 +38,4 @@ do
         echo "Skipping epistasis pair $row"
     fi
 done
-echo "06f CpG chunk ${chunk} has been done at $(date)"
+echo "06f CpG chunk ${chunk} has been done successfully at $(date)"
