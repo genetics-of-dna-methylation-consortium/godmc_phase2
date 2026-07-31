@@ -20,6 +20,7 @@ import pandas as pd
 import ld_checksums
 
 PRECURSOR_SCHEMA_VERSION = "15-aggregate-precursor-v1"
+COHORT_VARIANT_STATS_SCHEMA_VERSION = "15-cohort-variant-stats-v1"
 DEFAULT_PANEL_SPEC_VERSION = "0.1.0"
 DEFAULT_MAF_THRESHOLD = 0.01
 DEFAULT_MIN_ADJ_DIAG = 0.0
@@ -36,6 +37,20 @@ _VARIANT_DTYPES = {
     "membership_count": "int64", "b_intercept": "float64",
     "a_diag": "float64",
     "n_nonmissing": "int64", "n_imputed": "int64",
+}
+
+COHORT_VARIANT_STATS_COLUMNS = [
+    "stable_id", "b_intercept", "a_diag",
+    "n_nonmissing", "n_imputed", "genotype_mean",
+]
+
+_COHORT_VARIANT_STATS_DTYPES = {
+    "stable_id": "int64",
+    "b_intercept": "float64",
+    "a_diag": "float64",
+    "n_nonmissing": "int64",
+    "n_imputed": "int64",
+    "genotype_mean": "float64",
 }
 
 PAIR_DTYPE = np.dtype([
@@ -55,6 +70,7 @@ def precursor_paths(precursor_dir: str | Path) -> dict[str, Path]:
         "d": d / "D.npy",
         "variants": d / "variants.parquet",
         "pairs_dir": d / "A_pairs",
+        "cohort_stats_dir": d / "cohort_variant_stats",
         "lock": d / ".lock",
     }
 
@@ -374,6 +390,72 @@ def stage_variant_table(precursor_dir: str | Path, df: pd.DataFrame) -> tuple[Pa
     return tmp, path
 
 
+def _safe_filename_component(value: str) -> str:
+    """Return a conservative filename component derived from a cohort name."""
+    safe = re.sub(r"[^A-Za-z0-9._-]+", "_", value).strip("._-")
+    return safe or "cohort"
+
+
+def cohort_variant_stats_path(
+    precursor_dir: str | Path, cohort_index: int, study_name: str,
+) -> Path:
+    """Path for one cohort's retained per-variant contribution sidecar."""
+    safe_name = _safe_filename_component(study_name)
+    return (precursor_paths(precursor_dir)["cohort_stats_dir"] /
+            f"{cohort_index:04d}_{safe_name}.parquet")
+
+
+def stage_cohort_variant_stats(
+    path: str | Path,
+    cohort_variants: pd.DataFrame,
+    b_matrix: np.ndarray,
+    diag_acc: dict[int, float],
+    id_map: dict[str, int],
+) -> tuple[Path, Path]:
+    """Stage one cohort's per-variant support, B, and A diagonal sidecar.
+
+    The file deliberately stores stable IDs rather than repeating variant IDs;
+    the master ``variants.parquet`` is the stable_id -> variant_id map. This is
+    enough to reconstruct cohort-overlap centring later without inflating the
+    precursor with repeated string keys.
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + f".stage.{os.getpid()}")
+
+    stable_ids = np.array(
+        [id_map[v] for v in cohort_variants["variant_id"]], dtype=np.int64,
+    )
+    a_diag = np.empty(len(stable_ids), dtype=np.float64)
+    missing: list[str] = []
+    for idx, sid in enumerate(stable_ids):
+        val = diag_acc.get(int(sid))
+        if val is None:
+            missing.append(str(cohort_variants.iloc[idx]["variant_id"]))
+            a_diag[idx] = np.nan
+        else:
+            a_diag[idx] = val
+    if missing:
+        preview = ", ".join(missing[:5])
+        raise ValueError(
+            f"Missing A diagonal entries for {len(missing)} variants while "
+            f"writing cohort variant stats; first missing: {preview}"
+        )
+
+    df = pd.DataFrame({
+        "stable_id": stable_ids,
+        "b_intercept": b_matrix[:, 0].astype(np.float64),
+        "a_diag": a_diag,
+        "n_nonmissing": cohort_variants["n_nonmissing"].to_numpy(np.int64),
+        "n_imputed": cohort_variants["n_imputed"].to_numpy(np.int64),
+        "genotype_mean": cohort_variants["genotype_mean"].to_numpy(np.float64),
+    })
+    df[COHORT_VARIANT_STATS_COLUMNS].astype(
+        _COHORT_VARIANT_STATS_DTYPES,
+    ).to_parquet(tmp, index=False)
+    return tmp, path
+
+
 def _commit_staged(staged: list[tuple[Path, Path]]) -> None:
     """Atomically rename each staged temp into its final path (commit burst)."""
     for tmp, final in staged:
@@ -383,7 +465,7 @@ def _commit_staged(staged: list[tuple[Path, Path]]) -> None:
 def _clean_stale_temps(precursor_dir: Path) -> None:
     """Remove orphaned staging temps left by a crashed prior run (lock-guarded)."""
     paths = precursor_paths(precursor_dir)
-    for base in (paths["root"], paths["pairs_dir"]):
+    for base in (paths["root"], paths["pairs_dir"], paths["cohort_stats_dir"]):
         if base.is_dir():
             for pattern in ("*.stage.*", "*.tmp.*"):
                 for stale in base.glob(pattern):
@@ -446,6 +528,7 @@ def accumulate(
     if pm is None:
         pm = {
             "schema_version": PRECURSOR_SCHEMA_VERSION,
+            "cohort_variant_stats_schema_version": COHORT_VARIANT_STATS_SCHEMA_VERSION,
             "panel_specification_version": DEFAULT_PANEL_SPEC_VERSION,
             "contract": contract, "n_cohorts": 0, "cohorts": [],
             "next_stable_id": 0,
@@ -453,6 +536,10 @@ def accumulate(
         precursor_dir.mkdir(parents=True, exist_ok=True)
     else:
         validate_contract(pm["contract"], contract)
+        pm.setdefault(
+            "cohort_variant_stats_schema_version",
+            COHORT_VARIANT_STATS_SCHEMA_VERSION,
+        )
         incomplete = _incomplete_cohorts(pm)
         if incomplete and not force:
             raise RuntimeError(
@@ -471,6 +558,7 @@ def accumulate(
         _clean_stale_temps(precursor_dir)
         variants, b_mat, d_mat = read_cohort_assets(cohort_dir)
         table = read_variant_table(precursor_dir)
+        cohort_index = int(pm["n_cohorts"])
         table, id_map, next_id = merge_variant_table(
             table, variants, b_mat, pm["next_stable_id"])
 
@@ -508,6 +596,12 @@ def accumulate(
         if diag_acc:
             add = table["stable_id"].map(lambda s: diag_acc.get(int(s), 0.0))
             table["a_diag"] = table["a_diag"] + add
+        stats_final = cohort_variant_stats_path(
+            precursor_dir, cohort_index, study_name,
+        )
+        staged.append(stage_cohort_variant_stats(
+            stats_final, variants, b_mat, diag_acc, id_map,
+        ))
         staged.append(stage_variant_table(precursor_dir, table))
 
         d_path = precursor_paths(precursor_dir)["d"]
@@ -521,6 +615,8 @@ def accumulate(
             "study_name": study_name,
             "accumulated_at_utc": datetime.now(timezone.utc).isoformat(),
             "n_variants": int(len(variants)),
+            "d_intercept": float(d_mat[0, 0]),
+            "cohort_variant_stats": stats_final.relative_to(precursor_dir).as_posix(),
             "status": "in_progress",
         })
         write_precursor_manifest(precursor_dir, pm)
