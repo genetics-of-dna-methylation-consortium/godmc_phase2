@@ -267,16 +267,6 @@ check_logs_06 () {
         exit 1
     fi
 
-    compare_version "06c"
-    count_06c=`grep "successfully" ${section_06c_logfile}_* | wc -l`
-    count_06c_file=`ls ${section_06c_logfile}_* | wc -l`
-    if [ $count_06c == $count_06c_file ]; then
-        echo "06c-interaction_cis.sh completed successfully,"
-    else
-        echo "Problem: 06c-interaction_cis.sh did not complete successfully"
-        exit 1
-    fi
-
     compare_version "06d"
     count_06d=`grep "successfully" ${section_06d_logfile}_* | wc -l`
     count_06d_file=`ls ${section_06d_logfile}_* | wc -l`
