@@ -22,6 +22,15 @@ pr = genotypeio.PlinkReader(plink_prefix_path)
 genotype_df = pr.load_genotypes()
 variant_df = pr.bim.set_index('snp')[['chrom', 'pos']]
 
+print("Any -9 before imputation?", (genotype_df == -9).values.any())
+
+genotype_df = genotype_df.astype(np.float32)
+genotype_df[genotype_df == -9] = np.nan
+genotype_df = genotype_df.apply(lambda row: row.fillna(row.mean()), axis=1)
+
+print("Any -9 after imputation?", (genotype_df == -9).values.any())
+print("Any remaining NaNs after imputation?", genotype_df.isna().values.any())
+
 def runGE(Env):
     E_df_tmp = E_df[[Env]].dropna()
     interaction_series = E_df_tmp.squeeze()
