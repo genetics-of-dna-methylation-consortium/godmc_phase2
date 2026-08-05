@@ -39,7 +39,7 @@ do
             ${meth_vmeQTL_directory}/vmeQTL_phase2/adjustcovs_cpg_phase2_allCpGs_chunk${chunk}.bed.gz \
             ${tabfile}_epi_row${row}.raw2 \
             ${section_06_dir}/GEI_trans/epistasis/epistasis_cpg_chunk${chunk} \
-            0 \
+            0.01 \
             1
     else
         echo "Skipping epistasis pair $row"
