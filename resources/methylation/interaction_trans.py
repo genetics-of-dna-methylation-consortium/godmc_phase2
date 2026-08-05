@@ -29,7 +29,7 @@ print("Any -9 after imputation?", (genotype_df == -9).values.any())
 print("Any remaining NaNs after imputation?", genotype_df.isna().values.any())
 
 variant_df = pr.bim.set_index('snp')[['chrom', 'pos', 'a0', 'a1']]
-variant_df.to_csv(output_dir + '/Allele_info.csv', index=True)
+variant_df.to_csv(output_prefix_file + '/Allele_info.csv', index=True)
 
 def runGE(Env):
     E_df_tmp = E_df[[Env]].dropna()
