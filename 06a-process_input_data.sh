@@ -9,7 +9,14 @@ exec &> >(tee ${section_06a_logfile})
 print_version
 
 echo "Started to run 06a at $(date)"
-echo "STEP1: checking if all required files are available"
+echo "STEP1: downloading and checking if all required files are available"
+
+sftp -P 2222 -oIdentityFile=$key ${sftp_username}@${sftp_address}:/sftp/vmeQTL_resources <<EOF
+get *
+EOF
+
+mv pruned_snps_vmeQTL_phase2_chr* ${scripts_directory}/resources/genetics
+mv vmeQTL* ${scripts_directory}/resources/methylation/vmeQTL
 
 # add one step to download vmeQTL_list
 if [ -f ${covariates_combined}.txt ];
