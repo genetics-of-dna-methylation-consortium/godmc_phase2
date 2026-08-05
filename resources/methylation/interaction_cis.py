@@ -40,7 +40,7 @@ def runGE(Env):
     cis_df = cis.map_nominal(mapping_df, genotype_df, variant_df, 
                 phenotype_df, phenotype_pos_df, prefix_out,
                 covariates_df=None,
-                interaction_df=E_df_tmp, maf_threshold_interaction=0.001,
+                interaction_df=E_df_tmp, maf_threshold_interaction=0.01,
                 run_eigenmt=False, output_dir=output_dir, write_top=False, write_stats=True)
 
 for column_name in E_df.columns:
