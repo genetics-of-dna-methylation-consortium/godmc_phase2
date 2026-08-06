@@ -35,13 +35,27 @@ variant_df.to_csv(output_dir + '/Allele_info.csv', index=True)
 
 def runGE(Env):
     E_df_tmp = E_df[[Env]].dropna()
+
+    if E_df_tmp[Env].std() == 0 or np.isclose(E_df_tmp[Env].std(), 0):
+        print(f"[SKIP] '{Env}': Zero variance (all values are identical)")
+        return
+
+    if len(E_df_tmp) < 50:
+        print(f"[SKIP] '{Env}': Too few valid samples remaining ({len(E_df_tmp)})")
+        return
+
     prefix_out = "GEI_chunk"+str(chunk)+"_chr"+str(chrom)+"_E_"+Env+".candidate"
     mapping_df = pd.read_csv(list1, sep="\t", names=['SNP','CpG','Pair'], header=None)
-    cis_df = cis.map_nominal(mapping_df, genotype_df, variant_df, 
+    
+    try:
+        cis_df = cis.map_nominal(mapping_df, genotype_df, variant_df, 
                 phenotype_df, phenotype_pos_df, prefix_out,
                 covariates_df=None,
-                interaction_df=E_df_tmp, maf_threshold_interaction=0.01,
+                interaction_df=E_df_tmp, maf_threshold_interaction=0,
                 run_eigenmt=False, output_dir=output_dir, write_top=False, write_stats=True)
+        print(f"[SUCCESS] Completed GxE for: '{Env}'")    
+    except Exception as err:
+        print(f"[ERROR] Failed GxE for '{Env}'. Reason: {err}")
 
 for column_name in E_df.columns:
     print(f"Starting execution for: {column_name}")
