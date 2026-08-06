@@ -272,7 +272,7 @@ vmeQTL_list2="${scripts_directory}/resources/methylation/vmeQTL/vmeQTL_list2.txt
 vmeQTL_list3="${scripts_directory}/resources/methylation/vmeQTL/vmeQTL_list3.txt"
 vmeQTL_list4="${scripts_directory}/resources/methylation/vmeQTL/vmeQTL_list4.txt"
 vmeQTL_list5="${scripts_directory}/resources/methylation/vmeQTL/vmeQTL_list5.txt"
-envs_input="${home_directory}/resources/methylation/vmeQTL/all_environmental_factor.txt"
+envs_input="${home_directory}/processed_data/methylation/vmeQTL/all_environmental_factor.txt"
 
 # SFTP details
 # This is the location your results will be uploaded
