@@ -10,10 +10,8 @@ print_version
 #Please read resources/bin/hase/README_2.md
 #An example is also provided below
 
-echo "Skipping old 04b because 04a aligns alleles to ref-hrc before HASE converting."
+python  ${hase}/added/invert_probes.py \
+    -f  ${hase_converting}/probes \
+    -n ${study_name}
 
-# python  ${hase}/added/invert_probes.py \
-#     -f  ${hase_converting}/probes \
-#     -n ${study_name}
-
-echo "No probe inversion performed"
+echo "Allele positions inverted"
