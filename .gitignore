@@ -18,3 +18,7 @@ resources/genetics/easyQC_hrc_edit.ecf.out
 resources/bin/light_hase/data/hrc_ref_allele.txt
 resources/bin/light_hase/data/ref-hrc.ref.gz
 resources/bin/light_hase/data/ref-hrc.ref_info.h5
+
+resources/genetics/pruned_snps_vmeQTL_phase2_chr*
+resources/methylation/vmeQTL/vmeQTL_list*
+resources/methylation/vmeQTL/vmeQTL_phase1_cohort_list.txt
