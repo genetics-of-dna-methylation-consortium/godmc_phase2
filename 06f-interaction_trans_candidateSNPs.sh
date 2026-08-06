@@ -18,7 +18,7 @@ python ${scripts_directory}/resources/methylation/interaction_trans.py \
     ${meth_vmeQTL_directory}/vmeQTL_phase2/adjustcovs_cpg_phase2_allCpGs_chunk${chunk}.bed.gz \
     ${envs_input} \
     ${section_06_dir}/GEI_trans/candidate_SNPs/cpg_chunk${chunk}/GEI_trans_cpg_chunk${chunk} \
-    0.01 \
+    0 \
     0.05
 
 ${R_directory}Rscript ${scripts_directory}/resources/methylation/filter_GEI.R ${section_06_dir}/GEI_trans/candidate_SNPs/cpg_chunk${chunk}/
