@@ -7,7 +7,7 @@ checkFirstArg () {
 	local e
 	for e in "${@:2}"; do [[ "$e" == "$1" ]] && return 0; done
 	echo $"Error: $1 is not a valid section identifier"
-	echo $"Need to specify a value from 01,02,03,03a,03d,04,07,08,09,10,11,14"
+	echo $"Need to specify a value from 01,02,03,03a,03d,04,07,08,09,10,11,14,16"
 	echo $"Usage: $0 <pipeline section> {check|upload}"
 	exit 1
 }
@@ -24,7 +24,7 @@ checkSecondArg () {
 source resources/logs/check_logs.sh
 source resources/logs/check_results.sh
 
-sections=("01" "02" "03" "03a" "03d" "04" "07" "08" "09" "10" "11" "14")
+sections=("01" "02" "03" "03a" "03d" "04" "07" "08" "09" "10" "11" "14" "16")
 checkFirstArg "$1" "${sections[@]}"
 
 actions=("check" "upload")
@@ -41,7 +41,7 @@ eval "check_results_$1"
 echo ""
 echo "Section $1 has been successfully completed!"
 
-if [[ "$2" = "upload" && ( $1 = "01" || $1 = "02" || $1 = "03" || $1 = "03a" || $1 = "03d" || $1 = "04" || $1 = "07" || $1 = "08" ) ]]
+if [[ "$2" = "upload" && ( $1 = "01" || $1 = "02" || $1 = "03" || $1 = "03a" || $1 = "03d" || $1 = "04" || $1 = "07" || $1 = "08" || $1 = "16" ) ]]
 then
 
 	echo ""
@@ -104,7 +104,7 @@ bye
 #        echo "Encrypting files"
 #        gpg --output ${home_directory}/results/${study_name}_${1}.${suff}.aes --symmetric --cipher-algo AES256 ${home_directory}//results/${study_name}_${1}.${suff}
         echo ""
-    elif [[ $1 = "04" || $1 = "07" ]]
+    elif [[ $1 = "04" || $1 = "07" || $1 = "16" ]]
     then
         echo "Tarring results have been generated"
     else
@@ -288,6 +288,5 @@ curl -k -u ${sftp_username}:${mypassword} -T ${home_directory}/results/${study_n
 EOF
 
 fi
-
 
 

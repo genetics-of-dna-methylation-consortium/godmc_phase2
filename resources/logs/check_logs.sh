@@ -194,7 +194,7 @@ check_logs_04 () {
 	fi
 
 	compare_version "04b"
-	if grep -i -q "Allele positions inverted" ${section_04b_logfile}; then
+	if grep -i -q "Allele positions inverted" ${section_04b_logfile} || grep -i -q "No probe inversion performed" ${section_04b_logfile}; then
 		echo "04b-mapper-preparation.sh completed successfully."
 	else
 		echo "Problem: 04b-mapper-preparation.sh did not complete successfully"
@@ -298,6 +298,65 @@ check_logs_14 () {
 
 }
 
+check_logs_16 () {
+
+	compare_version "16a"
+	if grep -i -q "Module 16 sex-specific all-probe methylation phenotypes successfully prepared" ${section_16a_logfile}; then
+		echo "16a-prepare_chrX_all_probe_phenotypes_by_sex.sh completed successfully."
+	else
+		echo "Problem: 16a-prepare_chrX_all_probe_phenotypes_by_sex.sh did not complete successfully"
+		exit 1
+	fi
+
+	compare_version "16b"
+	if grep -i -q "Successfully prepared module 16 chrX/chrY HASE inputs" ${section_16b_logfile}; then
+		echo "16b-build_chrX_hase_by_sex.sh completed successfully."
+	else
+		echo "Problem: 16b-build_chrX_hase_by_sex.sh did not complete successfully"
+		exit 1
+	fi
+
+	compare_version "16c"
+	if grep -i -q "Successfully encoded module 16 chrX/chrY genotype and sex-specific all-probe methylation data" ${section_16c_logfile}; then
+		echo "16c-encode_all_probes_chrX_by_sex.sh completed successfully."
+	else
+		echo "Problem: 16c-encode_all_probes_chrX_by_sex.sh did not complete successfully"
+		exit 1
+	fi
+
+	compare_version "16d"
+	if grep -i -q "Module 16 chrX/chrY genotype against sex-specific all methylation probes successfully completed" ${section_16d_logfile}; then
+		echo "16d-singlesite_chrX_all_probe_hase.sh completed successfully."
+	else
+		echo "Problem: 16d-singlesite_chrX_all_probe_hase.sh did not complete successfully"
+		exit 1
+	fi
+
+	compare_version "16e"
+	if grep -i -q "16e Module 16 HASE positive-control validation successfully completed" ${section_16e_logfile}; then
+		echo "16e-perform_positive_control_chrXY_all_probe.sh completed successfully."
+	else
+		echo "Problem: 16e-perform_positive_control_chrXY_all_probe.sh did not complete successfully"
+		exit 1
+	fi
+
+	compare_version "16f"
+	if grep -i -q "16f Module 16 PLINK/R positive-control validation successfully completed" ${section_16f_logfile}; then
+		echo "16f-validate_chrXY_all_probe_positive_control.sh completed successfully."
+	else
+		echo "Problem: 16f-validate_chrXY_all_probe_positive_control.sh did not complete successfully"
+		exit 1
+	fi
+
+	compare_version "16g"
+	if grep -i -q "Successfully created results archives of module 16" ${section_16g_logfile}; then
+		echo "16g-tar_results.sh completed successfully."
+	else
+		echo "Problem: 16g-tar_results.sh did not complete successfully"
+		exit 1
+	fi
+}
+
 
 check_logs_09 () {
 
@@ -331,5 +390,3 @@ check_logs_09 () {
 
 
 }
-
-
