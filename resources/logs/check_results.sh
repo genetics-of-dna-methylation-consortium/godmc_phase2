@@ -285,6 +285,103 @@ check_results_04 () {
 
 }
 
+check_results_06 () {
+    if [ -f "${home_directory}/results/06/E_plots.pdf" ]; then
+        echo "${home_directory}/results/06/E_plots.pdf present"
+    else
+        echo "${home_directory}/results/06/E_plots.pdf absent. Please re-run 06a"
+    fi
+
+    if [ -f "${home_directory}/results/06/E_summary.csv" ]; then
+        echo "${home_directory}/results/06/E_summary.csv present"
+    else
+        echo "${home_directory}/results/06/E_summary.csv absent. Please re-run 06a"
+    fi
+    
+    participate07=`grep ${study_name} ${scripts_directory}/resources/methylation/vmeQTL/vmeQTL_phase1_cohort_list.txt | wc -l`
+    if [ ${participate07} -eq 1 ]; then
+        echo "Cohort should run 06b"
+        folder_size=$(du -sm "${home_directory}/results/06/vmeQTL_results/Missing_association" 2>/dev/null | cut -f1)
+        if [ ${folder_size} -gt 2000 ]; then
+            echo "${home_directory}/results/06/vmeQTL_results/Missing_association size is as expected"
+        else
+            echo "${home_directory}/results/06/vmeQTL_results/Missing_association size is not as expected. Please check your 06b reuslts"
+            exit 1
+        fi
+    else
+        echo "Cohort should skip 06b"
+    fi
+
+    if [ -d "${home_directory}/results/06/GEI_cis" ]; then
+        echo "folder ${home_directory}/results/06/GEI_cis present"
+        folder_size=$(du -sm "${home_directory}/results/06/GEI_cis" 2>/dev/null | cut -f1)
+        if [ ${folder_size} -gt 10000 ]; then
+            echo "${home_directory}/results/06/GEI_cis size is as expected"
+        else
+            echo "${home_directory}/results/06/GEI_cis size is not as expected. Please check your 06c reuslts"
+            exit 1
+        fi
+    else
+        echo "folder ${home_directory}/results/06/GEI_cis absent. Please re-run 06c"
+        exit 1
+    fi
+
+    if [ -d "${home_directory}/results/06/vmeQTL_results/Trans_candidateSNPs" ]; then
+        echo "folder ${home_directory}/results/06/vmeQTL_results/Trans_candidateSNPs present"
+        folder_size=$(du -sm "${home_directory}/results/06/vmeQTL_results/Trans_candidateSNPs" 2>/dev/null | cut -f1)
+        if [ ${folder_size} -gt 10000 ]; then
+            echo "results/06/vmeQTL_results/Trans_candidateSNPs size passed check"
+        else
+            echo "results/06/vmeQTL_results/Trans_candidateSNPs size is not as expected. Please check your 06d reuslts"
+            exit 1
+        fi
+    else
+        echo "folder ${home_directory}/results/06/vmeQTL_results/Trans_candidateSNPs absent. Please re-run 06d"
+        exit 1
+    fi
+
+    if [ -d "${home_directory}/results/06/vmeQTL_results/Trans_candidateCpGs" ]; then
+        echo "folder ${home_directory}/results/06/vmeQTL_results/Trans_candidateCpGs present"
+        folder_size=$(du -sm "${home_directory}/results/06/vmeQTL_results/Trans_candidateCpGs" 2>/dev/null | cut -f1)
+        if [ ${folder_size} -gt 1000 ]; then
+            echo "results/06/vmeQTL_results/Trans_candidateCpGs size passed check"
+        else
+            echo "results/06/vmeQTL_results/Trans_candidateCpGs size is not as expected. Please check your 06e reuslts"
+            exit 1
+        fi
+    else
+        echo "folder ${home_directory}/results/06/vmeQTL_results/Trans_candidateCpGs absent. Please re-run 06e"
+        exit 1
+    fi
+
+    if [ -d "${home_directory}/results/06/GEI_trans/candidate_SNPs" ]; then
+        echo "folder ${home_directory}/results/06/GEI_trans/candidate_SNPs present"
+        folder_size=$(du -sm "${home_directory}/results/06/GEI_trans/candidate_SNPs" 2>/dev/null | cut -f1)
+        if [ ${folder_size} -gt 1000 ]; then
+            echo "results/06/GEI_trans/candidate_SNPs size passed check"
+        else
+            echo "results/06/GEI_trans/candidate_SNPs size is not as expected. Please check your 06e reuslts"
+            exit 1
+        fi
+    else
+        echo "folder ${home_directory}/results/06/GEI_trans/candidate_SNPs absent. Please re-run 06f"
+        exit 1
+    fi
+
+    if [ -d "${home_directory}/results/06/GEI_trans/candidate_CpGs" ]; then
+        echo "folder ${home_directory}/results/06/GEI_trans/candidate_CpGs present"
+        folder_size=$(du -sm "${home_directory}/results/06/GEI_trans/candidate_CpGs" 2>/dev/null | cut -f1)
+        if [ ${folder_size} -gt 1000 ]; then
+            echo "results/06/GEI_trans/candidate_CpGs size passed check"
+        else
+            echo "results/06/GEI_trans/candidate_CpGs size is not as expected. Please check your 06e reuslts"
+            exit 1
+        fi
+    else
+        echo "folder ${home_directory}/results/06/GEI_trans/candidate_CpGs absent. Please re-run 06g"
+        exit 1
+    fi
+}
 
 check_results_07 () {
 

@@ -234,6 +234,80 @@ check_logs_04 () {
     fi
 }
 
+check_logs_06 () {
+
+    compare_version "06a"
+    if grep -i -q "06a has been done successfully" ${section_06a_logfile}; then
+        echo "06a-process_input_data.sh completed successfully."
+    else
+        echo "Problem: 06a-process_input_data.sh did not complete successfully."
+        exit 1
+    fi
+
+    compare_version "06b"
+    count_06b=`grep "successfully" ${section_06b_logfile}_chr[0-9]* | wc -l`
+    participate07=`grep ${study_name} ${scripts_directory}/resources/methylation/vmeQTL/vmeQTL_phase1_cohort_list.txt | wc -l`
+    if [ ${participate07} -eq 1 ]; then
+        echo "Your cohort was involved in module 07 meta-analysis."
+        if [ ${count_06b} -eq 17 ]; then
+            echo "06b-vmeQTL_detection_missingCpGs.sh completed successfully."
+        else
+            echo "Problem: 06b-vmeQTL_detection_missingCpGs.sh did not complete successfully." 
+            exit 1
+        fi
+    fi
+
+    compare_version "06c"
+    count_06c=`grep "successfully" ${section_06c_logfile}_* | wc -l`
+    count_06c_file=`ls ${section_06c_logfile}_* | wc -l`
+    if [ $count_06c == $count_06c_file ]; then
+        echo "06c-interaction_cis.sh completed successfully,"
+    else
+        echo "Problem: 06c-interaction_cis.sh did not complete successfully"
+        exit 1
+    fi
+
+    compare_version "06d"
+    count_06d=`grep "successfully" ${section_06d_logfile}_* | wc -l`
+    count_06d_file=`ls ${section_06d_logfile}_* | wc -l`
+    if [ $count_06d == $count_06d_file ]; then
+        echo "06d-vmeQTL_detection_candidateSNPs.sh completed successfully,"
+    else
+        echo "Problem: 06d-vmeQTL_detection_candidateSNPs.sh did not complete successfully"
+        exit 1
+    fi
+
+    compare_version "06e"
+    count_06e=`grep "successfully" ${section_06e_logfile}_* | wc -l`
+    count_06e_file=`ls ${section_06e_logfile}_* | wc -l`
+    if [ $count_06e == $count_06e_file ]; then
+        echo "06e-vmeQTL_detection_candidateCpGs.sh completed successfully,"
+    else
+        echo "Problem: 06e-vmeQTL_detection_candidateCpGs.sh did not complete successfully"
+        exit 1
+    fi
+
+    compare_version "06f"
+    count_06f=`grep "successfully" ${section_06f_logfile}_* | wc -l`
+    count_06f_file=`ls ${section_06f_logfile}_* | wc -l`
+    if [ $count_06f == $count_06f_file ]; then
+        echo "06f-interaction_trans_candidateSNPs.sh completed successfully,"
+    else
+        echo "Problem: 06f-interaction_trans_candidateSNPs.sh did not complete successfully"
+        exit 1
+    fi
+
+    compare_version "06g"
+    count_06g=`grep "successfully" ${section_06g_logfile}_* | wc -l`
+    count_06g_file=`ls ${section_06g_logfile}_* | wc -l`
+    if [ $count_06g == $count_06g_file ]; then
+        echo "06g-interaction_trans_candidateCpGs.sh completed successfully,"
+    else
+        echo "Problem: 06g-interaction_trans_candidateCpGs.sh did not complete successfully"
+        exit 1
+    fi
+}
+
 check_logs_07 () {
 
 	compare_version "07a"

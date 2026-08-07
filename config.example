@@ -106,5 +106,8 @@ meth_pc_threshold="1e-7"
 # Matrixeqtl parameters
 soft_threshold="1e-5"
 
+# module 06
+BMI=""
+
 # DO NOT MODIFY
 source ${scripts_directory}/resources/parameters

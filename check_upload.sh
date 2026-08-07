@@ -24,7 +24,7 @@ checkSecondArg () {
 source resources/logs/check_logs.sh
 source resources/logs/check_results.sh
 
-sections=("01" "02" "03" "03a" "03d" "04" "07" "08" "09" "10" "11" "14" "16")
+sections=("01" "02" "03" "03a" "03d" "04" "06" "07" "08" "09" "10" "11" "14" "16")
 checkFirstArg "$1" "${sections[@]}"
 
 actions=("check" "upload")
@@ -41,7 +41,7 @@ eval "check_results_$1"
 echo ""
 echo "Section $1 has been successfully completed!"
 
-if [[ "$2" = "upload" && ( $1 = "01" || $1 = "02" || $1 = "03" || $1 = "03a" || $1 = "03d" || $1 = "04" || $1 = "07" || $1 = "08" || $1 = "16" ) ]]
+if [[ "$2" = "upload" && ( $1 = "01" || $1 = "02" || $1 = "03" || $1 = "03a" || $1 = "03d" || $1 = "04" || $1 = "06" || $1 = "07" || $1 = "08" || $1 = "16") ]]
 then
 
 	echo ""
@@ -104,15 +104,31 @@ bye
 #        echo "Encrypting files"
 #        gpg --output ${home_directory}/results/${study_name}_${1}.${suff}.aes --symmetric --cipher-algo AES256 ${home_directory}//results/${study_name}_${1}.${suff}
         echo ""
-    elif [[ $1 = "04" || $1 = "07" || $1 = "16" ]]
+    elif [[ $1 = "04" || $1 = "07" || $1 = "06" || $1 = "16" ]]
     then
         echo "Tarring results have been generated"
     else
 	    tar ${flags} ${home_directory}/results/${study_name}_${1}.${suff} -C ${home_directory} results/${1}
         echo "Successfully created results archives"
     fi
-    
-    if [[ "$1" = "07" ]]
+
+    if [[ "$1" = "06" ]]
+    then
+        echo "start to encrypt 06"
+        for i in $(seq 1 7)
+        do
+        if [ -f ${home_directory}/results/${study_name}_06_results${i}.md5sum ] && [ -f ${home_directory}/results/${study_name}_06_results${i}.tgz.aes ]; then
+            echo ""
+        else
+            echo "Generating md5 checksum results${i}"
+            md5sum ${home_directory}/results/${study_name}_06_results${i}.tgz > ${home_directory}/results/${study_name}_06_results${i}.md5sum
+            echo "Encrypting results${i}"
+            gpg --output ${home_directory}/results/${study_name}_06_results${i}.tgz.aes --symmetric --cipher-algo AES256 ${home_directory}/results/${study_name}_06_results${i}.tgz
+            echo ""
+        fi
+        done
+        
+    elif [[ "$1" = "07" ]]
     then
         echo "start to encrypt 07"
         for i in $(seq 1 22)
@@ -163,6 +179,17 @@ echo "Detecting sshpass"
         put ${home_directory}/results/config/${study_name}_config.md5sum 
         bye
 !
+    elif [[ $1 = "06" ]]
+    then
+        sftp $port -oIdentityFile=$key -oBatchMode=no -b - ${sftp_username}@${sftp_address}:${sftp_path} << !
+        dir
+        cd ../upload
+        put ${home_directory}/results/${study_name}_${1}_results*.md5sum
+        put ${home_directory}/results/${study_name}_$1_results*.${suff}.aes
+        put ${home_directory}/results/config/${study_name}_config.tar.aes
+        put ${home_directory}/results/config/${study_name}_config.md5sum 
+        bye
+!
     else
         sftp $port -oIdentityFile=$key -oBatchMode=no -b - ${sftp_username}@${sftp_address}:${sftp_path} << !
         dir
@@ -187,6 +214,16 @@ then
     put ${home_directory}/results/${study_name}_$1_chr*.${suff}.aes
     put ${home_directory}/results/config/${study_name}_config.tar.aes
     put ${home_directory}/results/config/${study_name}_config.md5sum
+EOF
+elif [[ $1 = "06" ]]
+then
+    sftp $port -oIdentityFile=$key ${sftp_username}@${sftp_address}:${sftp_path} <<EOF
+    dir
+    cd ../upload
+    put ${home_directory}/results/${study_name}_${1}_results*.md5sum
+    put ${home_directory}/results/${study_name}_$1_results*.${suff}.aes
+    put ${home_directory}/results/config/${study_name}_config.tar.aes
+    put ${home_directory}/results/config/${study_name}_config.md5sum   
 EOF
 else
     sftp $port -oIdentityFile=$key ${sftp_username}@${sftp_address}:${sftp_path} <<EOF
