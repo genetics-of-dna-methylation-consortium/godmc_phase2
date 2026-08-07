@@ -1,0 +1,3 @@
+test_0	test_0_cov_0	test_0_cov_1	test_0_cov_2
+test_1	test_1_cov_0	test_1_cov_1	test_1_cov_2
+test_2	test_2_cov_0	test_2_cov_1	test_2_cov_2

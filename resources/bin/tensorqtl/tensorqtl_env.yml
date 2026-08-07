@@ -1,0 +1,18 @@
+name: tensorqtl_godmc
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - pandas
+  - pandas-plink
+  - scipy
+  - pgenlib>=0.90.1
+  - pyarrow
+  - pytorch
+  - cudatoolkit
+  - pip:
+    - git+https://github.com/ZXiaopu/tensorqtl_godmc.git@master
