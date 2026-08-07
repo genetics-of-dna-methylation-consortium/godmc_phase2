@@ -130,11 +130,16 @@ check_results_03a () {
 		exit 1
 	fi
 
-	if [ -f "${section_03_dir}/age_prediction_correlation.png" ]; then
-		echo "The matrix correlation plot among predicted age, age acceleration residuals, and chronological age is present"
+	same_age_check=$(awk 'NR>1 {print $3}' ${covariates} | sort -n | uniq | wc -l)
+	if [ "${same_age_check}" -eq 1 ]; then
+		echo "All individuals have the same age. Skipping age prediction correlation matrix and statistics."
 	else
-		echo "Problem: The matrix correlation plot of predicted age is absent"
-		exit 1
+		if [ -f "${section_03_dir}/age_prediction_correlation.png" ]; then
+			echo "The matrix correlation plot among predicted age, age acceleration residuals, and chronological age is present"
+		else
+			echo "Problem: The matrix correlation plot of predicted age is absent"
+			exit 1
+		fi
 	fi
 
 	if [ -f "${section_03_dir}/age_prediction_stats.csv" ]; then
@@ -484,6 +489,155 @@ check_results_09 () {
 
   done
 
+}
+
+check_results_16_check_file () {
+    if [ -f "$1" ]; then
+        echo "$2 present"
+    else
+        echo "Problem: $2 absent: $1"
+        exit 1
+    fi
+}
+
+check_results_16_check_dir () {
+    if [ -d "$1" ]; then
+        echo "$2 present"
+    else
+        echo "Problem: $2 absent: $1"
+        exit 1
+    fi
+}
+
+check_results_16_check_any_file () {
+    dir="$1"
+    pattern="$2"
+    label="$3"
+
+    if find "${dir}" -maxdepth 1 -type f -name "${pattern}" | grep -q .; then
+        echo "${label} present"
+    else
+        echo "Problem: ${label} absent in ${dir}"
+        exit 1
+    fi
+}
+
+check_results_16_cpg_exists () {
+    phenotype_csv="$1"
+    cpg="$2"
+
+    awk -F',' -v cpg="${cpg}" 'NR > 1 && $1 == cpg {found = 1; exit} END {exit found ? 0 : 1}' \
+        "${phenotype_csv}"
+}
+
+check_results_16_meta_inputs () {
+    sex_label="$1"
+    meta_inputs="${section_16_dir}/meta_inputs_${sex_label}"
+
+    echo "Checking Module 16 ${sex_label} meta-analysis inputs"
+
+    check_results_16_check_dir "${meta_inputs}" "Module 16 ${sex_label} meta input directory"
+    check_results_16_check_dir "${meta_inputs}/part_dev" "Module 16 ${sex_label} part_dev directory"
+    check_results_16_check_dir "${meta_inputs}/mapping" "Module 16 ${sex_label} mapping directory"
+    check_results_16_check_dir "${meta_inputs}/use_data" "Module 16 ${sex_label} use_data directory"
+    check_results_16_check_dir "${meta_inputs}/use_data/genotype" "Module 16 ${sex_label} genotype directory"
+    check_results_16_check_dir "${meta_inputs}/use_data/individuals" "Module 16 ${sex_label} individuals directory"
+    check_results_16_check_dir "${meta_inputs}/use_data/probes" "Module 16 ${sex_label} probes directory"
+    check_results_16_check_dir "${meta_inputs}/use_data/phenotypes" "Module 16 ${sex_label} phenotypes directory"
+
+    check_results_16_check_file "${meta_inputs}/part_dev/${study_name}_a_cov.npy" "${study_name}_a_cov.npy for Module 16 ${sex_label}"
+    check_results_16_check_file "${meta_inputs}/part_dev/${study_name}_b_cov.npy" "${study_name}_b_cov.npy for Module 16 ${sex_label}"
+    check_results_16_check_file "${meta_inputs}/part_dev/${study_name}_C.npy" "${study_name}_C.npy for Module 16 ${sex_label}"
+    check_results_16_check_file "${meta_inputs}/part_dev/${study_name}_a_test.npy" "${study_name}_a_test.npy for Module 16 ${sex_label}"
+    check_results_16_check_file "${meta_inputs}/part_dev/${study_name}_metadata.npy" "${study_name}_metadata.npy for Module 16 ${sex_label}"
+
+    check_results_16_check_any_file "${meta_inputs}/mapping" "*.npy" "Module 16 ${sex_label} mapper npy files"
+    check_results_16_check_any_file "${meta_inputs}/use_data/genotype" "*.h5" "Module 16 ${sex_label} encoded genotype h5 files"
+    check_results_16_check_any_file "${meta_inputs}/use_data/individuals" "*.h5" "Module 16 ${sex_label} encoded individual h5 files"
+    check_results_16_check_any_file "${meta_inputs}/use_data/probes" "*.h5" "Module 16 ${sex_label} probe h5 files"
+    check_results_16_check_any_file "${meta_inputs}/use_data/phenotypes" "*.csv" "Module 16 ${sex_label} encoded phenotype csv files"
+}
+
+check_results_16_positive_control () {
+    sex_label="$1"
+    pheno_dir="$2"
+    validation_cpg="${module16_positive_control_cpg}"
+    phenotype_csv="${pheno_dir}/methylation_data.csv"
+
+    check_results_16_check_file "${phenotype_csv}" "Module 16 ${sex_label} phenotype file"
+
+    if ! check_results_16_cpg_exists "${phenotype_csv}" "${validation_cpg}"; then
+        echo "Skipping Module 16 ${sex_label} positive-control checks because ${validation_cpg} was not found in ${phenotype_csv}"
+        return 1
+    fi
+
+    echo "Checking Module 16 ${sex_label} positive-control validation outputs for ${validation_cpg}"
+
+    check_results_16_check_file "${section_16_dir}/positive_control_validation/hase/${sex_label}/cohort_${study_name}_${validation_cpg}.csv.gz" "Module 16 ${sex_label} HASE cohort positive-control result"
+    check_results_16_check_file "${section_16_dir}/positive_control_validation/hase/${sex_label}/meta_${validation_cpg}.csv.gz" "Module 16 ${sex_label} HASE meta positive-control result"
+    check_results_16_check_file "${section_16_dir}/positive_control_validation/plink/${sex_label}/positive_control_${sex_label}_${validation_cpg}.PHENO1.glm.linear.gz" "Module 16 ${sex_label} PLINK positive-control result"
+    check_results_16_check_file "${section_16_dir}/positive_control_validation/hase/${sex_label}/${study_name}_${sex_label}_${validation_cpg}.merged.tsv.gz" "Module 16 ${sex_label} HASE-vs-PLINK merged comparison"
+
+    return 0
+}
+
+check_results_16_expected_sex () {
+    sex_label="$1"
+    pheno_dir="$2"
+
+    check_results_16_meta_inputs "${sex_label}"
+
+    if check_results_16_positive_control "${sex_label}" "${pheno_dir}"; then
+        pc_checked_count=$((pc_checked_count + 1))
+    fi
+}
+
+check_results_16 () {
+
+    check_results_16_check_file "${covariates_combined}.txt" "combined covariates file"
+
+    sex_col=$(awk 'NR == 1 {
+        for (i = 1; i <= NF; i++) {
+            if ($i == "Sex_factor") {
+                print i
+                exit
+            }
+        }
+    }' "${covariates_combined}.txt")
+
+    if [ -z "${sex_col}" ]; then
+        echo "Problem: Cannot find Sex_factor column in ${covariates_combined}.txt"
+        exit 1
+    fi
+
+    n_female=$(awk -v sex_col="${sex_col}" 'NR > 1 && $sex_col == "F" {n++} END {print n + 0}' "${covariates_combined}.txt")
+    n_male=$(awk -v sex_col="${sex_col}" 'NR > 1 && $sex_col == "M" {n++} END {print n + 0}' "${covariates_combined}.txt")
+
+    echo "Sex_factor counts: female=${n_female}, male=${n_male}"
+
+    pc_checked_count=0
+
+    if [ "${n_female}" -gt "0" ] && [ "${n_male}" -gt "0" ]; then
+        echo "Cohort contains both female and male samples"
+        check_results_16_expected_sex "female" "${hase16_allprobes_pheno_female}"
+        check_results_16_expected_sex "male" "${hase16_allprobes_pheno_male}"
+    elif [ "${n_female}" -gt "0" ]; then
+        echo "Cohort female only"
+        check_results_16_expected_sex "female" "${hase16_allprobes_pheno_female}"
+    elif [ "${n_male}" -gt "0" ]; then
+        echo "Cohort male only"
+        check_results_16_expected_sex "male" "${hase16_allprobes_pheno_male}"
+    else
+        echo "Problem: No M or F values found in Sex_factor column of ${covariates_combined}.txt"
+        exit 1
+    fi
+
+    if [ "${pc_checked_count}" -eq "0" ]; then
+        echo "Problem: Module 16 positive-control CpG ${module16_positive_control_cpg} was not found in any expected sex-specific phenotype file"
+        exit 1
+    fi
+
+    check_results_16_check_file "${home_directory}/results/${study_name}_16.tgz" "Module 16 tar results"
 }
 
 check_results_14 () {

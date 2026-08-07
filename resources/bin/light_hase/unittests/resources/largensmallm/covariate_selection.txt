@@ -1,0 +1,2 @@
+test_0	test_0_cov_0	test_0_cov_1	test_0_cov_2	test_0_cov_3	test_0_cov_4	test_0_cov_5	test_0_cov_6	test_0_cov_7	test_0_cov_8	test_0_cov_9
+test_1	test_1_cov_0	test_1_cov_1	test_1_cov_2	test_1_cov_3	test_1_cov_4	test_1_cov_5	test_1_cov_6	test_1_cov_7	test_1_cov_8	test_1_cov_9

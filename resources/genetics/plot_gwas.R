@@ -32,6 +32,10 @@ qqplot = function(data, filename, lambda) {
   dev.off()
 }
 
+finite_pvalues = function(data) {
+  data[is.finite(data) & !is.na(data)]
+}
+
 
 #################################Main#########################################
 
@@ -115,25 +119,34 @@ main = function(){
         message("Please upload this section and contact GoDMC analysts before continuing.\n\n")
       	}
       
-    chisq = qchisq(a_minuschr[,pval_column],1,lower.tail=FALSE)
-    lambda = median(chisq, na.rm = TRUE) / qchisq(0.5,1)
-    qqplot(data=a_minuschr[,pval_column], filename=paste0(outname, "_nocisChr"),lambda=lambda)
-    message("Generating QQ-plot without cis chromosome for", outname, " with lambda ", lambda)
+    a_minuschr_pvalues = finite_pvalues(a_minuschr[,pval_column])
+    if(length(a_minuschr_pvalues) > 0){
+      chisq = qchisq(a_minuschr_pvalues,1,lower.tail=FALSE)
+      lambda = median(chisq, na.rm = TRUE) / qchisq(0.5,1)
+      qqplot(data=a_minuschr_pvalues, filename=paste0(outname, "_nocisChr"),lambda=lambda)
+      message("Generating QQ-plot without cis chromosome for", outname, " with lambda ", lambda)
 
-    message(paste0('Generating manhantten plot without cis chromosome ', outname))
-    man_data = a_minuschr[order(a_minuschr[,pos_column], decreasing = F),]
-    man_data = subset(man_data, -log10(man_data[,pval_column]) > 2)
-      
-    pdf(file=paste0(outname, '_nocisChr_manhattan.pdf'), width=50, height=10)
-    manhattan(man_data, bp=names(man_data)[pos_column], 
-            chr=names(man_data)[chr_column], 
-            snp=names(man_data)[snp_column],
-            ylim=c(2,max(-log10(man_data[,pval_column])+1)))
-    dev.off()
-      
-    message("The following plots have been generated, please check!\n",
-          paste0(outname , "_nocisChr_qqplot.png\n"),
-          paste0(outname ,"_nocisChr_manhattan.png"))
+      message(paste0('Generating manhantten plot without cis chromosome ', outname))
+      man_data = a_minuschr[order(a_minuschr[,pos_column], decreasing = F),]
+      man_data = subset(man_data, -log10(man_data[,pval_column]) > 2)
+
+      if(nrow(man_data) > 0){
+        pdf(file=paste0(outname, '_nocisChr_manhattan.pdf'), width=50, height=10)
+        manhattan(man_data, bp=names(man_data)[pos_column],
+                chr=names(man_data)[chr_column],
+                snp=names(man_data)[snp_column],
+                ylim=c(2,max(-log10(man_data[,pval_column])+1)))
+        dev.off()
+
+        message("The following plots have been generated, please check!\n",
+              paste0(outname , "_nocisChr_qqplot.png\n"),
+              paste0(outname ,"_nocisChr_manhattan.png"))
+      } else {
+        message("Skipping Manhattan plot without cis chromosome because no variants pass the plotting threshold")
+      }
+    } else {
+      message("Skipping no-cis chromosome QQ/Manhattan plots because no finite p-values remain after excluding chromosome ", control_chr)
+    }
     }
     
     
