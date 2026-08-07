@@ -10,7 +10,7 @@ dependencies:
   - pandas
   - pandas-plink
   - scipy
-  - Pgenlib>=0.90.1
+  - pgenlib>=0.90.1
   - pyarrow
   - pytorch
   - cudatoolkit
