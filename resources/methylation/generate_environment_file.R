@@ -10,7 +10,7 @@ E_plots <- args[4]
 E_summary <- args[5]
 
 cov <- read.table(cov_file, he=T, stringsAsFactors=F, colClass=c("Sex_factor"="character"))
-BMI <- read.table(BMI_file, he=T, stringsAsFactors=F)
+BMI <- read.table(BMI_file, he=T, stringsAsFactors=F) %>% filter(IID %in% cov$IID)
 
 df <- merge(cov, BMI, by.x="IID", all=T)
 df$Sex_numeric[df$Sex_factor=="F"] <- 1
@@ -58,7 +58,6 @@ env2 <- df_cleaned[,(colnames(df_cleaned) %in% c("IID", "BMI", paste0("genetic_p
 env2_names <- paste(colnames(env2), collapse = ", ")
 n_env2 <- effectE(env2)
 message(paste0(ncol(env2)," factors to calculate effective numbers of E. They are ", env2_names, ". \nThe effective number is ", n_env2))
-
 
 pdf(E_plots, width=8, height=8)
 par(mfrow = c(2,2))
