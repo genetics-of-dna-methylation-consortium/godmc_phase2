@@ -76,11 +76,23 @@ fi
 echo "Generate genotype data with pruned SNPs"
 for c in $(seq 1 22);
 do
+    lines=$(( ($(wc -l < ${scripts_directory}/resources/genetics/pruned_snps_vmeQTL_phase2_chr${c}) + ${prune_sub} - 1) / ${prune_sub} ))
+    split -l "$lines" ${scripts_directory}/resources/genetics/pruned_snps_vmeQTL_phase2_chr${c} _tmp_subfile_ && \
+    i=1 && for f in _tmp_subfile_*; do mv "$f" "${scripts_directory}/resources/genetics/pruned_snps_vmeQTL_phase2_chr${c}_sub$i"; ((i++)); done
     ${plink} \
         --bfile ${bfile} \
         --extract ${scripts_directory}/resources/genetics/pruned_snps_vmeQTL_phase2_chr${c} \
         --make-bed \
         --out ${tabfile}.prunedSNPs.chr${c}
+
+    for chunk in $(seq 1 ${prune_sub});
+	do
+	${plink} \
+        --bfile ${tabfile}.prunedSNPs.chr${c} \
+        --extract ${scripts_directory}/resources/genetics/pruned_snps_vmeQTL_phase2_chr${c}_sub${chunk} \
+        --make-bed \
+        --out ${tabfile}.prunedSNPs.chr${c}.chunk${chunk}
+	done
 done
 
 echo "Generate the genotype data of previously identified vQTLs"
