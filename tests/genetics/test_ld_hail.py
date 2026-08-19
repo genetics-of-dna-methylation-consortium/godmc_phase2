@@ -6,6 +6,18 @@ import ld_hail
 from synthetic_plink import write_synthetic_plink as _write_synthetic_plink
 
 
+def _read_chunked_a(out_dir, chromosome_meta):
+    n_variants = chromosome_meta["n_variants"]
+    dense = np.zeros((n_variants, n_variants), dtype=np.float64)
+    for chunk in chromosome_meta["chunks"]:
+        values = BlockMatrix.read(str(out_dir.parent / chunk["directory"])).to_numpy()
+        dense[
+            chunk["row_start"]:chunk["row_stop"],
+            chunk["column_start"]:chunk["column_stop"],
+        ] = values
+    return dense
+
+
 def test_load_genotype_matrixtable_filters_chromosome_rows_and_orders_columns(
     hail_session, tmp_path
 ):
@@ -70,6 +82,57 @@ def test_load_genotype_matrixtable_raises_on_missing_sample(hail_session, tmp_pa
         )
 
 
+def test_load_genotype_matrixtable_excludes_preceding_multiallelic_rows(
+    hail_session, tmp_path
+):
+    from ld_hail import load_genotype_matrixtable
+    from ld_qc import build_variant_index
+
+    bfile = tmp_path / "test"
+    calls = [
+        [0, 0, 0],
+        [2, 2, 2],
+        [1, 1, 1],
+        [0, 1, 2],
+        [2, 1, 0],
+    ]
+    _write_synthetic_plink(
+        bfile,
+        calls=calls,
+        variants=[
+            ("22", 100, "A", "G"),
+            ("22", 200, "C", "T"),
+            ("22", 200, "C", "G"),
+            ("22", 300, "T", "A"),
+            ("22", 400, "G", "C"),
+        ],
+        samples=["IID1", "IID2", "IID3"],
+    )
+    variant_index = build_variant_index(f"{bfile}.bim", chromosome="22")
+
+    mt = load_genotype_matrixtable(
+        bfile=bfile,
+        chromosome="22",
+        final_samples=["IID1", "IID2", "IID3"],
+        variant_index=variant_index,
+        n_partitions=2,
+    )
+
+    assert mt.variant_id.collect() == [
+        "22:100:A:G",
+        "22:300:T:A",
+        "22:400:G:C",
+    ]
+    entries = mt.annotate_entries(dosage=mt.GT.n_alt_alleles()).entries().collect()
+    observed = {
+        (entry.variant_id, entry.s): entry.dosage
+        for entry in entries
+    }
+    assert observed[("22:300:T:A", "IID1")] == 0
+    assert observed[("22:300:T:A", "IID3")] == 2
+    assert observed[("22:400:G:C", "IID1")] == 2
+
+
 def test_prepare_for_cross_products_diagnostics_and_imputation(hail_session, tmp_path):
     from ld_hail import load_genotype_matrixtable, prepare_for_cross_products
     from ld_qc import build_variant_index
@@ -93,7 +156,9 @@ def test_prepare_for_cross_products_diagnostics_and_imputation(hail_session, tmp
         n_partitions=2,
     )
 
-    mt_imputed, diagnostics = prepare_for_cross_products(mt)
+    mt_imputed, diagnostics = prepare_for_cross_products(mt, n_samples=4)
+
+    diagnostics = diagnostics.collect()
 
     assert [d["variant_id"] for d in diagnostics] == [
         v["variant_id"] for v in variant_index["variants"]
@@ -133,7 +198,7 @@ def test_prepare_for_cross_products_raises_on_all_missing_variant(
         n_partitions=2,
     )
     with pytest.raises(ValueError, match="entirely missing"):
-        prepare_for_cross_products(mt)
+        prepare_for_cross_products(mt, n_samples=2)
 
 
 def test_compute_b_block_matches_direct_numpy(hail_session, tmp_path):
@@ -171,7 +236,7 @@ def test_compute_b_block_matches_direct_numpy(hail_session, tmp_path):
         variant_index=variant_index,
         n_partitions=2,
     )
-    mt_imputed, _ = prepare_for_cross_products(mt)
+    mt_imputed, _ = prepare_for_cross_products(mt, n_samples=4)
 
     covariate_matrix = np.array(
         [
@@ -183,7 +248,7 @@ def test_compute_b_block_matches_direct_numpy(hail_session, tmp_path):
         dtype=np.float64,
     )
 
-    b = compute_b_block(mt_imputed, covariate_matrix)
+    b = compute_b_block(mt_imputed, covariate_matrix, temp_dir=tmp_path)
 
     x_imputed = np.array(
         [
@@ -223,11 +288,11 @@ def test_compute_b_block_rejects_mismatched_sample_count(hail_session, tmp_path)
         variant_index=variant_index,
         n_partitions=2,
     )
-    mt_imputed, _ = prepare_for_cross_products(mt)
+    mt_imputed, _ = prepare_for_cross_products(mt, n_samples=4)
 
     bad_covariates = np.zeros((3, 3), dtype=np.float64)
     with pytest.raises(ValueError, match="must match exactly"):
-        compute_b_block(mt_imputed, bad_covariates)
+        compute_b_block(mt_imputed, bad_covariates, temp_dir=tmp_path)
 
 
 def test_compute_a_block_banded_drops_out_of_band_blocks(hail_session, tmp_path):
@@ -270,7 +335,7 @@ def test_compute_a_block_banded_drops_out_of_band_blocks(hail_session, tmp_path)
         variant_index=variant_index,
         n_partitions=2,
     )
-    mt_imputed, _ = prepare_for_cross_products(mt)
+    mt_imputed, _ = prepare_for_cross_products(mt, n_samples=n_samples)
 
     out_dir = tmp_path / "A_blocks"
     meta = compute_a_block_banded(
@@ -283,31 +348,18 @@ def test_compute_a_block_banded_drops_out_of_band_blocks(hail_session, tmp_path)
 
     chr22_meta = meta["chromosomes"]["22"]
     assert chr22_meta["n_variants"] == n_variants
-    assert chr22_meta["max_idx_distance_in_band"] == 4
+    assert chr22_meta["max_idx_distance_in_window"] == 4
 
-    a_back = BlockMatrix.read(str(out_dir / "chr22")).to_numpy()
+    a_back = _read_chunked_a(out_dir, chr22_meta)
     x_imputed = np.array(calls, dtype=np.float64)
     full_a = x_imputed @ x_imputed.T
 
-    # Build the expected kept/dropped mask matching Hail's sparsify_band(0, 4, blocks_only=True).
-    # A block (r, c) is KEPT iff the band [0, 4] overlaps the block's j-i range.
-    n_row_blocks = (n_variants + block_size - 1) // block_size
-    dropped_mask = np.zeros((n_variants, n_variants), dtype=bool)
-    for r in range(n_row_blocks):
-        for c in range(n_row_blocks):
-            i_lo, i_hi = r * block_size, min((r + 1) * block_size, n_variants)
-            j_lo, j_hi = c * block_size, min((c + 1) * block_size, n_variants)
-            block_jmi_min = j_lo - (i_hi - 1)
-            block_jmi_max = (j_hi - 1) - i_lo
-            kept = max(block_jmi_min, 0) <= min(block_jmi_max, 4)
-            if not kept:
-                dropped_mask[i_lo:i_hi, j_lo:j_hi] = True
-
-    # At least one block must be dropped for the banding test to be meaningful.
-    assert dropped_mask.any()
-
-    np.testing.assert_array_equal(a_back[dropped_mask], 0.0)
-    np.testing.assert_allclose(a_back[~dropped_mask], full_a[~dropped_mask], rtol=1e-12)
+    positions = np.arange(1, n_variants + 1) * 1_000_000
+    keep = np.zeros((n_variants, n_variants), dtype=bool)
+    for i in range(n_variants):
+        keep[i, i:] = positions[i:] <= positions[i] + radius_bp
+    expected = np.where(keep, full_a, 0.0)
+    np.testing.assert_allclose(a_back, expected, rtol=1e-12)
 
 
 def test_compute_a_block_banded_writes_per_chromosome_directories(
@@ -345,7 +397,7 @@ def test_compute_a_block_banded_writes_per_chromosome_directories(
         variant_index=variant_index,
         n_partitions=2,
     )
-    mt_imputed, _ = prepare_for_cross_products(mt)
+    mt_imputed, _ = prepare_for_cross_products(mt, n_samples=4)
 
     out_dir = tmp_path / "A_blocks"
     meta = compute_a_block_banded(
@@ -356,8 +408,8 @@ def test_compute_a_block_banded_writes_per_chromosome_directories(
     assert (out_dir / "chr1").is_dir()
     assert (out_dir / "chr2").is_dir()
 
-    a1 = BlockMatrix.read(str(out_dir / "chr1")).to_numpy()
-    a2 = BlockMatrix.read(str(out_dir / "chr2")).to_numpy()
+    a1 = _read_chunked_a(out_dir, meta["chromosomes"]["1"])
+    a2 = _read_chunked_a(out_dir, meta["chromosomes"]["2"])
     assert a1.shape == (2, 2)
     assert a2.shape == (1, 1)
 

@@ -111,10 +111,11 @@ meth_pc_threshold="1e-7"
 # Matrixeqtl parameters
 soft_threshold="1e-5"
 
-# Optional Hail overrides
-# Section 15 cohorts should run 15a then 15b for one ld_chromosome at a time.
-# ld_chromosome="22"   # current chromosome for 15a/15b
-# ld_chromosomes="22"  # expected set for check_upload.sh 15 check/upload; default is autosomes 1-22
+# Optional Hail overrides (see 15)
+# Section 15 can process every ld_chromosomes entry or one chromosome at a time.
+# ld_chromosome="all"  # run/check every chromosome in ld_chromosomes (default)
+# ld_chromosome="22"   # run/check only chromosome 22
+# ld_chromosomes="1 2 3"  # chromosome set used when ld_chromosome="all"
 # Required for section-15 15b compression/encryption, especially under SLURM.
 # Store this outside the repository/results tree and protect it with: chmod 600 <file>
 # ld_gpg_passphrase_file="/secure/path/godmc15.pass"

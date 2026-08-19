@@ -18,12 +18,14 @@ import numpy as np
 import pandas as pd
 
 import ld_checksums
+from ld_qc import ordered_variant_digest
 
 PRECURSOR_SCHEMA_VERSION = "15-aggregate-precursor-v1"
 COHORT_VARIANT_STATS_SCHEMA_VERSION = "15-cohort-variant-stats-v1"
 DEFAULT_PANEL_SPEC_VERSION = "0.1.0"
 DEFAULT_MAF_THRESHOLD = 0.01
 DEFAULT_MIN_ADJ_DIAG = 0.0
+CANONICAL_VARIANT_SCHEMA_VERSION = "v0.4-canonical-row-alignment"
 
 VARIANT_COLUMNS = [
     "stable_id", "variant_id", "chr", "pos", "ref", "alt",
@@ -156,6 +158,163 @@ _COHORT_VARIANT_DTYPES = {
 }
 
 
+def _validate_cohort_variant_alignment(
+    variants: pd.DataFrame,
+    b_mat: np.ndarray,
+    manifest: dict,
+) -> None:
+    required_columns = set(_COHORT_VARIANT_DTYPES)
+    missing_columns = required_columns - set(variants.columns)
+    if missing_columns:
+        raise ValueError(
+            "variants.tsv.gz is missing required columns: "
+            + ", ".join(sorted(missing_columns))
+        )
+
+    expected_ids = (
+        variants["chr"].astype(str)
+        + ":"
+        + variants["pos"].astype(str)
+        + ":"
+        + variants["ref"].astype(str)
+        + ":"
+        + variants["alt"].astype(str)
+    )
+    if not variants["variant_id"].astype(str).equals(expected_ids):
+        mismatch = np.flatnonzero(
+            variants["variant_id"].astype(str).to_numpy()
+            != expected_ids.to_numpy()
+        )[0]
+        raise ValueError(
+            "variants.tsv.gz has a non-canonical variant_id at row "
+            f"{int(mismatch)}"
+        )
+    duplicated = variants["variant_id"].duplicated()
+    if duplicated.any():
+        raise ValueError(
+            "variants.tsv.gz contains duplicate canonical variant IDs: "
+            f"{int(duplicated.sum())}"
+        )
+    duplicated_positions = variants.duplicated(subset=["chr", "pos"], keep=False)
+    if duplicated_positions.any():
+        raise ValueError(
+            "variants.tsv.gz contains variants at multi-allelic positions: "
+            f"{int(duplicated_positions.sum())} rows"
+        )
+    observed_order = list(
+        zip(
+            variants["chr"].astype(int),
+            variants["pos"].astype(int),
+            variants["ref"].astype(str),
+            variants["alt"].astype(str),
+        )
+    )
+    if observed_order != sorted(observed_order):
+        raise ValueError("variants.tsv.gz is not in canonical chromosome/position order")
+
+    variant_index = manifest.get("variant_index", {})
+    if variant_index.get("schema_version") != CANONICAL_VARIANT_SCHEMA_VERSION:
+        raise ValueError(
+            "Cohort variant schema does not guarantee canonical row alignment; "
+            f"expected {CANONICAL_VARIANT_SCHEMA_VERSION!r}, got "
+            f"{variant_index.get('schema_version')!r}"
+        )
+    manifest_count = variant_index.get("counts", {}).get("kept_count")
+    if manifest_count != len(variants):
+        raise ValueError(
+            f"Manifest records {manifest_count} kept variants but variants.tsv.gz "
+            f"has {len(variants)} rows"
+        )
+    if b_mat.shape[0] != len(variants):
+        raise ValueError(
+            f"B.npy has {b_mat.shape[0]} rows but variants.tsv.gz has "
+            f"{len(variants)} rows; they must align one-to-one"
+        )
+
+    variant_ids = variants["variant_id"].astype(str).tolist()
+    digest = ordered_variant_digest(variant_ids)
+    for location, recorded in (
+        ("variant_index", variant_index.get("variant_id_digest")),
+        ("B_block", manifest.get("B_block", {}).get("variant_id_digest")),
+        ("A_blocks", manifest.get("A_blocks", {}).get("variant_id_digest")),
+    ):
+        if recorded != digest:
+            raise ValueError(
+                f"{location} ordered variant digest does not match variants.tsv.gz"
+            )
+
+    expected_by_chromosome: dict[str, list[str]] = {}
+    for chrom, variant_id in zip(variants["chr"].astype(str), variant_ids):
+        expected_by_chromosome.setdefault(chrom, []).append(variant_id)
+    chromosomes = manifest.get("A_blocks", {}).get("chromosomes", {})
+    if set(chromosomes) != set(expected_by_chromosome):
+        raise ValueError(
+            "A-block chromosomes do not match variants.tsv.gz: "
+            f"observed {list(chromosomes)}, expected {list(expected_by_chromosome)}"
+        )
+
+    total_a_variants = 0
+    for chrom, chromosome_ids in expected_by_chromosome.items():
+        metadata = chromosomes[chrom]
+        expected_count = len(chromosome_ids)
+        if metadata.get("n_variants") != expected_count:
+            raise ValueError(
+                f"A-block chr{chrom} has {metadata.get('n_variants')} variants; "
+                f"expected {expected_count}"
+            )
+        if metadata.get("variant_id_digest") != ordered_variant_digest(chromosome_ids):
+            raise ValueError(
+                f"A-block chr{chrom} ordered variant digest does not match variants.tsv.gz"
+            )
+        row_stop = 0
+        positions = variants.loc[
+            variants["chr"].astype(str) == chrom, "pos"
+        ].to_numpy(np.int64)
+        radius_bp = int(manifest["A_blocks"]["radius_bp"])
+        window_stops = np.searchsorted(
+            positions, positions + radius_bp, side="right"
+        )
+        for chunk in metadata.get("chunks", []):
+            row_start = chunk.get("row_start")
+            next_row_stop = chunk.get("row_stop")
+            if row_start != row_stop or not isinstance(next_row_stop, int):
+                raise ValueError(
+                    f"A-block chr{chrom} chunks are not contiguous at row {row_stop}"
+                )
+            if chunk.get("n_rows", next_row_stop - row_start) != next_row_stop - row_start:
+                raise ValueError(f"A-block chr{chrom} chunk row count is inconsistent")
+            column_start = chunk.get("column_start")
+            column_stop = chunk.get("column_stop")
+            expected_column_stop = int(window_stops[row_start:next_row_stop].max())
+            if column_start != row_start or column_stop != expected_column_stop:
+                raise ValueError(
+                    f"A-block chr{chrom} chunk columns do not match the declared LD window"
+                )
+            if chunk.get("n_cols", column_stop - column_start) != column_stop - column_start:
+                raise ValueError(f"A-block chr{chrom} chunk column count is inconsistent")
+            row_ids = chromosome_ids[row_start:next_row_stop]
+            column_ids = chromosome_ids[column_start:column_stop]
+            if chunk.get("row_variant_id_digest") != ordered_variant_digest(row_ids):
+                raise ValueError(
+                    f"A-block chr{chrom} chunk row digest does not match variants.tsv.gz"
+                )
+            if chunk.get("column_variant_id_digest") != ordered_variant_digest(column_ids):
+                raise ValueError(
+                    f"A-block chr{chrom} chunk column digest does not match variants.tsv.gz"
+                )
+            row_stop = next_row_stop
+        if row_stop != expected_count:
+            raise ValueError(
+                f"A-block chr{chrom} chunks end at row {row_stop}; expected {expected_count}"
+            )
+        total_a_variants += expected_count
+    if total_a_variants != len(variants):
+        raise ValueError(
+            f"A-block metadata has {total_a_variants} variants but variants.tsv.gz "
+            f"has {len(variants)}"
+        )
+
+
 def read_cohort_assets(cohort_dir: str | Path) -> tuple[pd.DataFrame, np.ndarray, np.ndarray]:
     """Read a 15a cohort's variants.tsv.gz, B.npy, and D.npy.
 
@@ -166,16 +325,13 @@ def read_cohort_assets(cohort_dir: str | Path) -> tuple[pd.DataFrame, np.ndarray
     rejected rather than silently adjusted.
     """
     cohort_dir = Path(cohort_dir)
+    manifest = json.loads((cohort_dir / "manifest.json").read_text(encoding="utf-8"))
     variants = pd.read_csv(
         cohort_dir / "variants.tsv.gz", sep="\t", dtype=_COHORT_VARIANT_DTYPES,
     )
     b_mat = np.load(cohort_dir / "B.npy", allow_pickle=False).astype(np.float64)
     d_mat = np.load(cohort_dir / "D.npy", allow_pickle=False).astype(np.float64)
-    if b_mat.shape[0] != len(variants):
-        raise ValueError(
-            f"B.npy has {b_mat.shape[0]} rows but variants.tsv.gz has "
-            f"{len(variants)} rows; they must align one-to-one"
-        )
+    _validate_cohort_variant_alignment(variants, b_mat, manifest)
     if b_mat.shape[1] != 1 or d_mat.shape != (1, 1):
         raise ValueError(
             f"Expected B (n x 1) and D (1 x 1) for the intercept-only schema; "
@@ -579,6 +735,12 @@ def accumulate(
             off_parts = []
             for chunk in cmeta["chunks"]:
                 dense = chunk_reader(cohort_dir / chunk["directory"])
+                expected_shape = (int(chunk["n_rows"]), int(chunk["n_cols"]))
+                if dense.shape != expected_shape:
+                    raise ValueError(
+                        f"A-block chunk {chunk['directory']} has shape {dense.shape}; "
+                        f"expected {expected_shape}"
+                    )
                 diag_sids, diag_vals, offdiag = extract_chunk_entries(
                     dense, chunk["row_start"], chunk["column_start"],
                     positions, sids, contract["radius_bp"])

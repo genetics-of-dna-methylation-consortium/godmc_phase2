@@ -184,6 +184,36 @@ def load_genotype_matrixtable(
     )
     mt = mt.filter_rows(row_is_valid_snp & row_is_outside_mhc)
 
+    # PLINK/Hail represents each BIM row independently. Remove every row at a
+    # repeated genomic position to match build_variant_index's biallelic-site
+    # contract before any positional matrix operations are performed.
+    variant_rows = mt.rows()
+    position_counts = variant_rows.group_by(locus=variant_rows.locus).aggregate(
+        n_rows=hl.agg.count()
+    )
+    mt = mt.filter_rows(position_counts[mt.locus].n_rows == 1)
+
+    expected_ids = [variant["variant_id"] for variant in variant_index["variants"]]
+    observed_ids = list(mt.variant_id.collect())
+    if observed_ids != expected_ids:
+        mismatch = next(
+            (
+                index
+                for index, (observed, expected) in enumerate(
+                    zip(observed_ids, expected_ids)
+                )
+                if observed != expected
+            ),
+            min(len(observed_ids), len(expected_ids)),
+        )
+        observed = observed_ids[mismatch] if mismatch < len(observed_ids) else "<missing>"
+        expected = expected_ids[mismatch] if mismatch < len(expected_ids) else "<none>"
+        raise ValueError(
+            "Hail MatrixTable rows do not exactly match the canonical variant "
+            f"index: observed {len(observed_ids)} rows, expected {len(expected_ids)}; "
+            f"first mismatch at row {mismatch}: observed {observed}, expected {expected}"
+        )
+
     fam_iids = [str(s) for s in mt.s.collect()]
     iid_to_index = {iid: i for i, iid in enumerate(fam_iids)}
     missing_samples = [s for s in final_samples if s not in iid_to_index]
@@ -214,6 +244,17 @@ def prepare_for_cross_products(
         n_nonmissing=hl.agg.count_where(hl.is_defined(mt.GT)),
         genotype_mean=hl.agg.mean(mt.GT.n_alt_alleles()),
     )
+    all_missing = mt.aggregate_rows(
+        hl.agg.filter(
+            mt.n_nonmissing == 0,
+            hl.agg.take(mt.variant_id, 5),
+        )
+    )
+    if all_missing:
+        raise ValueError(
+            "Genotypes are entirely missing for at least one variant; first: "
+            + ", ".join(all_missing)
+        )
     mt = mt.annotate_rows(n_imputed=n_samples - mt.n_nonmissing)
 
     mt = mt.annotate_entries(

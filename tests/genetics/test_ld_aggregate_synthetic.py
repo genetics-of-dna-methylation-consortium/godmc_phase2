@@ -50,7 +50,7 @@ def _read_r_full(panel, chrom, n):
     """Reassemble the full pooled R matrix for a chromosome from its chunks."""
     from hail.linalg import BlockMatrix
     out = np.zeros((n, n))
-    chunk_root = panel / "R_blocks" / f"chr{chrom}"
+    chunk_root = panel / "panel_v1" / "R_blocks" / f"chr{chrom}"
     for c in sorted(chunk_root.glob("chunk_*")):
         block = BlockMatrix.read(str(c)).to_numpy()
         out[0:block.shape[0], 0:block.shape[1]] += block   # single-chunk chr22 here
@@ -256,7 +256,7 @@ def test_intersection_excludes_partial_variant(tmp_path):
     precursor, panel = tmp_path / "pp", tmp_path / "panel_partial"
     _accumulate(out_a, precursor, tmp_path); _accumulate(out_b, precursor, tmp_path)
     _finalise(precursor, panel, tmp_path)
-    with gzip.open(panel / "variants.tsv.gz", "rt") as fh:
+    with gzip.open(panel / "panel_v1" / "variants.tsv.gz", "rt") as fh:
         body = fh.read()
     assert "2000000" not in body and "3000000" in body and "1000000" in body
 

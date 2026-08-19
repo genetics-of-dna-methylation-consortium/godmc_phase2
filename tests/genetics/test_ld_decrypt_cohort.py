@@ -23,6 +23,7 @@ PASSPHRASE = "testpass"
 
 sys.path.insert(0, str(REPO_ROOT / "resources" / "genetics"))
 import ld_checksums as ck  # noqa: E402
+from ld_qc import ordered_variant_digest  # noqa: E402
 
 
 def _make_gpg_wrapper(tmp_path):
@@ -42,10 +43,15 @@ def _make_gpg_wrapper(tmp_path):
 def _env(tmp_path):
     env = dict(os.environ)
     env["GPG"] = str(_make_gpg_wrapper(tmp_path))
+    passphrase_file = tmp_path / "passphrase.txt"
+    passphrase_file.write_text(PASSPHRASE + "\n")
+    env["LD_GPG_PASSPHRASE_FILE"] = str(passphrase_file)
     return env
 
 
-def _manifest(study, chrom):
+def _manifest(study, chrom, pos):
+    variant_id = f"{chrom}:{pos}:A:C"
+    digest = ordered_variant_digest([variant_id])
     return {
         "study_name": study,
         "generated_at_utc": "2026-01-01T00:00:00+00:00",
@@ -56,7 +62,7 @@ def _manifest(study, chrom):
         "input_bfile": "data",
         "sample_alignment": {"counts": {"final_sample_count": 10}},
         "variant_index": {
-            "schema_version": "v0.3-with-genotype-stats",
+            "schema_version": "v0.4-canonical-row-alignment",
             "columns": ["chr", "pos", "ref", "alt", "variant_id",
                         "n_nonmissing", "n_imputed", "genotype_mean"],
             "chromosome_filter": chrom,
@@ -71,6 +77,7 @@ def _manifest(study, chrom):
                 "excluded_multiallelic_position": 0,
             },
             "n_samples_used": 10,
+            "variant_id_digest": digest,
         },
         "covariate_schema": {
             "schema_id": "intercept-only-v1",
@@ -79,13 +86,25 @@ def _manifest(study, chrom):
             "sex_factor_recode": {},
         },
         "hail": {},
-        "B_block": {"filename": "B.npy", "shape": [1, 1], "dtype": "float64"},
+        "B_block": {"filename": "B.npy", "shape": [1, 1], "dtype": "float64",
+                    "variant_id_digest": digest},
         "A_blocks": {
             "radius_bp": 1000000,
             "block_size": 4096,
             "chunk_rows": 50000,
             "max_dense_gb": 1.0,
-            "chromosomes": {chrom: {"n_variants": 1, "n_chunks": 1}},
+            "variant_id_digest": digest,
+            "chromosomes": {chrom: {
+                "n_variants": 1,
+                "n_chunks": 1,
+                "variant_id_digest": digest,
+                "chunks": [{"row_start": 0, "row_stop": 1,
+                            "column_start": 0, "column_stop": 1,
+                            "n_rows": 1, "n_cols": 1,
+                            "row_variant_id_digest": digest,
+                            "column_variant_id_digest": digest,
+                            "directory": f"A_blocks/chr{chrom}/chunk_000000"}],
+            }},
         },
         "notes": [],
     }
@@ -102,7 +121,7 @@ def _build_chromosome(cs, study, chrom, pos, b_value):
         handle.write("chr\tpos\tref\talt\tvariant_id\tn_nonmissing\tn_imputed\tgenotype_mean\n")
         handle.write(f"{chrom}\t{pos}\tA\tC\t{chrom}:{pos}:A:C\t10\t0\t{b_value}\n")
     (cs / "manifest.json").write_text(
-        json.dumps(_manifest(study, chrom), indent=2) + "\n", encoding="utf-8")
+        json.dumps(_manifest(study, chrom, pos), indent=2) + "\n", encoding="utf-8")
     (cs / "qc_report.txt").write_text("ok\n", encoding="utf-8")
     ck.write_cohort_checksums(cs)
     return cs

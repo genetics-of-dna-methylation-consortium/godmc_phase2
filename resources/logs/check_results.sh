@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+source "${scripts_directory:-.}/resources/genetics/ld_workflow.sh"
+source "${scripts_directory:-.}/resources/genetics/ld_pack.sh"
 
 check_results_01 () {
 
@@ -426,13 +428,43 @@ from pathlib import Path
 outdir = Path(sys.argv[1])
 chrom = sys.argv[2]
 manifest = json.loads((outdir / "manifest.json").read_text(encoding="utf-8"))
+actual_filter = manifest.get("variant_index", {}).get("chromosome_filter")
+if str(actual_filter) != str(chrom):
+    raise SystemExit(
+        f"manifest chromosome_filter is {actual_filter!r}, expected {chrom!r}"
+    )
 chrom_meta = manifest.get("A_blocks", {}).get("chromosomes", {}).get(str(chrom))
 if not chrom_meta:
     raise SystemExit(f"manifest lacks A_blocks metadata for chr{chrom}")
-for chunk in chrom_meta.get("chunks", []):
-    name = chunk.get("name")
-    if name:
-        print(name)
+chunks = [chunk.get("name") for chunk in chrom_meta.get("chunks", [])]
+if any(not name for name in chunks):
+    raise SystemExit(f"manifest has an unnamed A-block chunk for chr{chrom}")
+if int(chrom_meta.get("n_chunks", -1)) != len(chunks):
+    raise SystemExit(f"manifest n_chunks does not match chunk list for chr{chrom}")
+if not chunks:
+    raise SystemExit(f"manifest lists no A-block chunks for chr{chrom}")
+for name in chunks:
+    print(name)
+PY
+}
+
+ld_verify_manifest_checksum_15 () {
+	local outdir="$1"
+	PYTHONPATH="${scripts_directory}/resources/genetics:${PYTHONPATH:-}" python - "${outdir}" <<'PY'
+import sys
+from pathlib import Path
+import ld_checksums
+
+outdir = Path(sys.argv[1])
+document = ld_checksums.read_cohort_checksums(outdir)
+expected = (document.get("files") or {}).get("manifest.json")
+if not expected:
+    raise SystemExit("checksums.json does not contain manifest.json")
+actual = ld_checksums.hash_file(outdir / "manifest.json")
+if actual != expected:
+    raise SystemExit(
+        f"manifest.json checksum mismatch: expected {expected}, got {actual}"
+    )
 PY
 }
 
@@ -492,7 +524,7 @@ check_section_15_upload_dir () {
 				;;
 		esac
 	done
-	shopt -u nullglob dotglob
+	shopt -u dotglob
 	for path in "${section_15_upload_dir}"/*.tgz.aes; do
 		ok=0
 		if [ ! -f "${path%.tgz.aes}.md5sum" ]; then
@@ -500,6 +532,7 @@ check_section_15_upload_dir () {
 			exit 1
 		fi
 	done
+	shopt -u nullglob
 	if [ "${ok}" -ne 0 ]; then
 		echo "Problem: no LD encrypted archives found in ${section_15_upload_dir}"
 		exit 1
@@ -507,12 +540,20 @@ check_section_15_upload_dir () {
 }
 
 check_results_15 () {
+	local chunks targets
+	if ! targets="$(ld_target_chromosomes_15)"; then
+		exit 1
+	fi
 
 	check_section_15_upload_dir
 	section_15_upload_dir="${section_15_dir}/upload"
 
-	for chr in ${ld_chromosomes}; do
-		outdir="${ld_prepare_dir}/chr${chr}"
+	while IFS= read -r chr; do
+		outdir="$(ld_resolve_chromosome_dir_15 "${ld_prepare_dir}" "${chr}")"
+		if ! ld_verify_manifest_checksum_15 "${outdir}"; then
+			echo "Problem: LD chr${chr} manifest does not match checksums.json"
+			exit 1
+		fi
 		if [ ! -f "${outdir}/.packaged" ]; then
 			echo "Problem: LD chr${chr} packaged sentinel is absent"
 			exit 1
@@ -523,29 +564,39 @@ check_results_15 () {
 				exit 1
 			fi
 		done
+	for path in "${section_15_upload_dir}"/*.md5sum; do
+		if [ ! -f "${path%.md5sum}.tgz.aes" ]; then
+			echo "Problem: missing encrypted archive for ${path}"
+			exit 1
+		fi
+	done
 		if [ -d "${outdir}/A_blocks" ]; then
 			echo "Problem: LD chr${chr} A_blocks still exists after packaging"
 			exit 1
 		fi
 		scaffold="${study_name}_chr${chr}_15_scaffold"
-		if [ ! -f "${section_15_upload_dir}/${scaffold}.tgz.aes" ] || [ ! -f "${section_15_upload_dir}/${scaffold}.md5sum" ]; then
+		if ! ld_verify_archive "${section_15_upload_dir}" "${scaffold}"; then
 			echo "Problem: LD chr${chr} scaffold upload artefacts are absent"
 			exit 1
 		fi
 		chunk_count=0
+		if ! chunks="$(ld_manifest_chunks_15 "${outdir}" "${chr}")"; then
+			echo "Problem: LD chr${chr} chunk manifest is invalid"
+			exit 1
+		fi
 		while IFS= read -r chunk; do
 			chunk_base="${study_name}_chr${chr}_15_chr${chr}_${chunk}"
-			if [ ! -f "${section_15_upload_dir}/${chunk_base}.tgz.aes" ] || [ ! -f "${section_15_upload_dir}/${chunk_base}.md5sum" ]; then
+			if ! ld_verify_archive "${section_15_upload_dir}" "${chunk_base}"; then
 				echo "Problem: LD chr${chr} chunk upload artefacts are absent for ${chunk}"
 				exit 1
 			fi
 			chunk_count=$((chunk_count + 1))
-		done < <(ld_manifest_chunks_15 "${outdir}" "${chr}")
+		done <<< "${chunks}"
 		if [ "${chunk_count}" -eq 0 ]; then
 			echo "Problem: LD chr${chr} has no chunk upload artefacts"
 			exit 1
 		fi
 		echo "LD chr${chr} packaged artefacts present"
-	done
+	done <<< "${targets}"
 
 }

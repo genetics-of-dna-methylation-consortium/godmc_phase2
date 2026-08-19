@@ -9,6 +9,38 @@ import pytest
 
 import ld_aggregate as agg
 import ld_checksums as ck
+from ld_qc import ordered_variant_digest
+
+
+def _add_alignment_contract(manifest, variant_rows):
+    variant_ids = [str(row[4]) for row in variant_rows]
+    digest = ordered_variant_digest(variant_ids)
+    manifest.setdefault("variant_index", {}).update({
+        "schema_version": agg.CANONICAL_VARIANT_SCHEMA_VERSION,
+        "counts": {"kept_count": len(variant_ids)},
+        "variant_id_digest": digest,
+    })
+    manifest["B_block"] = {"variant_id_digest": digest}
+    manifest["A_blocks"]["variant_id_digest"] = digest
+    by_chromosome = {}
+    for row in variant_rows:
+        by_chromosome.setdefault(str(row[0]), []).append(str(row[4]))
+    for chrom, chromosome_ids in by_chromosome.items():
+        metadata = manifest["A_blocks"]["chromosomes"][chrom]
+        metadata["n_variants"] = len(chromosome_ids)
+        metadata["variant_id_digest"] = ordered_variant_digest(chromosome_ids)
+        for chunk in metadata["chunks"]:
+            row_ids = chromosome_ids[chunk["row_start"]:chunk["row_stop"]]
+            column_ids = chromosome_ids[
+                chunk["column_start"]:chunk["column_stop"]
+            ]
+            chunk.setdefault("n_rows", chunk["row_stop"] - chunk["row_start"])
+            chunk.setdefault(
+                "n_cols", chunk["column_stop"] - chunk["column_start"]
+            )
+            chunk["row_variant_id_digest"] = ordered_variant_digest(row_ids)
+            chunk["column_variant_id_digest"] = ordered_variant_digest(column_ids)
+    return manifest
 
 
 def test_precursor_paths_are_under_dir(tmp_path):
@@ -56,7 +88,7 @@ def _cohort_manifest():
             "matrix_columns": ["intercept"],
             "sex_factor_recode": {},
         },
-        "variant_index": {"schema_version": "v0.3-with-genotype-stats"},
+        "variant_index": {"schema_version": agg.CANONICAL_VARIANT_SCHEMA_VERSION},
         "A_blocks": {"radius_bp": 1_000_000, "block_size": 4096},
     }
 
@@ -68,7 +100,7 @@ def test_extract_contract_pulls_expected_fields():
         "schema_id": "intercept_only",
         "matrix_columns": ["intercept"],
         "sex_factor_recode": {},
-        "variants_schema_version": "v0.3-with-genotype-stats",
+        "variants_schema_version": agg.CANONICAL_VARIANT_SCHEMA_VERSION,
         "radius_bp": 1_000_000,
         "block_size": 4096,
     }
@@ -95,6 +127,25 @@ def _write_cohort_dir(tmp_path, variant_rows, b, d):
         fh.write(header + body)
     np.save(out / "B.npy", np.asarray(b, dtype=np.float64))
     np.save(out / "D.npy", np.asarray(d, dtype=np.float64))
+    chromosomes = {}
+    row_start = 0
+    for chrom in dict.fromkeys(str(row[0]) for row in variant_rows):
+        n_variants = sum(str(row[0]) == chrom for row in variant_rows)
+        chromosomes[chrom] = {"chunks": [{
+            "row_start": 0,
+            "row_stop": n_variants,
+            "column_start": 0,
+            "column_stop": n_variants,
+            "n_rows": n_variants,
+            "directory": f"A_blocks/chr{chrom}/chunk_000000",
+        }]}
+        row_start += n_variants
+    manifest = {
+        "variant_index": {},
+        "A_blocks": {"radius_bp": 1_000_000, "chromosomes": chromosomes},
+    }
+    _add_alignment_contract(manifest, variant_rows)
+    (out / "manifest.json").write_text(json.dumps(manifest))
     return out
 
 
@@ -128,6 +179,29 @@ def test_read_cohort_assets_rejects_non_intercept_only_shapes(tmp_path):
     rows = [("1", 100, "G", "A", "1:100:G:A", 4, 0, 1.0)]
     out = _write_cohort_dir(tmp_path, rows, [[4.0, 90.0, 1.5]], np.eye(3))
     with pytest.raises(ValueError, match="1"):
+        agg.read_cohort_assets(out)
+
+
+def test_read_cohort_assets_rejects_reordered_variants_with_equal_counts(tmp_path):
+    rows = [
+        ("1", 200, "C", "T", "1:200:C:T", 4, 0, 1.0),
+        ("1", 100, "G", "A", "1:100:G:A", 4, 0, 0.5),
+    ]
+    out = _write_cohort_dir(tmp_path, rows, [[4.0], [2.0]], [[4.0]])
+    with pytest.raises(ValueError, match="canonical chromosome/position order"):
+        agg.read_cohort_assets(out)
+
+
+def test_read_cohort_assets_rejects_a_variant_digest_mismatch(tmp_path):
+    rows = [
+        ("1", 100, "G", "A", "1:100:G:A", 4, 0, 1.0),
+        ("1", 200, "C", "T", "1:200:C:T", 4, 0, 0.5),
+    ]
+    out = _write_cohort_dir(tmp_path, rows, [[4.0], [2.0]], [[4.0]])
+    manifest = json.loads((out / "manifest.json").read_text())
+    manifest["A_blocks"]["chromosomes"]["1"]["variant_id_digest"] = "bad"
+    (out / "manifest.json").write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match="chr1 ordered variant digest"):
         agg.read_cohort_assets(out)
 
 
@@ -260,12 +334,14 @@ def _build_synthetic_cohort(tmp_path, study_name="cohortA"):
         "study_name": study_name, "genome_build": "GRCh37",
         "covariate_schema": {"schema_id": "intercept_only",
             "matrix_columns": ["intercept"], "sex_factor_recode": {}},
-        "variant_index": {"schema_version": "v0.3-with-genotype-stats"},
+        "variant_index": {},
         "A_blocks": {"radius_bp": 1_000_000, "block_size": 8,
             "chromosomes": {"1": {"chunks": [
                 {"row_start": 0, "row_stop": 2, "column_start": 0,
-                 "column_stop": 2, "directory": "A_blocks/chr1/chunk_000000"}]}}},
+                 "column_stop": 2, "n_rows": 2,
+                 "directory": "A_blocks/chr1/chunk_000000"}]}}},
     }
+    _add_alignment_contract(manifest, rows)
     (cohort / "manifest.json").write_text(json.dumps(manifest))
     ck.write_cohort_checksums(cohort)
     return cohort
@@ -466,12 +542,15 @@ def _build_two_cohort_precursor(tmp_path):
             "study_name": name, "genome_build": "GRCh37",
             "covariate_schema": {"schema_id": "intercept_only",
                 "matrix_columns": ["intercept"], "sex_factor_recode": {}},
-            "variant_index": {"schema_version": "v0.3-with-genotype-stats"},
+            "variant_index": {},
             "A_blocks": {"radius_bp": 1_000_000, "block_size": 8,
                 "chromosomes": {"1": {"chunks": [
                     {"row_start": 0, "row_stop": 3, "column_start": 0,
-                     "column_stop": 3, "directory": "A_blocks/chr1/chunk_000000"}]}}},
+                     "column_stop": 3, "n_rows": 3,
+                     "directory": "A_blocks/chr1/chunk_000000"}]}}},
         }
+        rows = [(*meta, n_samples, 0, X[:, col].mean()) for col, meta in enumerate(variant_meta)]
+        _add_alignment_contract(manifest, rows)
         (cohort / "manifest.json").write_text(json.dumps(manifest))
         ck.write_cohort_checksums(cohort)
         agg.accumulate(cohort, precursor, chunk_reader=lambda cd: A, pair_batch_rows=64)
@@ -494,9 +573,10 @@ def test_finalise_writes_panel_and_calls_writer(tmp_path):
                  maf_threshold=0.0, min_adj_diag=-1e9, block_size=8,
                  max_dense_gb=1.0)
 
-    assert (panel / "pooled_manifest.json").is_file()
-    assert (panel / "variants.tsv.gz").is_file()
-    assert (panel / "dropped_variants.tsv").is_file()
+    panel_v1 = panel / "panel_v1"
+    assert (panel_v1 / "pooled_manifest.json").is_file()
+    assert (panel_v1 / "variants.tsv.gz").is_file()
+    assert (panel_v1 / "dropped_variants.tsv").is_file()
     assert written, "R writer was never called"
     # diagonal of every emitted R block is 1 where present
     for dense, _ in written:
@@ -573,12 +653,15 @@ def test_finalise_multi_chromosome_keeps_offdiagonals(tmp_path):
             "study_name": name, "genome_build": "GRCh37",
             "covariate_schema": {"schema_id": "intercept_only",
                 "matrix_columns": ["intercept"], "sex_factor_recode": {}},
-            "variant_index": {"schema_version": "v0.3-with-genotype-stats"},
+            "variant_index": {},
             "A_blocks": {"radius_bp": 1_000_000, "block_size": 8, "chromosomes": {
                 c: {"chunks": [{"row_start": 0, "row_stop": 2, "column_start": 0,
-                    "column_stop": 2, "directory": f"A_blocks/chr{c}/chunk_000000"}]}
+                    "column_stop": 2, "n_rows": 2,
+                    "directory": f"A_blocks/chr{c}/chunk_000000"}]}
                 for c in chroms}},
         }
+        rows = [(*meta, n_samples, 0, X[:, col].mean()) for col, meta in enumerate(variant_meta)]
+        _add_alignment_contract(manifest, rows)
         (cohort / "manifest.json").write_text(json.dumps(manifest))
         ck.write_cohort_checksums(cohort)
 

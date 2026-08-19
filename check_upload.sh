@@ -39,37 +39,83 @@ checkSecondArg () {
 source resources/logs/check_logs.sh
 source resources/logs/check_results.sh
 
+require_section_15_upload_config () {
+	if [ -n "${LD_SHIP_CMD:-}" ]; then
+		return 0
+	fi
+	if [ -z "${imperial_user:-}" ]; then
+		echo "Problem: imperial_user is required for section-15 upload" >&2
+		return 1
+	fi
+	if [ -z "${imperial_key:-}" ] || [ ! -r "${imperial_key}" ]; then
+		echo "Problem: imperial_key is not a readable file: ${imperial_key:-<unset>}" >&2
+		return 1
+	fi
+	if [ -z "${imperial_host:-}" ] || [[ "${imperial_host}" == TODO.* ]]; then
+		echo "Problem: imperial_host has not been configured" >&2
+		return 1
+	fi
+	if [ -z "${imperial_path:-}" ]; then
+		echo "Problem: imperial_path is required for section-15 upload" >&2
+		return 1
+	fi
+}
+
 ship_section_15_file () {
 	local path="$1"
 	if [ -n "${LD_SHIP_CMD:-}" ]; then
 		"${LD_SHIP_CMD}" "${path}"
 		return $?
 	fi
-	rsync --partial --append --checksum \
+	rsync --partial --checksum \
 		-e "ssh -i ${imperial_key}" \
 		"${path}" "${imperial_user}@${imperial_host}:${imperial_path}/"
 }
 
 upload_section_15 () {
-	local path sentinel failed=0 uploaded=0 section_15_upload_dir="${section_15_dir}/upload"
+	local chr chunk chunks outdir path sentinel scaffold targets failed=0 uploaded=0 section_15_upload_dir="${section_15_dir}/upload"
+	local -a section_15_files
+	require_section_15_upload_config || exit 1
+	if ! targets="$(ld_target_chromosomes_15)"; then
+		exit 1
+	fi
 	mkdir -p "${section_15_upload_dir}"
 	shopt -s nullglob
-	for path in "${section_15_upload_dir}"/*.tgz.aes "${section_15_upload_dir}"/*.md5sum; do
-		sentinel="${section_15_upload_dir}/.uploaded_$(basename "${path}")"
-		if [ -f "${sentinel}" ]; then
-			echo "Section 15 upload already recorded for $(basename "${path}")"
-			uploaded=$((uploaded + 1))
-			continue
+	while IFS= read -r chr; do
+		outdir="$(ld_resolve_chromosome_dir_15 "${ld_prepare_dir}" "${chr}")"
+		scaffold="${study_name}_chr${chr}_15_scaffold"
+		section_15_files=(
+			"${section_15_upload_dir}/${scaffold}.tgz.aes"
+			"${section_15_upload_dir}/${scaffold}.md5sum"
+		)
+		if ! chunks="$(ld_manifest_chunks_15 "${outdir}" "${chr}")"; then
+			echo "Problem: failed to read the section-15 chunk manifest for chr${chr}" >&2
+			exit 1
 		fi
-		if ship_section_15_file "${path}"; then
-			touch "${sentinel}"
-			echo "Uploaded section 15 artefact $(basename "${path}")"
-			uploaded=$((uploaded + 1))
-		else
-			echo "Problem: failed to upload section 15 artefact ${path}" >&2
-			failed=1
-		fi
-	done
+		while IFS= read -r chunk; do
+			chunk="${study_name}_chr${chr}_15_chr${chr}_${chunk}"
+			section_15_files+=(
+				"${section_15_upload_dir}/${chunk}.tgz.aes"
+				"${section_15_upload_dir}/${chunk}.md5sum"
+			)
+		done <<< "${chunks}"
+		for path in "${section_15_files[@]}"; do
+			sentinel="${section_15_upload_dir}/.uploaded_$(basename "${path}")"
+			if [ -f "${sentinel}" ]; then
+				echo "Section 15 upload already recorded for $(basename "${path}")"
+				uploaded=$((uploaded + 1))
+				continue
+			fi
+			if ship_section_15_file "${path}"; then
+				touch "${sentinel}"
+				echo "Uploaded section 15 artefact $(basename "${path}")"
+				uploaded=$((uploaded + 1))
+			else
+				echo "Problem: failed to upload section 15 artefact ${path}" >&2
+				failed=1
+			fi
+		done
+	done <<< "${targets}"
 	shopt -u nullglob
 	if [ "${uploaded}" -eq 0 ]; then
 		echo "Problem: no section 15 upload artefacts found in ${section_15_upload_dir}"

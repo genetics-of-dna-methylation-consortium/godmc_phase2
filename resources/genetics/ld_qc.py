@@ -1,6 +1,7 @@
 from collections import Counter
+import hashlib
 from pathlib import Path
-from typing import TypedDict
+from typing import Iterable, TypedDict
 
 import numpy as np
 
@@ -27,6 +28,16 @@ class VariantRecord(TypedDict):
 class VariantIndex(TypedDict):
     variants: list[VariantRecord]
     counts: dict[str, int]
+
+
+def ordered_variant_digest(variant_ids: Iterable[str]) -> str:
+    """Return a stable digest that preserves variant identity and order."""
+    digest = hashlib.blake2b()
+    for variant_id in variant_ids:
+        encoded = str(variant_id).encode("utf-8")
+        digest.update(len(encoded).to_bytes(4, byteorder="big"))
+        digest.update(encoded)
+    return digest.hexdigest()
 
 
 # Section 15 matches the GoDMC mQTL estimand. In sections 03b/03e every covariate

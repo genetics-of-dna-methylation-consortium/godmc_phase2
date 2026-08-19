@@ -18,6 +18,8 @@ from pathlib import Path
 
 import numpy as np
 import ld_checksums
+from ld_aggregate import read_cohort_assets
+from ld_qc import ordered_variant_digest
 
 
 AUTOSOME_ORDER = {str(i): i for i in range(1, 23)}
@@ -165,8 +167,9 @@ def merged_counts(manifests: list[dict], n_variants: int) -> dict:
     return counts
 
 
-def write_merged_variants(chrom_dirs: list[Path], out_path: Path) -> int:
+def write_merged_variants(chrom_dirs: list[Path], out_path: Path) -> tuple[int, str]:
     n_rows = 0
+    variant_ids: list[str] = []
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with gzip.open(out_path, "wt") as out_handle:
         wrote_header = False
@@ -179,7 +182,8 @@ def write_merged_variants(chrom_dirs: list[Path], out_path: Path) -> int:
                 for line in in_handle:
                     out_handle.write(line)
                     n_rows += 1
-    return n_rows
+                    variant_ids.append(line.split("\t", 5)[4])
+    return n_rows, ordered_variant_digest(variant_ids)
 
 
 def write_merged_b(chrom_dirs: list[Path], out_path: Path, n_variants: int) -> tuple[int, int]:
@@ -219,6 +223,7 @@ def build_manifest(
     manifests: list[dict],
     chromosomes: list[str],
     n_variants: int,
+    variant_id_digest: str,
     b_shape: tuple[int, int],
     d_shape: tuple[int, int],
 ) -> dict:
@@ -228,8 +233,11 @@ def build_manifest(
     merged["variant_index"]["chromosome_filter"] = "all"
     merged["variant_index"]["filters_applied"][0] = "autosomes 1-22"
     merged["variant_index"]["counts"] = merged_counts(manifests, n_variants)
+    merged["variant_index"]["variant_id_digest"] = variant_id_digest
     merged["variant_index"]["n_samples_used"] = template["variant_index"].get("n_samples_used")
     merged["B_block"]["shape"] = list(b_shape)
+    merged["B_block"]["variant_id_digest"] = variant_id_digest
+    merged["A_blocks"]["variant_id_digest"] = variant_id_digest
     merged["A_blocks"]["chromosomes"] = {}
     for chrom, manifest in zip(chromosomes, manifests):
         chrom_meta = manifest["A_blocks"]["chromosomes"].get(chrom)
@@ -290,16 +298,28 @@ def reassemble(input_dir: Path, output_dir: Path, study_name: str, gpg: str) -> 
     chromosomes = discover_chromosomes(input_dir, study_name)
     chrom_dirs = [restore_chromosome(input_dir, restore_root, study_name, c, gpg) for c in chromosomes]
     manifests = [read_manifest(d) for d in chrom_dirs]
+    for chrom_dir in chrom_dirs:
+        read_cohort_assets(chrom_dir)
 
     template = manifests[0]
     for chrom, manifest in zip(chromosomes, manifests):
         check_contract(chrom, template, manifest)
 
-    n_variants = write_merged_variants(chrom_dirs, merged_root / "variants.tsv.gz")
+    n_variants, variant_id_digest = write_merged_variants(
+        chrom_dirs, merged_root / "variants.tsv.gz"
+    )
     b_shape = write_merged_b(chrom_dirs, merged_root / "B.npy", n_variants)
     d_shape = write_merged_d(chrom_dirs, merged_root / "D.npy")
     copy_a_blocks(chrom_dirs, merged_root)
-    manifest = build_manifest(template, manifests, chromosomes, n_variants, b_shape, d_shape)
+    manifest = build_manifest(
+        template,
+        manifests,
+        chromosomes,
+        n_variants,
+        variant_id_digest,
+        b_shape,
+        d_shape,
+    )
     (merged_root / "manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )

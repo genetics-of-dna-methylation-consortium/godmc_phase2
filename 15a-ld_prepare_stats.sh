@@ -3,6 +3,7 @@
 source resources/setup.sh "$@"
 set -- $concatenated
 set -o pipefail
+source "${scripts_directory}/resources/genetics/ld_workflow.sh"
 
 mkdir -p "${ld_dir}" "${ld_blocks_dir}" "${ld_prepare_dir}" "${ld_hail_tmp_dir}"
 
@@ -31,15 +32,6 @@ check_prepared_outputs () {
 	[ -d "${outdir}/A_blocks/chr${chr}" ]
 }
 
-resolve_chromosome_dir () {
-	local chr="$1"
-	if [ "$(basename "${ld_prepare_dir}")" = "chr${chr}" ]; then
-		echo "${ld_prepare_dir}"
-	else
-		echo "${ld_prepare_dir}/chr${chr}"
-	fi
-}
-
 run_prepare_stats () {
 	local chr="$1" outdir="$2" logfile="$3"
 	local hail_runtime_args=""
@@ -65,10 +57,10 @@ run_prepare_stats () {
 		--a-block-size "${ld_a_block_size}" \
 		--a-chunk-rows "${ld_a_chunk_rows}" \
 		--a-max-dense-gb "${ld_a_max_dense_gb}" \
-		${hail_runtime_args}
+		${hail_runtime_args} || return 1
 
-	check_prepared_outputs "${outdir}" "${chr}"
-	touch "${outdir}/.prepared"
+	check_prepared_outputs "${outdir}" "${chr}" || return 1
+	touch "${outdir}/.prepared" || return 1
 	echo "Successfully prepared LD cohort scaffold outputs for chr${chr}"
 }
 
@@ -79,20 +71,21 @@ run_chromosome () {
 		echo "Successfully prepared LD cohort scaffold outputs for chr${chr}"
 		return 0
 	fi
-	run_prepare_stats "${chr}" "${outdir}" "${logfile}"
+	run_prepare_stats "${chr}" "${outdir}" "${logfile}" || return 1
 }
-
-if [ "${ld_chromosome}" = "all" ]; then
-	echo "Problem: section 15 must be prepared one chromosome at a time to keep disk use bounded."
-	echo "Run, for example: ld_chromosome=22 bash 15a-ld_prepare_stats.sh -c config"
-	exit 1
-fi
 
 check_inputs
 
-chromosome_dir="$(resolve_chromosome_dir "${ld_chromosome}")"
-chromosome_log="${section_15_dir}/logs_a/chr${ld_chromosome}.log"
-mkdir -p "$(dirname "${chromosome_log}")"
-exec &> >(tee "${chromosome_log}")
-
-run_chromosome "${ld_chromosome}" "${chromosome_dir}" "${chromosome_log}"
+mapfile -t target_chromosomes < <(ld_target_chromosomes_15)
+if [ "${#target_chromosomes[@]}" -eq 0 ]; then
+	echo "Problem: no section-15 chromosomes selected" >&2
+	exit 1
+fi
+for chr in "${target_chromosomes[@]}"; do
+	chromosome_dir="$(ld_resolve_chromosome_dir_15 "${ld_prepare_dir}" "${chr}")"
+	chromosome_log="${section_15_dir}/logs_a/chr${chr}.log"
+	mkdir -p "$(dirname "${chromosome_log}")"
+	if ! run_chromosome "${chr}" "${chromosome_dir}" "${chromosome_log}" 2>&1 | tee "${chromosome_log}"; then
+		exit 1
+	fi
+done

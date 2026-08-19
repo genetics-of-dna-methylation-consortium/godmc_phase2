@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import argparse
+import csv
+import gzip
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,12 +26,14 @@ from ld_qc import (
     build_covariate_matrix,
     build_sample_alignment,
     build_variant_index,
+    ordered_variant_digest,
     require_file,
 )
 import ld_checksums
 
 
 CHROMOSOME_FILTER_ALL = "all"
+VARIANT_SCHEMA_VERSION = "v0.4-canonical-row-alignment"
 
 
 def parse_args() -> argparse.Namespace:
@@ -116,6 +120,96 @@ def _export_variants_tsv_gz(path: Path, diagnostics_table) -> None:
     ).export(str(path), header=True)
 
 
+def _read_exported_variant_ids(path: Path) -> list[str]:
+    with gzip.open(path, "rt", encoding="utf-8", newline="") as handle:
+        return [row["variant_id"] for row in csv.DictReader(handle, delimiter="\t")]
+
+
+def _validate_output_alignment(
+    variant_index,
+    variants_path: Path,
+    b_matrix: np.ndarray,
+    a_blocks_meta: dict,
+) -> str:
+    """Prove variants, B, and A metadata share one canonical row index."""
+    expected_ids = [variant["variant_id"] for variant in variant_index["variants"]]
+    exported_ids = _read_exported_variant_ids(variants_path)
+    if exported_ids != expected_ids:
+        mismatch = next(
+            (
+                index
+                for index, (observed, expected) in enumerate(
+                    zip(exported_ids, expected_ids)
+                )
+                if observed != expected
+            ),
+            min(len(exported_ids), len(expected_ids)),
+        )
+        raise ValueError(
+            "variants.tsv.gz does not exactly match the canonical variant index: "
+            f"first mismatch at row {mismatch}"
+        )
+    if b_matrix.shape[0] != len(expected_ids):
+        raise ValueError(
+            f"B.npy has {b_matrix.shape[0]} rows but the canonical variant index "
+            f"has {len(expected_ids)} rows"
+        )
+
+    expected_by_chromosome: dict[str, list[str]] = {}
+    for variant in variant_index["variants"]:
+        expected_by_chromosome.setdefault(variant["chr"], []).append(
+            variant["variant_id"]
+        )
+    chromosomes = a_blocks_meta.get("chromosomes", {})
+    if list(chromosomes) != list(expected_by_chromosome):
+        raise ValueError(
+            "A-block chromosomes do not match the canonical variant index: "
+            f"observed {list(chromosomes)}, expected {list(expected_by_chromosome)}"
+        )
+
+    a_variant_count = 0
+    for chrom, expected_chromosome_ids in expected_by_chromosome.items():
+        metadata = chromosomes[chrom]
+        expected_count = len(expected_chromosome_ids)
+        if metadata.get("n_variants") != expected_count:
+            raise ValueError(
+                f"A-block chr{chrom} has {metadata.get('n_variants')} variants; "
+                f"expected {expected_count}"
+            )
+        row_stop = 0
+        for chunk in metadata.get("chunks", []):
+            if chunk.get("row_start") != row_stop:
+                raise ValueError(
+                    f"A-block chr{chrom} chunks are not contiguous at row {row_stop}"
+                )
+            row_stop = int(chunk.get("row_stop", -1))
+            row_ids = expected_chromosome_ids[
+                int(chunk["row_start"]):int(chunk["row_stop"])
+            ]
+            column_ids = expected_chromosome_ids[
+                int(chunk["column_start"]):int(chunk["column_stop"])
+            ]
+            chunk["row_variant_id_digest"] = ordered_variant_digest(row_ids)
+            chunk["column_variant_id_digest"] = ordered_variant_digest(column_ids)
+        if row_stop != expected_count:
+            raise ValueError(
+                f"A-block chr{chrom} chunks end at row {row_stop}; expected {expected_count}"
+            )
+        metadata["variant_id_digest"] = ordered_variant_digest(
+            expected_chromosome_ids
+        )
+        a_variant_count += expected_count
+
+    if a_variant_count != len(expected_ids):
+        raise ValueError(
+            f"A-block metadata has {a_variant_count} variants but B and variants "
+            f"have {len(expected_ids)}"
+        )
+    digest = ordered_variant_digest(expected_ids)
+    a_blocks_meta["variant_id_digest"] = digest
+    return digest
+
+
 def log_step(message: str) -> None:
     """Emit a flushed progress marker into the section log."""
     print(f"[section15a] {message}", flush=True)
@@ -196,6 +290,13 @@ def main() -> None:
         chunk_rows=args.a_chunk_rows,
         max_dense_gb=args.a_max_dense_gb,
     )
+    log_step("Validating canonical row alignment across variants, B, and A blocks")
+    variant_id_digest = _validate_output_alignment(
+        variant_index,
+        output_dir / "variants.tsv.gz",
+        b_matrix,
+        a_blocks_meta,
+    )
 
     manifest = {
         "study_name": args.study_name,
@@ -210,7 +311,7 @@ def main() -> None:
             "counts": sample_counts,
         },
         "variant_index": {
-            "schema_version": "v0.3-with-genotype-stats",
+            "schema_version": VARIANT_SCHEMA_VERSION,
             "columns": [
                 "chr",
                 "pos",
@@ -232,6 +333,7 @@ def main() -> None:
             "ref_alt_convention": "ref = .bim column 6 (A2), alt = .bim column 5 (A1)",
             "duplicate_key_policy": "hard fail on duplicate chr:pos:ref:alt",
             "sort_order": "chr (numeric), pos, ref, alt",
+            "variant_id_digest": variant_id_digest,
             "counts": variant_counts,
             "n_samples_used": sample_counts["final_sample_count"],
         },
@@ -250,6 +352,7 @@ def main() -> None:
             "rows": "variants.tsv.gz row order",
             "columns": COVARIATE_MATRIX_COLUMNS,
             "format": "numpy-npy-dense",
+            "variant_id_digest": variant_id_digest,
         },
         "A_blocks": a_blocks_meta,
         "notes": [

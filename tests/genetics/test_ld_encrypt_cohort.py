@@ -55,6 +55,9 @@ def _run(env, cohort, out, study="testcohort"):
 def _env(tmp_path):
     env = dict(os.environ)
     env["GPG"] = str(_make_gpg_wrapper(tmp_path))
+    passphrase_file = tmp_path / "passphrase.txt"
+    passphrase_file.write_text(PASSPHRASE + "\n")
+    env["LD_GPG_PASSPHRASE_FILE"] = str(passphrase_file)
     return env, Path(env["GPG"])
 
 
