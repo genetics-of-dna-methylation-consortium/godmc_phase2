@@ -37,6 +37,11 @@ def parse_args() -> argparse.Namespace:
         default=os.environ.get("GPG", "gpg"),
         help="gpg binary or wrapper to use for decryption",
     )
+    parser.add_argument(
+        "--gpg-passphrase-file",
+        required=True,
+        help="readable file containing this cohort's symmetric GPG passphrase",
+    )
     return parser.parse_args()
 
 
@@ -69,14 +74,39 @@ def safe_extract(tgz_path: Path, dest: Path) -> None:
         tar.extractall(dest)
 
 
-def decrypt_archive(input_dir: Path, staging_dir: Path, base: str, gpg: str) -> Path:
+def decrypt_archive(
+    input_dir: Path,
+    staging_dir: Path,
+    base: str,
+    gpg: str,
+    passphrase_file: Path,
+) -> Path:
     aes_path = input_dir / f"{base}.tgz.aes"
     if not aes_path.is_file():
         raise FileNotFoundError(f"Missing encrypted archive: {aes_path}")
     tgz_path = staging_dir / f"{base}.tgz"
     if tgz_path.exists():
         tgz_path.unlink()
-    subprocess.run([gpg, "--output", str(tgz_path), "--decrypt", str(aes_path)], check=True)
+    try:
+        subprocess.run(
+            [
+                gpg,
+                "--batch",
+                "--yes",
+                "--pinentry-mode",
+                "loopback",
+                "--passphrase-file",
+                str(passphrase_file),
+                "--output",
+                str(tgz_path),
+                "--decrypt",
+                str(aes_path),
+            ],
+            check=True,
+        )
+    except subprocess.CalledProcessError:
+        tgz_path.unlink(missing_ok=True)
+        raise
     verify_plaintext_md5(tgz_path, input_dir / f"{base}.md5sum")
     return tgz_path
 
@@ -114,19 +144,24 @@ def restore_chromosome(
     study_name: str,
     chrom: str,
     gpg: str,
+    passphrase_file: Path,
 ) -> Path:
     chrom_dir = staging_dir / f"chr{chrom}"
     chrom_dir.mkdir(parents=True, exist_ok=True)
 
     scaffold_base = f"{study_name}_chr{chrom}_15_scaffold"
-    scaffold_tgz = decrypt_archive(input_dir, staging_dir, scaffold_base, gpg)
+    scaffold_tgz = decrypt_archive(
+        input_dir, staging_dir, scaffold_base, gpg, passphrase_file
+    )
     safe_extract(scaffold_tgz, chrom_dir)
     scaffold_tgz.unlink()
 
     a_blocks_dir = chrom_dir / "A_blocks"
     a_blocks_dir.mkdir(parents=True, exist_ok=True)
     for base in chunk_bases(input_dir, study_name, chrom):
-        tgz_path = decrypt_archive(input_dir, staging_dir, base, gpg)
+        tgz_path = decrypt_archive(
+            input_dir, staging_dir, base, gpg, passphrase_file
+        )
         safe_extract(tgz_path, a_blocks_dir)
         tgz_path.unlink()
 
@@ -283,7 +318,19 @@ def ensure_publishable(output_dir: Path) -> bool:
     )
 
 
-def reassemble(input_dir: Path, output_dir: Path, study_name: str, gpg: str) -> None:
+def reassemble(
+    input_dir: Path,
+    output_dir: Path,
+    study_name: str,
+    gpg: str,
+    passphrase_file: Path,
+) -> None:
+    if not passphrase_file.is_file() or not os.access(passphrase_file, os.R_OK):
+        raise FileNotFoundError(
+            f"GPG passphrase file is not readable: {passphrase_file}"
+        )
+    if passphrase_file.stat().st_size == 0:
+        raise ValueError(f"GPG passphrase file is empty: {passphrase_file}")
     if not ensure_publishable(output_dir):
         return
 
@@ -296,7 +343,12 @@ def reassemble(input_dir: Path, output_dir: Path, study_name: str, gpg: str) -> 
     merged_root.mkdir(parents=True)
 
     chromosomes = discover_chromosomes(input_dir, study_name)
-    chrom_dirs = [restore_chromosome(input_dir, restore_root, study_name, c, gpg) for c in chromosomes]
+    chrom_dirs = [
+        restore_chromosome(
+            input_dir, restore_root, study_name, chrom, gpg, passphrase_file
+        )
+        for chrom in chromosomes
+    ]
     manifests = [read_manifest(d) for d in chrom_dirs]
     for chrom_dir in chrom_dirs:
         read_cohort_assets(chrom_dir)
@@ -338,7 +390,13 @@ def reassemble(input_dir: Path, output_dir: Path, study_name: str, gpg: str) -> 
 
 def main() -> None:
     args = parse_args()
-    reassemble(Path(args.input_dir), Path(args.output_dir), args.study_name, args.gpg)
+    reassemble(
+        Path(args.input_dir),
+        Path(args.output_dir),
+        args.study_name,
+        args.gpg,
+        Path(args.gpg_passphrase_file),
+    )
 
 
 if __name__ == "__main__":

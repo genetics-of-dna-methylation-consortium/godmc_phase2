@@ -167,7 +167,7 @@ upload_section_15 () {
 	if [ "${failed}" -ne 0 ]; then
 		exit 1
 	fi
-	echo "Successfully uploaded section 15 staged artefacts"
+	echo "Successfully uploaded section 15 files"
 }
 
 sections=("01" "02" "03" "03a" "03d" "04" "07" "08" "09" "10" "11" "14" "15")

@@ -27,24 +27,24 @@ from ld_qc import ordered_variant_digest  # noqa: E402
 
 
 def _make_gpg_wrapper(tmp_path):
-    """Non-interactive gpg wrapper (loopback passphrase) + isolated keyring."""
+    """GPG wrapper with an isolated keyring."""
     gnupg_home = tmp_path / "gnupg"
     gnupg_home.mkdir(mode=0o700)
     wrapper = tmp_path / "gpg_batch.sh"
     wrapper.write_text(
         "#!/usr/bin/env bash\n"
-        f'exec gpg --homedir "{gnupg_home}" --batch --yes '
-        f'--pinentry-mode loopback --passphrase "{PASSPHRASE}" "$@"\n'
+        f'exec gpg --homedir "{gnupg_home}" "$@"\n'
     )
     wrapper.chmod(0o755)
     return wrapper
 
 
-def _env(tmp_path):
+def _env(tmp_path, passphrase=PASSPHRASE):
+    tmp_path.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ)
     env["GPG"] = str(_make_gpg_wrapper(tmp_path))
     passphrase_file = tmp_path / "passphrase.txt"
-    passphrase_file.write_text(PASSPHRASE + "\n")
+    passphrase_file.write_text(passphrase + "\n")
     env["LD_GPG_PASSPHRASE_FILE"] = str(passphrase_file)
     return env
 
@@ -132,9 +132,14 @@ def _encrypt(env, cohort, upload, study):
                           env=env, capture_output=True, text=True)
 
 
-def _decrypt(env, upload, merged, study):
-    return subprocess.run([str(DECRYPT), str(upload), str(merged), study],
-                          env=env, capture_output=True, text=True)
+def _decrypt(env, upload, merged, study, passphrase_file=None):
+    passphrase_file = passphrase_file or env["LD_GPG_PASSPHRASE_FILE"]
+    return subprocess.run(
+        [str(DECRYPT), str(upload), str(merged), study, str(passphrase_file)],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
 
 
 def test_single_chromosome_roundtrip_produces_valid_cohort(tmp_path):
@@ -178,6 +183,40 @@ def test_two_chromosome_roundtrip_merges_into_one_cohort(tmp_path):
     assert (merged / "A_blocks" / "chr1" / "chunk_000000" / "values.txt").is_file()
     assert (merged / "A_blocks" / "chr22" / "chunk_000000" / "values.txt").is_file()
     np.testing.assert_array_equal(np.load(merged / "B.npy"), np.array([[0.1], [0.2]]))
+
+
+def test_each_cohort_uses_its_own_passphrase_file(tmp_path):
+    env_a = _env(tmp_path / "gpg_a", "cohort-a-passphrase")
+    env_b = _env(tmp_path / "gpg_b", "cohort-b-passphrase")
+    upload = tmp_path / "upload"
+    cohort_a = _build_chromosome(
+        tmp_path / "cohort_a", "cohortA", "22", 2201, 0.2
+    )
+    cohort_b = _build_chromosome(
+        tmp_path / "cohort_b", "cohortB", "22", 2201, 0.3
+    )
+
+    assert _encrypt(env_a, cohort_a, upload, "cohortA").returncode == 0
+    assert _encrypt(env_b, cohort_b, upload, "cohortB").returncode == 0
+
+    merged_a = tmp_path / "merged_a"
+    merged_b = tmp_path / "merged_b"
+    assert _decrypt(env_a, upload, merged_a, "cohortA").returncode == 0
+    assert _decrypt(env_b, upload, merged_b, "cohortB").returncode == 0
+    manifest_a = json.loads((merged_a / "manifest.json").read_text())
+    manifest_b = json.loads((merged_b / "manifest.json").read_text())
+    assert manifest_a["study_name"] == "cohortA"
+    assert manifest_b["study_name"] == "cohortB"
+
+    wrong = _decrypt(
+        env_a,
+        upload,
+        tmp_path / "wrong_passphrase",
+        "cohortA",
+        env_b["LD_GPG_PASSPHRASE_FILE"],
+    )
+    assert wrong.returncode != 0
+    assert not (tmp_path / "wrong_passphrase" / "manifest.json").exists()
 
 
 def test_md5_mismatch_fails_and_does_not_publish(tmp_path):
