@@ -17,14 +17,6 @@ sftp_username_nc866=""
 # This should be "~/.ssh/id_rsa" or "~/.ssh/id_dsa" on your HPC system/server. See instructions on the wiki on how to set up your key.
 key=""
 
-# Imperial LD-upload (section 15) account, provided by the GoDMC developers.
-imperial_user=""
-# Path to the SSH private key for the Imperial LD-upload account (often the same as `key`).
-imperial_key=""
-# Optional section-15 endpoint overrides. Leave unset unless developers provide them.
-# imperial_host="TODO.imperial.ac.uk"
-# imperial_path="/godmc/ld_upload"
-
 # Full path to where the input_data folder is which contains your data formatted as described in the github repo
 home_directory=""
 
@@ -112,10 +104,10 @@ meth_pc_threshold="1e-7"
 soft_threshold="1e-5"
 
 # Optional Hail overrides (see 15)
-# Section 15 can process every ld_chromosomes entry or one chromosome at a time.
-# ld_chromosome="all"  # run/check every chromosome in ld_chromosomes (default)
+# Section 15 processes one explicitly selected chromosome at a time.
 # ld_chromosome="22"   # run/check only chromosome 22
-# ld_chromosomes="1 2 3"  # chromosome set used when ld_chromosome="all"
+# Before uploading section 15, export GODMC_UPLOAD_PASSWORD in the calling shell.
+# Do not store the upload password in this configuration file.
 # Required for section-15 15b compression/encryption, especially under SLURM.
 # Store this outside the repository/results tree and protect it with: chmod 600 <file>
 # ld_gpg_passphrase_file="/secure/path/godmc15.pass"

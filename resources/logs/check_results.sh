@@ -517,7 +517,9 @@ check_section_15_upload_dir () {
 	for path in "${section_15_upload_dir}"/*; do
 		base="$(basename "${path}")"
 		case "${base}" in
-			*.tgz.aes|*.md5sum|.uploaded_*) ;;
+			.uploaded_*) ok=0 ;;
+			*.tgz.aes) ok=0 ;;
+			*.md5sum) ;;
 			*)
 				echo "Problem: unexpected raw or unsupported file in LD upload directory: ${path}"
 				exit 1
@@ -526,7 +528,6 @@ check_section_15_upload_dir () {
 	done
 	shopt -u dotglob
 	for path in "${section_15_upload_dir}"/*.tgz.aes; do
-		ok=0
 		if [ ! -f "${path%.tgz.aes}.md5sum" ]; then
 			echo "Problem: missing md5sum for ${path}"
 			exit 1
@@ -534,7 +535,7 @@ check_section_15_upload_dir () {
 	done
 	shopt -u nullglob
 	if [ "${ok}" -ne 0 ]; then
-		echo "Problem: no LD encrypted archives found in ${section_15_upload_dir}"
+		echo "Problem: no LD encrypted archives or upload records found in ${section_15_upload_dir}"
 		exit 1
 	fi
 }
@@ -564,18 +565,12 @@ check_results_15 () {
 				exit 1
 			fi
 		done
-	for path in "${section_15_upload_dir}"/*.md5sum; do
-		if [ ! -f "${path%.md5sum}.tgz.aes" ]; then
-			echo "Problem: missing encrypted archive for ${path}"
-			exit 1
-		fi
-	done
 		if [ -d "${outdir}/A_blocks" ]; then
 			echo "Problem: LD chr${chr} A_blocks still exists after packaging"
 			exit 1
 		fi
 		scaffold="${study_name}_chr${chr}_15_scaffold"
-		if ! ld_verify_archive "${section_15_upload_dir}" "${scaffold}"; then
+		if ! ld_upload_artefact_ready_15 "${section_15_upload_dir}" "${scaffold}"; then
 			echo "Problem: LD chr${chr} scaffold upload artefacts are absent"
 			exit 1
 		fi
@@ -586,7 +581,7 @@ check_results_15 () {
 		fi
 		while IFS= read -r chunk; do
 			chunk_base="${study_name}_chr${chr}_15_chr${chr}_${chunk}"
-			if ! ld_verify_archive "${section_15_upload_dir}" "${chunk_base}"; then
+			if ! ld_upload_artefact_ready_15 "${section_15_upload_dir}" "${chunk_base}"; then
 				echo "Problem: LD chr${chr} chunk upload artefacts are absent for ${chunk}"
 				exit 1
 			fi

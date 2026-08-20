@@ -1,11 +1,13 @@
 name: hail_env
+
 channels:
   - conda-forge
-  - pkgs/main
+
 dependencies:
-  - python=3.12.3
-  - onnx==1.17.0
-  - r-base=4.4.3|>=4.1
+  - python=3.11
+
+  # R
+  - r-base=4.4.3
   - r-devtools=2.4.5
   - r-irkernel=1.3.2
   - r-mass=7.3.60
@@ -16,7 +18,7 @@ dependencies:
   - r-matrixstats=1.5.0
   - r-remotes=2.5.0
   - r-plyr=1.8.9
-  - r-Cairo=1.6.2
+  - r-cairo=1.6.2
   - r-plotrix=3.8_4
   - r-cluster=2.1.8.1
   - r-rpmm=1.25
@@ -36,17 +38,24 @@ dependencies:
   - r-magrittr=2.0.3
   - r-r.utils=2.13.0
   - r-biocmanager=1.30.26
-  - numpy==2.3.1
+
+  # Python
+  - numpy=2.2
   - pandas=2.2.3
-  - scipy==1.16.0
-  - pyarrow==24.0.0
+  - scipy=1.15
   - scikit-learn=1.6.1
   - matplotlib=3.10.1
   - seaborn=0.13.2
+  - pyarrow=20
+
   - jupyterlab=4.4.0
   - ipykernel=6.29.5
-  - openjdk=11.0.26
-  - git=2.49.0
-  - pip=25.0.1
+
+  - openjdk=11
+
+  - git
+  - pip
+
   - pip:
       - hail==0.2.135
+      - onnx==1.17.0

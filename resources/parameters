@@ -241,28 +241,7 @@ gwas_smoking_dir="${home_directory}/results/11"
 gwas_cellcount_entropy_dir="${home_directory}/results/11"
 gwas_cellcounts_dir="${home_directory}/results/12"
 gwas_cellcounts_mvlmm_dir="${home_directory}/results/13"
-ld_dir="${ld_dir:-${section_15_dir}}"
-ld_blocks_dir="${ld_blocks_dir:-${ld_dir}/blocks}"
-ld_prepare_dir="${ld_prepare_dir:-${ld_dir}/cohort_stats}"
-ld_aggregate_dir="${ld_aggregate_dir:-${ld_dir}/pooled}"
-ld_manifest="${ld_manifest:-${ld_dir}/manifest.json}"
-ld_qc_report="${ld_qc_report:-${ld_dir}/qc_report.txt}"
-ld_chromosome="${ld_chromosome:-all}"
-ld_gpg_passphrase_file="${ld_gpg_passphrase_file:-}"
-ld_hail_partitions="${ld_hail_partitions:-256}"
-ld_hail_local_cores="${ld_hail_local_cores:-4}"
-ld_hail_driver_memory_gb="${ld_hail_driver_memory_gb:-24}"
-ld_hail_tmp_dir="${ld_hail_tmp_dir:-${ld_prepare_dir}/hail_tmp}"
-ld_a_block_size="${ld_a_block_size:-2048}"
-ld_a_chunk_rows="${ld_a_chunk_rows:-50000}"
-ld_a_max_dense_gb="${ld_a_max_dense_gb:-0.5}"
-ld_precursor_dir="${ld_precursor_dir:-${ld_dir}/precursor}"
-ld_panel_dir="${ld_panel_dir:-${ld_dir}/panels}"
-ld_aggregate_mode="${ld_aggregate_mode:-accumulate}"
-ld_maf_threshold="${ld_maf_threshold:-0.01}"
-ld_min_adj_diag="${ld_min_adj_diag:-0.0}"
-ld_min_cohorts="${ld_min_cohorts:-}"
-ld_chromosomes="${ld_chromosomes:-1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22}"
+ld_dir="${home_directory}/results/15"
 
 resname="res"
 
@@ -283,6 +262,30 @@ meth_vmeQTL_directory="${home_directory}/processed_data/methylation_data/vmeQTL"
 meth_vmeQTL_input_chr="${meth_vmeQTL_directory}/meth_vmeQTL_input.chr"
 meth_vmeQTL_annotation="${scripts_directory}/resources/methylation/vmeQTL/EPIC_annotation_autochr"
 vmeQTL_thread="10"
+
+#LD calculation (cohorts)
+ld_blocks_dir="${ld_dir}/blocks"
+ld_prepare_dir="${ld_prepare_dir:-${ld_dir}/cohort_stats}"
+ld_aggregate_dir="${ld_dir}/pooled"
+ld_manifest="${ld_dir}/manifest.json"
+ld_qc_report="${ld_dir}/qc_report.txt"
+ld_gpg_passphrase_file="${ld_gpg_passphrase_file:-}"
+ld_hail_partitions="${ld_hail_partitions:-256}"
+ld_hail_local_cores="${ld_hail_local_cores:-4}"
+ld_hail_driver_memory_gb="${ld_hail_driver_memory_gb:-24}"
+ld_hail_tmp_dir="${ld_hail_tmp_dir:-${ld_prepare_dir}/hail_tmp}"
+ld_a_block_size="${ld_a_block_size:-2048}"
+ld_a_chunk_rows="${ld_a_chunk_rows:-50000}"
+ld_a_max_dense_gb="${ld_a_max_dense_gb:-0.5}"
+
+#LD calculation (central)
+ld_precursor_dir="${ld_dir}/precursor"
+ld_panel_dir="${ld_panel_dir:-${ld_dir}/panels}"
+ld_aggregate_mode="${ld_aggregate_mode:-accumulate}"
+ld_maf_threshold="${ld_maf_threshold:-0.01}"
+ld_min_adj_diag="${ld_min_adj_diag:-0.0}"
+ld_min_cohorts="${ld_min_cohorts:-}"
+
 
 
 # SFTP details
@@ -311,10 +314,8 @@ sftp_path_inversions="/usr/local/etc2/ftp/godmc/pub/bristol"
 sftp_address_nc866="https://86.50.168.229"
 sftp_path_nc866="/remote.php/webdav/GoDMC"
 
-# Imperial section-15 (LD) rsync endpoint. Placeholder until the endpoint is
-# finalised; the wrapper's transport step is isolated so this can change in one place.
-imperial_host="${imperial_host:-TODO.imperial.ac.uk}"
-imperial_path="${imperial_path:-/godmc/ld_upload}"
+# Imperial section-15 (LD) HTTPS upload endpoint.
+godmc_upload_url="https://godmc-upload.dsi.ic.ac.uk"
 
 # scripts and binaries
 plink="${scripts_directory}/resources/bin/plink1.90"

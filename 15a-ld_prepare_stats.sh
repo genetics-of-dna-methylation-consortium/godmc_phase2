@@ -61,6 +61,14 @@ run_prepare_stats () {
 
 	check_prepared_outputs "${outdir}" "${chr}" || return 1
 	touch "${outdir}/.prepared" || return 1
+
+	# Hail materialises the chromosome-wide genotype BlockMatrix under the temp
+	# directory; it is not reused across chromosomes, so reclaim it now to keep
+	# peak local disk to one chromosome.
+	if [ -n "${ld_hail_tmp_dir}" ] && [ -d "${ld_hail_tmp_dir}" ]; then
+		rm -rf "${ld_hail_tmp_dir}" || return 1
+	fi
+
 	echo "Successfully prepared LD cohort scaffold outputs for chr${chr}"
 }
 
