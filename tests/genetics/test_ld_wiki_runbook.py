@@ -12,7 +12,7 @@ def test_runbook_documents_staged_workflow_and_is_current():
     # documents the disk expectation that motivates the design
     assert "150 GB" in text
     # documents the Imperial endpoint config the operator must set
-    assert "imperial_user" in text and "imperial_key" in text
+    assert "ld_upload_password_file" in text
     # documents resumability
     assert ".prepared" in text and ".packaged" in text
     # stale status removed

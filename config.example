@@ -103,14 +103,11 @@ meth_pc_threshold="1e-7"
 # Matrixeqtl parameters
 soft_threshold="1e-5"
 
-# Optional Hail overrides (see 15)
-# Section 15 processes one explicitly selected chromosome at a time.
-# ld_chromosome="22"   # run/check only chromosome 22
-# Before uploading section 15, export GODMC_UPLOAD_PASSWORD in the calling shell.
-# Do not store the upload password in this configuration file.
-# Required for section-15 15b compression/encryption, especially under SLURM.
-# Store this outside the repository/results tree and protect it with: chmod 600 <file>
-# ld_gpg_passphrase_file="/secure/path/godmc15.pass"
+# Required for section-15 upload.
+ld_upload_password_file="${HOME}/.godmc/upload.pass"
+# Required for section-15 15b compression/encryption.
+ld_gpg_passphrase_file="${HOME}/.godmc/gpg.pass"
+# Optional hail overrides
 # ld_hail_local_cores="8"
 # ld_hail_partitions="256"
 # ld_hail_driver_memory_gb="32"

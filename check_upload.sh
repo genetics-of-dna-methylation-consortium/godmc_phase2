@@ -43,8 +43,18 @@ require_section_15_upload_config () {
 	if [ -n "${LD_SHIP_CMD:-}" ]; then
 		return 0
 	fi
-	if [ -z "${GODMC_UPLOAD_PASSWORD:-}" ]; then
-		echo "Problem: GODMC_UPLOAD_PASSWORD is required for section-15 upload" >&2
+	if [ -z "${ld_upload_password_file:-}" ]; then
+		echo "Problem: section-15 upload requires ld_upload_password_file in config" >&2
+		return 1
+	fi
+	if [ ! -r "${ld_upload_password_file}" ]; then
+		echo "Problem: LD upload password file is not readable: ${ld_upload_password_file}" >&2
+		return 1
+	fi
+	ld_upload_password=""
+	IFS= read -r ld_upload_password < "${ld_upload_password_file}" || true
+	if [ -z "${ld_upload_password}" ]; then
+		echo "Problem: LD upload password file is empty: ${ld_upload_password_file}" >&2
 		return 1
 	fi
 	if ! command -v curl >/dev/null 2>&1; then
@@ -63,7 +73,7 @@ ship_section_15_file () {
 	if ! http_status="$(curl --fail --show-error \
 		--output /dev/null \
 		--write-out "%{http_code}" \
-		--user "uploader:${GODMC_UPLOAD_PASSWORD}" \
+		--user "uploader:${ld_upload_password}" \
 		--upload-file "${path}" \
 		"${godmc_upload_url}/${filename}")"; then
 		return 1
