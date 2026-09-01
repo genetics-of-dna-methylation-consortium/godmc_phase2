@@ -22,7 +22,6 @@ Allele convention:
 from __future__ import annotations
 
 import gzip
-import json
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -549,28 +548,6 @@ def compute_a_block_banded(
 
             row_start = row_stop
             chunk_index += 1
-
-        chr_manifest = {
-            "chromosome": chrom,
-            "format": "hail-blockmatrix-row-interval-chunks",
-            "radius_bp": radius_bp,
-            "block_size": block_size,
-            "chunk_rows": chunk_rows,
-            "max_dense_gb": max_dense_gb,
-            "chunking": "memory-capped up to chunk_rows",
-            "n_variants": int(n_variants),
-            "n_chunks": len(chunks),
-            "sparsification": "row_intervals",
-            "window_definition": (
-                "upper triangle, same chromosome, pos_j <= pos_i + radius_bp"
-            ),
-            "max_idx_distance_in_window": max_idx_distance,
-            "chunks": chunks,
-        }
-        (chr_dir / "manifest.json").write_text(
-            json.dumps(chr_manifest, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
 
         chromosomes_meta[chrom] = {
             "directory": f"{out_path.name}/chr{chrom}",
