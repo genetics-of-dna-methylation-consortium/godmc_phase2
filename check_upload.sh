@@ -126,14 +126,12 @@ cleanup_section_15 () {
 }
 
 upload_section_15 () {
-	local chr chunk chunks outdir path upload_receipt scaffold targets failed=0 uploaded=0 section_15_upload_dir="${section_15_dir}/upload"
+	local chr chunk chunks outdir path upload_receipt scaffold targets failed=0 section_15_upload_dir="${section_15_dir}/upload"
 	local -a section_15_files
 	require_section_15_upload_config || exit 1
 	if ! targets="$(ld_target_chromosomes_15)"; then
 		exit 1
 	fi
-	mkdir -p "${section_15_upload_dir}"
-	shopt -s nullglob
 	while IFS= read -r chr; do
 		outdir="$(ld_resolve_chromosome_dir_15 "${ld_prepare_dir}" "${chr}")"
 		scaffold="${study_name}_chr${chr}_15_scaffold"
@@ -156,24 +154,17 @@ upload_section_15 () {
 			upload_receipt="${section_15_upload_dir}/.uploaded_$(basename "${path}")"
 			if [ -f "${upload_receipt}" ]; then
 				echo "Section 15 upload already recorded for $(basename "${path}")"
-				uploaded=$((uploaded + 1))
 				continue
 			fi
 			if ship_section_15_file "${path}"; then
 				touch "${upload_receipt}"
 				echo "Uploaded section 15 file $(basename "${path}")"
-				uploaded=$((uploaded + 1))
 			else
 				echo "Problem: failed to upload section 15 file ${path}" >&2
 				failed=1
 			fi
 		done
 	done <<< "${targets}"
-	shopt -u nullglob
-	if [ "${uploaded}" -eq 0 ]; then
-		echo "Problem: no section 15 upload files found in ${section_15_upload_dir}"
-		exit 1
-	fi
 	if [ "${failed}" -ne 0 ]; then
 		exit 1
 	fi
