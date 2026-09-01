@@ -3,7 +3,7 @@
 cd ..
 source ./config
 
-for i in $(seq 1 9);
+for i in $(seq 1 22);
 do 
     for chunk in $(seq 1 ${prune_sub});
     do
