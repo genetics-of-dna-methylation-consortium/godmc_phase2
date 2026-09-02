@@ -86,37 +86,37 @@ for rel, expected in sorted(selected.items()):
 PY
 }
 
-artifact_pair_exists () {
+file_pair_exists () {
 	local base="$1"
 	[ -f "${section_15_upload_dir}/${base}.tgz.aes" ] && [ -f "${section_15_upload_dir}/${base}.md5sum" ]
 }
 
-artifact_pair_valid () {
+file_pair_valid () {
 	local base="$1"
-	artifact_pair_exists "${base}" && ld_verify_archive "${section_15_upload_dir}" "${base}"
+	file_pair_exists "${base}" && ld_verify_archive "${section_15_upload_dir}" "${base}"
 }
 
-all_artifacts_exist () {
+all_files_exist () {
 	local chr="$1" outdir="$2" chunk base chunks
 	base="${study_name}_chr${chr}_15_scaffold"
-	artifact_pair_exists "${base}" || return 1
+	file_pair_exists "${base}" || return 1
 	chunks="$(manifest_chunks "${outdir}" "${chr}")" || return 1
 	[ -n "${chunks}" ] || return 1
 	while IFS= read -r chunk; do
 		base="${study_name}_chr${chr}_15_chr${chr}_${chunk}"
-		artifact_pair_exists "${base}" || return 1
+		file_pair_exists "${base}" || return 1
 	done <<< "${chunks}"
 }
 
-all_artifacts_valid () {
+all_files_valid () {
 	local chr="$1" outdir="$2" chunk base chunks
 	base="${study_name}_chr${chr}_15_scaffold"
-	artifact_pair_valid "${base}" || return 1
+	file_pair_valid "${base}" || return 1
 	chunks="$(manifest_chunks "${outdir}" "${chr}")" || return 1
 	[ -n "${chunks}" ] || return 1
 	while IFS= read -r chunk; do
 		base="${study_name}_chr${chr}_15_chr${chr}_${chunk}"
-		artifact_pair_valid "${base}" || return 1
+		file_pair_valid "${base}" || return 1
 	done <<< "${chunks}"
 }
 
@@ -131,7 +131,7 @@ pack_scaffold () {
 		"${section_15_upload_dir}/.uploaded_${base}.md5sum"
 	ld_pack_archive "${section_15_upload_dir}" "${base}" "${outdir}" \
 		manifest.json variants.tsv.gz D.npy B.npy checksums.json qc_report.txt || return 1
-	artifact_pair_exists "${base}" || return 1
+	file_pair_exists "${base}" || return 1
 }
 
 pack_chunk () {
@@ -139,7 +139,7 @@ pack_chunk () {
 	base="${study_name}_chr${chr}_15_chr${chr}_${chunk}"
 	chunk_dir="${outdir}/A_blocks/chr${chr}/${chunk}"
 	if [ ! -d "${chunk_dir}" ]; then
-		if artifact_pair_valid "${base}"; then
+		if file_pair_valid "${base}"; then
 			return 0
 		fi
 		echo "Problem: raw chunk ${chunk_dir} is missing and ${base} has not been packaged correctly" >&2
@@ -151,7 +151,7 @@ pack_chunk () {
 		"${section_15_upload_dir}/.uploaded_${base}.tgz.aes" \
 		"${section_15_upload_dir}/.uploaded_${base}.md5sum"
 	ld_pack_archive "${section_15_upload_dir}" "${base}" "${outdir}/A_blocks" "chr${chr}/${chunk}" || return 1
-	artifact_pair_exists "${base}" || return 1
+	file_pair_exists "${base}" || return 1
 	rm -rf "${chunk_dir}" || return 1
 }
 
@@ -176,7 +176,7 @@ process_chromosome () {
 	echo "[15b] ===== chromosome ${chr} ====="
 	check_required_files "${outdir}" "${chr}" || return 1
 	if [ -f "${outdir}/.packaged" ] && [ ! -d "${outdir}/A_blocks" ]; then
-		all_artifacts_valid "${chr}" "${outdir}" || return 1
+		all_files_valid "${chr}" "${outdir}" || return 1
 		pack_scaffold "${chr}" "${outdir}" || return 1
 		echo "[15b] chr${chr} chunks already packaged and verified; scaffold refreshed"
 		echo "Successfully packaged LD cohort chromosome chr${chr}"
@@ -201,7 +201,7 @@ process_chromosome () {
 	rm -f "${tmp_chunks}" || return 1
 
 	pack_scaffold "${chr}" "${outdir}" || return 1
-	all_artifacts_exist "${chr}" "${outdir}" || return 1
+	all_files_exist "${chr}" "${outdir}" || return 1
 	rm -rf "${outdir}/A_blocks" || return 1
 	touch "${outdir}/.packaged" || return 1
 	echo "Successfully packaged LD cohort chromosome chr${chr}"

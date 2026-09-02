@@ -57,10 +57,6 @@ require_section_15_upload_config () {
 		echo "Problem: LD upload password file is empty: ${ld_upload_password_file}" >&2
 		return 1
 	fi
-	if ! command -v curl >/dev/null 2>&1; then
-		echo "Problem: curl is required for section-15 upload" >&2
-		return 1
-	fi
 }
 
 ship_section_15_file () {
