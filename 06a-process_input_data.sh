@@ -5,6 +5,7 @@ set -- $concatenated
 
 mkdir -p ${section_06_dir}
 mkdir -p ${section_06_dir}/logs_a
+mkdir -p ${meth_vmeQTL_directory}
 exec &> >(tee ${section_06a_logfile})
 print_version
 
@@ -143,6 +144,36 @@ ${R_directory}Rscript ${scripts_directory}/resources/methylation/generate_enviro
 echo "STEP4: generating and processing methylation data"
 mkdir -p ${meth_vmeQTL_directory}/vmeQTL_phase2/
 
+count=`ls ${meth_vmeQTL_input_chr}*[0-9].bod | wc -l`
+if [ $count -eq 22 ];
+then
+    echo "methylation data for 22 chromosomes in OSCA format exist"
+else
+    ${R_directory}Rscript \
+        ${scripts_directory}/resources/methylation/vmeQTL_process_tabfile.R \
+        ${untransformed_methylation_adjusted_pcs}.RData \
+        ${meth_vmeQTL_input_chr}
+
+    for chr in $(seq 1 22)
+    do
+        echo "convert chr ${chr} methylation data to bod format"
+        ${osca} \
+            --tefile ${meth_vmeQTL_input_chr}${chr} \
+            --methylation-m \
+            --make-bod \
+            --no-fid \
+            --out ${meth_vmeQTL_input_chr}${chr}
+
+        ${osca} \
+            --befile ${meth_vmeQTL_input_chr}${chr} \
+            --update-opi ${meth_vmeQTL_annotation}.opi
+        
+        ${R_directory}Rscript ${scripts_directory}/resources/methylation/match_oii_plink.R \
+            ${meth_vmeQTL_input_chr}${chr}.oii \
+            ${bfile}.fam
+	done
+fi
+
 if [ ${participate07} -eq 1 ];
 then
     echo "You have participated module 07. Generating subset of methylation files to run missing CpGs"
@@ -171,36 +202,6 @@ then
         ${meth_vmeQTL_directory}/vmeQTL_phase2/missing_cpgs_chr${c}.oii \
         ${bfile}.fam
     done
-fi
-
-count=`ls ${meth_vmeQTL_input_chr}*[0-9].bod | wc -l`
-if [ $count -eq 22 ];
-then
-    echo "methylation data for 22 chromosomes in OSCA format exist"
-else
-    ${R_directory}Rscript \
-        ${scripts_directory}/resources/methylation/vmeQTL_process_tabfile.R \
-        ${untransformed_methylation_adjusted_pcs}.RData \
-        ${meth_vmeQTL_input_chr}
-
-    for chr in $(seq 1 22)
-    do
-        echo "convert chr ${chr} methylation data to bod format"
-        ${osca} \
-            --tefile ${meth_vmeQTL_input_chr}${chr} \
-            --methylation-m \
-            --make-bod \
-            --no-fid \
-            --out ${meth_vmeQTL_input_chr}${chr}
-
-        ${osca} \
-            --befile ${meth_vmeQTL_input_chr}${chr} \
-            --update-opi ${meth_vmeQTL_annotation}.opi
-        
-        ${R_directory}Rscript ${scripts_directory}/resources/methylation/match_oii_plink.R \
-            ${meth_vmeQTL_input_chr}${chr}.oii \
-            ${bfile}.fam
-done
 fi
 
 echo "Generating methylation data of the CpGs of interest"
