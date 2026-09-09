@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+source "${scripts_directory:-.}/resources/genetics/ld_workflow.sh"
 vercomp () {
 	if [[ $1 == $2 ]]
 	then
@@ -371,6 +372,26 @@ check_logs_14 () {
 	fi
 
 }
+
+check_logs_15 () {
+	local targets
+	if ! targets="$(ld_target_chromosomes_15)"; then
+		exit 1
+	fi
+
+	while IFS= read -r chr; do
+		log_a="${section_15_dir}/logs_a/chr${chr}.log"
+		log_b="${section_15_dir}/logs_b/chr${chr}.log"
+		if [ ! -f "${log_a}" ] || ! grep -i -q "Successfully prepared LD cohort scaffold outputs for chr${chr}" "${log_a}"; then
+			echo "Problem: 15a-ld_prepare_stats.sh did not complete successfully for chr${chr}"
+			exit 1
+		fi
+		if [ ! -f "${log_b}" ] || ! grep -i -q "Successfully packaged LD cohort chromosome chr${chr}" "${log_b}"; then
+			echo "Problem: 15b-ld_compress_data.sh did not complete successfully for chr${chr}"
+			exit 1
+		fi
+		echo "Section 15 chr${chr} prepared and packaged successfully."
+	done <<< "${targets}"
 
 check_logs_16 () {
 

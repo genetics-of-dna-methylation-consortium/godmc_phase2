@@ -1,13 +1,28 @@
 #!/bin/bash
 
-source resources/setup.sh "$@"
-set -- $concatenated
+setup_args=()
+section_args=()
+while [ "$#" -gt 0 ]; do
+	case "$1" in
+		-c)
+			setup_args+=("$1" "$2")
+			shift 2
+			;;
+		*)
+			section_args+=("$1")
+			shift
+			;;
+	esac
+done
+
+source resources/setup.sh "${setup_args[@]}" "${section_args[@]}"
+set -- "${section_args[@]}"
 
 checkFirstArg () {
 	local e
 	for e in "${@:2}"; do [[ "$e" == "$1" ]] && return 0; done
 	echo $"Error: $1 is not a valid section identifier"
-	echo $"Need to specify a value from 01,02,03,03a,03d,04,07,08,09,10,11,14,16"
+	echo $"Need to specify a value from 01,02,03,03a,03d,04,07,08,09,10,11,14,15,16"
 	echo $"Usage: $0 <pipeline section> {check|upload}"
 	exit 1
 }
@@ -16,19 +31,159 @@ checkSecondArg () {
 	local e
 	for e in "${@:2}"; do [[ "$e" == "$1" ]] && return 0; done
 	echo $"Error: $2 is not a valid action"
-	echo $"Specify either 'check' or 'upload'"
-	echo $"Usage: $0 <pipeline section> {check|upload}"
+	echo $"Specify 'check', 'upload', or 'cleanup' (section 15 only)"
+	echo $"Usage: $0 <pipeline section> {check|upload|cleanup}"
 	exit 1
 }
 
 source resources/logs/check_logs.sh
 source resources/logs/check_results.sh
 
-sections=("01" "02" "03" "03a" "03d" "04" "06" "07" "08" "09" "10" "11" "14" "16")
+require_section_15_upload_config () {
+	if [ -n "${LD_SHIP_CMD:-}" ]; then
+		return 0
+	fi
+	if [ -z "${ld_upload_password_file:-}" ]; then
+		echo "Problem: section-15 upload requires ld_upload_password_file in config" >&2
+		return 1
+	fi
+	if [ ! -r "${ld_upload_password_file}" ]; then
+		echo "Problem: LD upload password file is not readable: ${ld_upload_password_file}" >&2
+		return 1
+	fi
+	ld_upload_password=""
+	IFS= read -r ld_upload_password < "${ld_upload_password_file}" || true
+	if [ -z "${ld_upload_password}" ]; then
+		echo "Problem: LD upload password file is empty: ${ld_upload_password_file}" >&2
+		return 1
+	fi
+}
+
+ship_section_15_file () {
+	local path="$1" filename http_status
+	if [ -n "${LD_SHIP_CMD:-}" ]; then
+		"${LD_SHIP_CMD}" "${path}"
+		return $?
+	fi
+	filename="$(basename "${path}")"
+	if ! http_status="$(curl --fail --show-error \
+		--output /dev/null \
+		--write-out "%{http_code}" \
+		--user "uploader:${ld_upload_password}" \
+		--upload-file "${path}" \
+		"${godmc_upload_url}/${filename}")"; then
+		return 1
+	fi
+	if ! [[ "${http_status}" =~ ^2[0-9][0-9]$ ]]; then
+		echo "Problem: section-15 upload returned HTTP ${http_status} for ${filename}" >&2
+		return 1
+	fi
+}
+
+cleanup_section_15 () {
+	local chr chunk chunks outdir path base scaffold targets removed=0 kept=0
+	local section_15_upload_dir="${section_15_dir}/upload"
+	local -a section_15_files
+	if ! targets="$(ld_target_chromosomes_15)"; then
+		exit 1
+	fi
+	while IFS= read -r chr; do
+		outdir="$(ld_resolve_chromosome_dir_15 "${ld_prepare_dir}" "${chr}")"
+		scaffold="${study_name}_chr${chr}_15_scaffold"
+		section_15_files=("${section_15_upload_dir}/${scaffold}.tgz.aes")
+		if ! chunks="$(ld_manifest_chunks_15 "${outdir}" "${chr}")"; then
+			echo "Problem: failed to read the section-15 chunk manifest for chr${chr}" >&2
+			exit 1
+		fi
+		while IFS= read -r chunk; do
+			chunk="${study_name}_chr${chr}_15_chr${chr}_${chunk}"
+			section_15_files+=("${section_15_upload_dir}/${chunk}.tgz.aes")
+		done <<< "${chunks}"
+		for path in "${section_15_files[@]}"; do
+			if [ ! -f "${path}" ]; then
+				continue
+			fi
+			base="$(basename "${path%.tgz.aes}")"
+			if ld_upload_receipt_present_15 "${section_15_upload_dir}" "${base}"; then
+				rm -f "${path}" || exit 1
+				removed=$((removed + 1))
+			else
+				echo "Problem: ${base}.tgz.aes has no upload record; keeping it" >&2
+				kept=$((kept + 1))
+			fi
+		done
+	done <<< "${targets}"
+	echo "Section 15 cleanup removed ${removed} uploaded archive(s)"
+	if [ "${kept}" -ne 0 ]; then
+		echo "Problem: ${kept} section 15 archive(s) are not recorded as uploaded; re-run the upload step" >&2
+		exit 1
+	fi
+	echo "Successfully reclaimed section 15 uploaded archives"
+}
+
+upload_section_15 () {
+	local chr chunk chunks outdir path upload_receipt scaffold targets failed=0 section_15_upload_dir="${section_15_dir}/upload"
+	local -a section_15_files
+	require_section_15_upload_config || exit 1
+	if ! targets="$(ld_target_chromosomes_15)"; then
+		exit 1
+	fi
+	while IFS= read -r chr; do
+		outdir="$(ld_resolve_chromosome_dir_15 "${ld_prepare_dir}" "${chr}")"
+		scaffold="${study_name}_chr${chr}_15_scaffold"
+		section_15_files=(
+			"${section_15_upload_dir}/${scaffold}.tgz.aes"
+			"${section_15_upload_dir}/${scaffold}.md5sum"
+		)
+		if ! chunks="$(ld_manifest_chunks_15 "${outdir}" "${chr}")"; then
+			echo "Problem: failed to read the section-15 chunk manifest for chr${chr}" >&2
+			exit 1
+		fi
+		while IFS= read -r chunk; do
+			chunk="${study_name}_chr${chr}_15_chr${chr}_${chunk}"
+			section_15_files+=(
+				"${section_15_upload_dir}/${chunk}.tgz.aes"
+				"${section_15_upload_dir}/${chunk}.md5sum"
+			)
+		done <<< "${chunks}"
+		for path in "${section_15_files[@]}"; do
+			upload_receipt="${section_15_upload_dir}/.uploaded_$(basename "${path}")"
+			if [ -f "${upload_receipt}" ]; then
+				echo "Section 15 upload already recorded for $(basename "${path}")"
+				continue
+			fi
+			if ship_section_15_file "${path}"; then
+				touch "${upload_receipt}"
+				echo "Uploaded section 15 file $(basename "${path}")"
+			else
+				echo "Problem: failed to upload section 15 file ${path}" >&2
+				failed=1
+			fi
+		done
+	done <<< "${targets}"
+	if [ "${failed}" -ne 0 ]; then
+		exit 1
+	fi
+	echo "Successfully uploaded section 15 files"
+}
+
+sections=("01" "02" "03" "03a" "03d" "04" "07" "08" "09" "10" "11" "14" "15" "16")
 checkFirstArg "$1" "${sections[@]}"
 
-actions=("check" "upload")
+actions=("check" "upload" "cleanup")
 checkSecondArg "$2" "${actions[@]}"
+
+if [[ "$2" = "cleanup" && "$1" != "15" ]]
+then
+	echo $"Error: the cleanup action is only supported for section 15"
+	exit 1
+fi
+
+if [[ "$2" = "cleanup" && "$1" = "15" ]]
+then
+	cleanup_section_15
+	exit 0
+fi
 
 echo ""
 echo "Checking log files for $1"
@@ -326,4 +481,7 @@ EOF
 
 fi
 
-
+if [[ "$2" = "upload" && $1 = "15" ]]
+then
+	upload_section_15
+fi
