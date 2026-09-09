@@ -49,6 +49,9 @@ phenotypes_AD="NULL"
 phenotypes_Psoriasis="NULL"
 phenotypes_PsoriasisNOHLA="NULL"
 
+# Optional phenotype file for MZ Twinning
+phenotypes_MZT="NULL"
+
 # Imputation quality scores
 # This should be a file with three columns, SNP, MAF and quality scores
 quality_scores="${home_directory}/input_data/data.info"
@@ -112,6 +115,9 @@ ld_gpg_passphrase_file="${HOME}/.godmc/gpg.pass"
 # ld_hail_partitions="256"
 # ld_hail_driver_memory_gb="32"
 # ld_hail_tmp_dir="/path/to/scratch/godmc15_hail_tmp"
+
+# module 06
+BMI=""
 
 # DO NOT MODIFY
 source ${scripts_directory}/resources/parameters

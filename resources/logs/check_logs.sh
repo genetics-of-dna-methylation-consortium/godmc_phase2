@@ -195,7 +195,7 @@ check_logs_04 () {
 	fi
 
 	compare_version "04b"
-	if grep -i -q "Allele positions inverted" ${section_04b_logfile}; then
+	if grep -i -q "Allele positions inverted" ${section_04b_logfile} || grep -i -q "No probe inversion performed" ${section_04b_logfile}; then
 		echo "04b-mapper-preparation.sh completed successfully."
 	else
 		echo "Problem: 04b-mapper-preparation.sh did not complete successfully"
@@ -231,6 +231,80 @@ check_logs_04 () {
         echo "04f-tar_results.sh completed successfully."
     else
         echo "Problem: 04f-tar_results.sh did not complete successfully"
+        exit 1
+    fi
+}
+
+check_logs_06 () {
+
+    compare_version "06a"
+    if grep -i -q "06a has been done successfully" ${section_06a_logfile}; then
+        echo "06a-process_input_data.sh completed successfully."
+    else
+        echo "Problem: 06a-process_input_data.sh did not complete successfully."
+        exit 1
+    fi
+
+    compare_version "06b"
+    count_06b=`grep "successfully" ${section_06b_logfile}_chr[0-9]* | wc -l`
+    participate07=`grep ${study_name} ${scripts_directory}/resources/methylation/vmeQTL/vmeQTL_phase1_cohort_list.txt | wc -l`
+    if [ ${participate07} -eq 1 ]; then
+        echo "Your cohort was involved in module 07 meta-analysis."
+        if [ ${count_06b} -eq 17 ]; then
+            echo "06b-vmeQTL_detection_missingCpGs.sh completed successfully."
+        else
+            echo "Problem: 06b-vmeQTL_detection_missingCpGs.sh did not complete successfully." 
+            exit 1
+        fi
+    fi
+
+    compare_version "06c"
+    count_06c=`grep "successfully" ${section_06c_logfile}_* | wc -l`
+    count_06c_file=`ls ${section_06c_logfile}_* | wc -l`
+    if [ $count_06c == $count_06c_file ]; then
+        echo "06c-interaction_cis.sh completed successfully,"
+    else
+        echo "Problem: 06c-interaction_cis.sh did not complete successfully"
+        exit 1
+    fi
+
+    compare_version "06d"
+    count_06d=`grep "successfully" ${section_06d_logfile}_* | wc -l`
+    count_06d_file=`ls ${section_06d_logfile}_* | wc -l`
+    if [ $count_06d == $count_06d_file ]; then
+        echo "06d-vmeQTL_detection_candidateSNPs.sh completed successfully,"
+    else
+        echo "Problem: 06d-vmeQTL_detection_candidateSNPs.sh did not complete successfully"
+        exit 1
+    fi
+
+    compare_version "06e"
+    count_06e=`grep "successfully" ${section_06e_logfile}_* | wc -l`
+    count_06e_file=`ls ${section_06e_logfile}_* | wc -l`
+    if [ $count_06e == $count_06e_file ]; then
+        echo "06e-vmeQTL_detection_candidateCpGs.sh completed successfully,"
+    else
+        echo "Problem: 06e-vmeQTL_detection_candidateCpGs.sh did not complete successfully"
+        exit 1
+    fi
+
+    compare_version "06f"
+    count_06f=`grep "successfully" ${section_06f_logfile}_* | wc -l`
+    count_06f_file=`ls ${section_06f_logfile}_* | wc -l`
+    if [ $count_06f == $count_06f_file ]; then
+        echo "06f-interaction_trans_candidateSNPs.sh completed successfully,"
+    else
+        echo "Problem: 06f-interaction_trans_candidateSNPs.sh did not complete successfully"
+        exit 1
+    fi
+
+    compare_version "06g"
+    count_06g=`grep "successfully" ${section_06g_logfile}_* | wc -l`
+    count_06g_file=`ls ${section_06g_logfile}_* | wc -l`
+    if [ $count_06g == $count_06g_file ]; then
+        echo "06g-interaction_trans_candidateCpGs.sh completed successfully,"
+    else
+        echo "Problem: 06g-interaction_trans_candidateCpGs.sh did not complete successfully"
         exit 1
     fi
 }
@@ -319,6 +393,63 @@ check_logs_15 () {
 		echo "Section 15 chr${chr} prepared and packaged successfully."
 	done <<< "${targets}"
 
+check_logs_16 () {
+
+	compare_version "16a"
+	if grep -i -q "Module 16 sex-specific all-probe methylation phenotypes successfully prepared" ${section_16a_logfile}; then
+		echo "16a-prepare_chrX_all_probe_phenotypes_by_sex.sh completed successfully."
+	else
+		echo "Problem: 16a-prepare_chrX_all_probe_phenotypes_by_sex.sh did not complete successfully"
+		exit 1
+	fi
+
+	compare_version "16b"
+	if grep -i -q "Successfully prepared module 16 chrX/chrY HASE inputs" ${section_16b_logfile}; then
+		echo "16b-build_chrX_hase_by_sex.sh completed successfully."
+	else
+		echo "Problem: 16b-build_chrX_hase_by_sex.sh did not complete successfully"
+		exit 1
+	fi
+
+	compare_version "16c"
+	if grep -i -q "Successfully encoded module 16 chrX/chrY genotype and sex-specific all-probe methylation data" ${section_16c_logfile}; then
+		echo "16c-encode_all_probes_chrX_by_sex.sh completed successfully."
+	else
+		echo "Problem: 16c-encode_all_probes_chrX_by_sex.sh did not complete successfully"
+		exit 1
+	fi
+
+	compare_version "16d"
+	if grep -i -q "Module 16 chrX/chrY genotype against sex-specific all methylation probes successfully completed" ${section_16d_logfile}; then
+		echo "16d-singlesite_chrX_all_probe_hase.sh completed successfully."
+	else
+		echo "Problem: 16d-singlesite_chrX_all_probe_hase.sh did not complete successfully"
+		exit 1
+	fi
+
+	compare_version "16e"
+	if grep -i -q "16e Module 16 HASE positive-control validation successfully completed" ${section_16e_logfile}; then
+		echo "16e-perform_positive_control_chrXY_all_probe.sh completed successfully."
+	else
+		echo "Problem: 16e-perform_positive_control_chrXY_all_probe.sh did not complete successfully"
+		exit 1
+	fi
+
+	compare_version "16f"
+	if grep -i -q "16f Module 16 PLINK/R positive-control validation successfully completed" ${section_16f_logfile}; then
+		echo "16f-validate_chrXY_all_probe_positive_control.sh completed successfully."
+	else
+		echo "Problem: 16f-validate_chrXY_all_probe_positive_control.sh did not complete successfully"
+		exit 1
+	fi
+
+	compare_version "16g"
+	if grep -i -q "Successfully created results archives of module 16" ${section_16g_logfile}; then
+		echo "16g-tar_results.sh completed successfully."
+	else
+		echo "Problem: 16g-tar_results.sh did not complete successfully"
+		exit 1
+	fi
 }
 
 
