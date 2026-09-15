@@ -38,6 +38,6 @@ then
     fi
     echo "06c chunk${1} chr${2} has been done successfully at $(date)"
 else
-    echo "vmeQTL list 1 is not updated, please redownload it. For more details, see https://github.com/genetics-of-dna-methylation-consortium/godmc_phase2/wiki/Module-06-troubleshooting"
+    echo "vmeQTL list 1 is not updated, please redownload it. For more details, see https://github.com/genetics-of-dna-methylation-consortium/godmc_phase2/wiki/Module-06-troubleshooting-&-User-Guide"
     exit 1
 fi
