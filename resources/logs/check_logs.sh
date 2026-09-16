@@ -260,7 +260,16 @@ check_logs_06 () {
     compare_version "06c"
     count_06c=`grep "successfully" ${section_06c_logfile}_* | wc -l`
     count_06c_file=`ls ${section_06c_logfile}_* | wc -l`
-    list1_count=`wc -l ${vmeQTL_list1}`
+    list1_count=$(wc -l < "${vmeQTL_list1}")
+    ID_check=`head -n1 ${vmeQTL_list1} | cut -f 1`
+
+    if [[ "${list1_count}" -eq 41504231  &&  "${ID_check}" == "1:10000400_A_T" ]]; then
+        echo "You are using the updated vmeQTL_list1"
+    else
+        echo "Problem: vmeQTL list 1 is not updated, please redownload it. For more details, see https://github.com/genetics-of-dna-methylation-consortium/godmc_phase2/wiki/Module-06-troubleshooting-&-User-Guide"
+        exit 1
+    fi
+
     if [ $count_06c == $count_06c_file ]; then
         echo "06c-interaction_cis.sh completed successfully,"
     else
