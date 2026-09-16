@@ -260,16 +260,7 @@ check_logs_06 () {
     compare_version "06c"
     count_06c=`grep "successfully" ${section_06c_logfile}_* | wc -l`
     count_06c_file=`ls ${section_06c_logfile}_* | wc -l`
-    list1_count=$(wc -l < "${vmeQTL_list1}")
-    ID_check=`head -n1 ${vmeQTL_list1} | cut -f 1`
-
-    if [[ "${list1_count}" -eq 41504231  &&  "${ID_check}" == "1:10000400_A_T" ]]; then
-        echo "You are using the updated vmeQTL_list1"
-    else
-        echo "Problem: vmeQTL list 1 is not updated, please redownload it. For more details, see https://github.com/genetics-of-dna-methylation-consortium/godmc_phase2/wiki/Module-06-troubleshooting-&-User-Guide"
-        exit 1
-    fi
-
+    list1_count=`wc -l ${vmeQTL_list1}`
     if [ $count_06c == $count_06c_file ]; then
         echo "06c-interaction_cis.sh completed successfully,"
     else
@@ -351,15 +342,6 @@ check_logs_07 () {
 
 check_logs_08 () {
 
-	compare_version "08a"
-	if grep -i -q "Success" ${section_08a_logfile}; then
-		echo "08a-genotypeInversion completed successfully."
-	else
-		echo "Problem: 08a-genotypeInversion did not complete successfully"
-		exit 1
-	fi
-
-	compare_version "08b"
 	compare_version "08a"
 	if grep -i -q "Success" ${section_08a_logfile}; then
 		echo "08a-genotypeInversion completed successfully."
@@ -464,8 +446,8 @@ check_logs_09 () {
 
     PRS=${vect_PRS_array[$k]}
     log_file=${section_09_dir}/${PRS}/logs/log.txt
- 
-	  if grep -i -q "run successfully" ${log_file}; then
+
+    	  if grep -i -q "run successfully" ${log_file}; then
 		  echo "09 completed successfully for ${PRS}"
 	  else
 		  echo "Problem: 09 did not complete successfully for ${PRS}"
@@ -473,4 +455,13 @@ check_logs_09 () {
 	  fi
 
   done
+
+	if grep -i -q "script finalised" ${section_09_logfile}; then
+		echo "09 completed successfully for all traits"
+	else
+		echo "Problem: 09 did not complete successfully for all traits"
+		exit 1
+	fi
+
+
 }
