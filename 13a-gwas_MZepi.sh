@@ -12,7 +12,7 @@ print_version
 # Step 1: compute epigenetic scores
 
 
-
+cut -d' ' -f1-12 "${pca}.eigenvec" > ${pca}_10.eigenvec
 
 ${R_directory}Rscript resources/MZtwin/MZEpiScore.R \
     ${betas} \
@@ -24,7 +24,7 @@ ${R_directory}Rscript resources/MZtwin/MZEpiScore.R \
 
 echo "Finished computing Epi-MZ scores"
 
-cut -d' ' -f1-12 "${pca}.eigenvec" > ${pca}_10.eigenvec
+
 
 # Step 2: generate a sparse genetic relationship matrix (GRM) and PCA ###################################
 # For family data, use all samples, correcting for the full (sparse) GRM.

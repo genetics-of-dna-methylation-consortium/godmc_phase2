@@ -17,6 +17,15 @@ To give you an idea of the kind of analyses we are interested please review our 
 
 If you are interested in joining or finding out more please contact either Josine Min (Josine.Min@bristol.ac.uk) or Eilis Hannon (E.J.Hannon@exeter.ac.uk)
 
+## Release plan
+We are releasing modules in phases to manage development effectively and to support analyses that require multiple stages (e.g., discovery and validation). The table below outlines the planned release timeline, and each module’s wiki page provides up‑to‑date information on its development status.
+
+| Release                | Status          | Schedule | 
+|-----------------------|-----------------|----------------|
+| Initial Release: preprocessing and core analysis modules        | Released        | July 2024        | 
+| Expansion Release: Additional analysis modules           | In Development  | July 2026        | 
+
+
 ## Guidance for how to use this repository
 
 Detailed instructions for running each stage of the pipeline [can be found here](https://github.com/genetics-of-dna-methylation-consortium/godmc_phase2/wiki). This includes details on how what software you need to have installed, and the required input data and their format. 
@@ -53,15 +62,24 @@ The scripts in this repository were developed by the core GoDMC team and individ
 
 The developer group of these scripts are listed in alphabetical order below:
 
+
 Carlos Ruiz Arenas  
-Olalekan Awoniran  
+Olalekan Awoniran
+Olivia Castellini-Pérez  
+Toby Clark  
 Eilis Hannon  
-Gibran Hemani  
+Gibran Hemani
+Thomas Jonkman
+Natalia Llonga     
 Josine Min  
-Maria Soler Artigas  
-Natalia Llonga  
-Olivia Castellini  
-Siyi Wang  
-Sonja Rajic  
-Thomas Jonkman  
+Anh Nguyen
+Ting Qi
+Emma Raitoharju
+Sonja Rajic
+Manuel Donato Rodríguez-Romero
+Maria Soler Artigas
+Haotian Tang  
+Jenny van Dongen
+Siyi Wang
+Jian Yang  
 Xiaopu Zhang  

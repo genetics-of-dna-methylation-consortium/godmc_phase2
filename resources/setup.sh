@@ -1,7 +1,10 @@
 #!/bin/bash
 
-# Check scripts up to date
-git pull
+# Check scripts up to date. Local pilot harnesses can skip this to avoid
+# network-dependent setup inside repeated script calls.
+if [ "${GODMC_SKIP_GIT_PULL:-0}" != "1" ]; then
+	git pull
+fi
 
 # Initialize variables
 config_file="./config"

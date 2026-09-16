@@ -106,6 +106,16 @@ meth_pc_threshold="1e-7"
 # Matrixeqtl parameters
 soft_threshold="1e-5"
 
+# Required for section-15 upload.
+ld_upload_password_file="${HOME}/.godmc/upload.pass"
+# Required for section-15 15b compression/encryption.
+ld_gpg_passphrase_file="${HOME}/.godmc/gpg.pass"
+# Optional hail overrides
+# ld_hail_local_cores="8"
+# ld_hail_partitions="256"
+# ld_hail_driver_memory_gb="32"
+# ld_hail_tmp_dir="/path/to/scratch/godmc15_hail_tmp"
+
 # module 06
 BMI=""
 
