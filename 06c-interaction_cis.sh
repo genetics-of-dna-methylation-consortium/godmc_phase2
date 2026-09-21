@@ -13,7 +13,7 @@ echo "Checking list1"
 count=$(wc -l < "${vmeQTL_list1}")
 ID_check=`head -n1 ${vmeQTL_list1} | cut -f 1`
 
-if [[ "${count}" -eq 41504231  &&  "${ID_check}" == "1:10000400_A_T" ]];
+if [[ "${count}" -eq 43491276 && "${ID_check}" == "1:10000400_A_T" ]];
 then
     echo "Start to run 06c chunk${1} chr${2} at $(date)"
     chunk=$1

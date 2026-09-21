@@ -264,7 +264,7 @@ check_logs_06 () {
     list1_count=$(wc -l < "${vmeQTL_list1}")
     ID_check=`head -n1 ${vmeQTL_list1} | cut -f 1`
 
-    if [[ "${list1_count}" -eq 41504231  &&  "${ID_check}" == "1:10000400_A_T" ]]; then
+    if [[ "${list1_count}" -eq 43491276 &&  "${ID_check}" == "1:10000400_A_T" ]]; then
         echo "You are using the updated vmeQTL_list1"
     else
         echo "Problem: vmeQTL list 1 is not updated, please redownload it. For more details, see https://github.com/genetics-of-dna-methylation-consortium/godmc_phase2/wiki/Module-06-troubleshooting-&-User-Guide"
