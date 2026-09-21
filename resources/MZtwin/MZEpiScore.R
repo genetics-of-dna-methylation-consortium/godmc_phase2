@@ -31,7 +31,7 @@ pc_file =arguments[6]
 #############################################################################################################################################################################################################################
 # Prepare covariates files for GWAS 
 #############################################################################################################################################################################################################################
-covariates <- read.table(paste0(covariates_dir,"/covariates_intersectids.txt"),header=T)
+covariates <- read.table(paste0(covariates_dir,"covariates_intersectids.txt"),header=T)
 
 age_index <- grep("^age_numeric$", names(covariates), ignore.case=TRUE)
   count_age <- length(unique(covariates[,age_index]))
