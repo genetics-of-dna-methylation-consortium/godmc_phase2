@@ -167,7 +167,7 @@ upload_section_15 () {
 	echo "Successfully uploaded section 15 files"
 }
 
-sections=("01" "02" "03" "03a" "03d" "04" "07" "08" "09" "10" "11" "14" "15" "16")
+sections=("01" "02" "03" "03a" "03d" "04" "06" "07" "08" "09" "10" "11" "14" "15" "16")
 checkFirstArg "$1" "${sections[@]}"
 
 actions=("check" "upload" "cleanup")

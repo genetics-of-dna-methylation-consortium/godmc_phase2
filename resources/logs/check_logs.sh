@@ -402,7 +402,8 @@ check_logs_15 () {
 		fi
 		echo "Section 15 chr${chr} prepared and packaged successfully."
 	done <<< "${targets}"
-
+}
+    
 check_logs_16 () {
 
 	compare_version "16a"
@@ -492,6 +493,5 @@ check_logs_09 () {
 		echo "Problem: 09 did not complete successfully for all traits"
 		exit 1
 	fi
-
 
 }
