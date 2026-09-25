@@ -466,7 +466,10 @@ gzip ${section_02_dir}/data.vmiss
 gzip ${section_02_dir}/data.afreq
 
 # Check missingness
-missingness=`zcat ${section_02_dir}/data.smiss | awk '{ sum += $6; n++ } END { if (n > 0) print sum / n; }'`
+missingness=$(zcat "${section_02_dir}/data.smiss.gz" |
+    awk 'NR==1 {for(i=1;i<=NF;i++) if($i=="F_MISS") c=i; next}
+         {sum+=$c; n++}
+         END {if(c && n) printf "%.10f\n", sum/n}')
 
 echo "Average missingness: ${missingness}"
 
