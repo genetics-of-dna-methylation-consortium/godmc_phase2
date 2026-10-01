@@ -150,7 +150,7 @@ def load_genotype_matrixtable(
         bim=f"{bfile_str}.bim",
         fam=f"{bfile_str}.fam",
         reference_genome="GRCh37",
-        skip_invalid_loci=False,
+        skip_invalid_loci=True,
         n_partitions=n_partitions,
     )
 
